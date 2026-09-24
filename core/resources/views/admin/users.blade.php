@@ -1,8 +1,7 @@
 <x-admin-layout title="Users">
     @php
         /** @var \Illuminate\Pagination\LengthAwarePaginator $users */
-        use App\Models\User;
-        $roles = [User::ROLE_MEMBER, User::ROLE_CREATOR, User::ROLE_MODERATOR, User::ROLE_ADMIN];
+        $roles = [\App\Models\User::ROLE_MEMBER, \App\Models\User::ROLE_CREATOR, \App\Models\User::ROLE_MODERATOR, \App\Models\User::ROLE_ADMIN];
     @endphp
 
     <form method="GET" class="flex flex-wrap items-center gap-2">

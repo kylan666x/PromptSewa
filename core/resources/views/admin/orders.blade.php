@@ -1,16 +1,15 @@
 <x-admin-layout title="Orders">
     @php
         /** @var \Illuminate\Pagination\LengthAwarePaginator $orders */
-        use App\Models\Order;
     @endphp
 
     <div class="flex flex-wrap gap-2">
         @foreach ([
             '' => 'All',
-            Order::STATUS_PENDING => 'Pending',
-            Order::STATUS_PAID => 'Paid',
-            Order::STATUS_FAILED => 'Failed',
-            Order::STATUS_REFUNDED => 'Refunded',
+            \App\Models\Order::STATUS_PENDING => 'Pending',
+            \App\Models\Order::STATUS_PAID => 'Paid',
+            \App\Models\Order::STATUS_FAILED => 'Failed',
+            \App\Models\Order::STATUS_REFUNDED => 'Refunded',
         ] as $statusKey => $label)
             <a href="{{ route('admin.orders.index', $statusKey === '' ? [] : ['status' => $statusKey]) }}"
                @class([
@@ -55,9 +54,9 @@
                         <td class="px-5 py-3.5">
                             <span class="rounded-md px-2 py-0.5 text-xs font-medium
                                 {{ match ($order->status) {
-                                    Order::STATUS_PAID => 'bg-emerald-100 text-emerald-800',
-                                    Order::STATUS_PENDING => 'bg-saffron/25 text-saffron-deep',
-                                    Order::STATUS_FAILED => 'bg-rose-100 text-rose-700',
+                                    \App\Models\Order::STATUS_PAID => 'bg-emerald-100 text-emerald-800',
+                                    \App\Models\Order::STATUS_PENDING => 'bg-saffron/25 text-saffron-deep',
+                                    \App\Models\Order::STATUS_FAILED => 'bg-rose-100 text-rose-700',
                                     default => 'bg-paper-deep text-ink/80',
                                 } }}">
                                 {{ $order->status }}

@@ -6,13 +6,13 @@
 @endphp
 
 <x-app-layout>
-    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data='promptForm({
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data="promptForm({
         contexts: {{ Js::from($typeContexts) }},
         categories: {{ Js::from($categories->values()) }},
         initialType: {{ Js::from($oldType) }},
         initialCategoryId: {{ Js::from((string) old("category_id", "")) }},
         initialTools: {{ Js::from(array_values((array) old("recommended_tools", []))) }}
-    })'>
+    })" >
         <header>
             <p class="text-xs font-semibold uppercase tracking-widest text-saffron-deep/90">Creator workspace</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-ink">Add a new prompt</h1>

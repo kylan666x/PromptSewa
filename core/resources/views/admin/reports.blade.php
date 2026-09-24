@@ -2,14 +2,13 @@
     @php
         /** @var \Illuminate\Pagination\LengthAwarePaginator $reports */
         /** @var array<string, int> $counts */
-        use App\Models\PromptReport;
     @endphp
 
     <div class="flex flex-wrap gap-2">
         @foreach ([
-            PromptReport::STATUS_OPEN => ['Open', $counts[PromptReport::STATUS_OPEN]],
-            PromptReport::STATUS_RESOLVED => ['Resolved', $counts[PromptReport::STATUS_RESOLVED]],
-            PromptReport::STATUS_DISMISSED => ['Dismissed', $counts[PromptReport::STATUS_DISMISSED]],
+            \App\Models\PromptReport::STATUS_OPEN => ['Open', $counts[\App\Models\PromptReport::STATUS_OPEN]],
+            \App\Models\PromptReport::STATUS_RESOLVED => ['Resolved', $counts[\App\Models\PromptReport::STATUS_RESOLVED]],
+            \App\Models\PromptReport::STATUS_DISMISSED => ['Dismissed', $counts[\App\Models\PromptReport::STATUS_DISMISSED]],
             '' => ['All', $counts['all']],
         ] as $statusKey => [$label, $count])
             <a href="{{ route('admin.reports.index', $statusKey === '' ? [] : ['status' => $statusKey]) }}"
@@ -31,9 +30,9 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-md px-2 py-0.5 text-xs font-medium
                                 {{ match ($report->status) {
-                                    PromptReport::STATUS_OPEN => 'bg-saffron/25 text-saffron-deep',
-                                    PromptReport::STATUS_RESOLVED => 'bg-emerald-100 text-emerald-800',
-                                    PromptReport::STATUS_DISMISSED => 'bg-paper-deep text-ink/60',
+                                    \App\Models\PromptReport::STATUS_OPEN => 'bg-saffron/25 text-saffron-deep',
+                                    \App\Models\PromptReport::STATUS_RESOLVED => 'bg-emerald-100 text-emerald-800',
+                                    \App\Models\PromptReport::STATUS_DISMISSED => 'bg-paper-deep text-ink/60',
                                     default => 'bg-paper-deep text-ink/80',
                                 } }}">
                                 {{ ucfirst($report->status) }}
@@ -56,24 +55,24 @@
                     </div>
 
                     <div class="flex items-center gap-1.5">
-                        @if ($report->status !== PromptReport::STATUS_RESOLVED)
+                        @if ($report->status !== \App\Models\PromptReport::STATUS_RESOLVED)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
-                                <input type="hidden" name="status" value="{{ PromptReport::STATUS_RESOLVED }}">
+                                <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_RESOLVED }}">
                                 <button class="rounded-lg border border-emerald-700/40 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-600/20">Resolve</button>
                             </form>
                         @endif
-                        @if ($report->status !== PromptReport::STATUS_DISMISSED)
+                        @if ($report->status !== \App\Models\PromptReport::STATUS_DISMISSED)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
-                                <input type="hidden" name="status" value="{{ PromptReport::STATUS_DISMISSED }}">
+                                <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_DISMISSED }}">
                                 <button class="rounded-lg border border-ink/15 bg-paper-deep px-2.5 py-1 text-xs font-medium text-ink/80 transition hover:border-ink/40">Dismiss</button>
                             </form>
                         @endif
-                        @if ($report->status === PromptReport::STATUS_OPEN)
+                        @if ($report->status === \App\Models\PromptReport::STATUS_OPEN)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
-                                <input type="hidden" name="status" value="{{ PromptReport::STATUS_OPEN }}">
+                                <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_OPEN }}">
                                 <button class="rounded-lg border border-ink/15 px-2.5 py-1 text-xs font-medium text-ink/50 transition hover:border-ink/40" title="Reopen">Reopen</button>
                             </form>
                         @endif

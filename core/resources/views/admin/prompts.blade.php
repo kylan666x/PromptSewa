@@ -1,17 +1,16 @@
 <x-admin-layout title="Prompts">
     @php
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $prompts */
+        /** @var \App\Models\Prompt \Illuminate\Pagination\LengthAwarePaginator $prompts */
         /** @var array<string, int> $counts */
-        use App\Models\Prompt;
     @endphp
 
     <div class="flex flex-wrap gap-2">
         @foreach ([
             '' => ['All', $counts['all']],
-            Prompt::STATUS_PENDING => ['Pending', $counts[Prompt::STATUS_PENDING]],
-            Prompt::STATUS_PUBLISHED => ['Published', $counts[Prompt::STATUS_PUBLISHED]],
-            Prompt::STATUS_REJECTED => ['Rejected', $counts[Prompt::STATUS_REJECTED]],
-            Prompt::STATUS_DRAFT => ['Drafts', $counts[Prompt::STATUS_DRAFT]],
+            \App\Models\Prompt::STATUS_PENDING => ['Pending', $counts[\App\Models\Prompt::STATUS_PENDING]],
+            \App\Models\Prompt::STATUS_PUBLISHED => ['Published', $counts[\App\Models\Prompt::STATUS_PUBLISHED]],
+            \App\Models\Prompt::STATUS_REJECTED => ['Rejected', $counts[\App\Models\Prompt::STATUS_REJECTED]],
+            \App\Models\Prompt::STATUS_DRAFT => ['Drafts', $counts[\App\Models\Prompt::STATUS_DRAFT]],
         ] as $statusKey => [$label, $count])
             <a href="{{ route('admin.prompts.index', $statusKey === '' ? [] : ['status' => $statusKey]) }}"
                @class([
@@ -48,9 +47,9 @@
                         <td class="px-5 py-3.5">
                             <span class="rounded-md px-2 py-0.5 text-xs font-medium
                                 {{ match ($prompt->status) {
-                                    Prompt::STATUS_PUBLISHED => 'bg-emerald-100 text-emerald-800',
-                                    Prompt::STATUS_PENDING => 'bg-saffron/25 text-saffron-deep',
-                                    Prompt::STATUS_REJECTED => 'bg-rose-100 text-rose-700',
+                                    \App\Models\Prompt::STATUS_PUBLISHED => 'bg-emerald-100 text-emerald-800',
+                                    \App\Models\Prompt::STATUS_PENDING => 'bg-saffron/25 text-saffron-deep',
+                                    \App\Models\Prompt::STATUS_REJECTED => 'bg-rose-100 text-rose-700',
                                     default => 'bg-paper-deep text-ink/80',
                                 } }}">
                                 {{ $prompt->status }}
@@ -58,17 +57,17 @@
                         </td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center justify-end gap-1.5">
-                                @if ($prompt->status !== Prompt::STATUS_PUBLISHED)
+                                @if ($prompt->status !== \App\Models\Prompt::STATUS_PUBLISHED)
                                     <form method="POST" action="{{ route('admin.prompts.status', $prompt) }}">
                                         @csrf
-                                        <input type="hidden" name="status" value="{{ Prompt::STATUS_PUBLISHED }}">
+                                        <input type="hidden" name="status" value="{{ \App\Models\Prompt::STATUS_PUBLISHED }}">
                                         <button class="rounded-lg border border-emerald-700/40 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-600/20">Publish</button>
                                     </form>
                                 @endif
-                                @if ($prompt->status !== Prompt::STATUS_REJECTED)
+                                @if ($prompt->status !== \App\Models\Prompt::STATUS_REJECTED)
                                     <form method="POST" action="{{ route('admin.prompts.status', $prompt) }}">
                                         @csrf
-                                        <input type="hidden" name="status" value="{{ Prompt::STATUS_REJECTED }}">
+                                        <input type="hidden" name="status" value="{{ \App\Models\Prompt::STATUS_REJECTED }}">
                                         <button class="rounded-lg border border-rose-700/30 bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-200">Reject</button>
                                     </form>
                                 @endif

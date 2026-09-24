@@ -9,13 +9,13 @@
 @endphp
 
 <x-app-layout>
-    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data='promptForm({
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data="promptForm({
         contexts: {{ Js::from($typeContexts) }},
         categories: {{ Js::from($categories->values()) }},
         initialType: {{ Js::from($oldType) }},
         initialCategoryId: {{ Js::from((string) old("category_id", (string) $prompt->category_id)) }},
         initialTools: {{ Js::from(array_values((array) old("recommended_tools", $latest?->toolList() ?? []))) }}
-    })'>
+    })" >
         <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-widest text-saffron-deep/90">Creator workspace</p>
