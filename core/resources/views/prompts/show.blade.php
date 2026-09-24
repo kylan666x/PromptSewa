@@ -125,7 +125,7 @@
                     </div>
 
                     @if ($canViewFullBody && $latest)
-                        <div class="mt-3" x-data='promptViewer(@js($latest->body), @js($variableNames))'>
+                        <div class="mt-3" x-data="promptViewer(@js($latest->body), @js($variableNames))">
                             @if (count($variableNames) > 0)
                                 <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm">
                                     <h3 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Fill in the variables</h3>
