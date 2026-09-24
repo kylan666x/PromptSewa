@@ -1,0 +1,36 @@
+# Codebuff/agent workspace metadata
+.freebuff/
+
+# --- Laravel application (core/) ---
+core/.env
+core/.env.backup
+core/.env.production
+core/.phpunit.result.cache
+core/.phpunit.cache/
+core/node_modules/
+core/public/build/
+core/public/hot
+core/public/storage
+core/storage/*.key
+core/storage/pail/
+core/storage/framework/cache/data/
+core/storage/framework/sessions/
+core/storage/framework/views/
+core/storage/framework/testing/
+core/storage/logs/
+core/storage/app/private/
+core/storage/app/public/
+core/vendor/
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editors/IDEs ---
+.idea/
+.vscode/
+*.swp
+
+# Release builder output
+dist/
