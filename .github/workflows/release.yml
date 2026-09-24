@@ -1,0 +1,108 @@
+name: Release / Deploy
+
+# Builds the cPanel-ready upload.zip on every tag (v*) or manual run and
+# attaches it as a downloadable artifact (upload.zip update path).
+#
+# OPTIONAL hands-free FTP/FTPS/SFTP deploy to a cPanel host:
+#   Repo → Settings → Secrets and variables → Actions
+#     Variables (not secrets):  CPANEL_DEPLOY_ENABLED = true
+#     Secrets:  CPANEL_FTP_HOST    e.g. ftp://ftp.yourdomain.com:21 (or sftp://host:22)
+#               CPANEL_FTP_USER    your cPanel username
+#               CPANEL_FTP_PASS    your cPanel/FTP password
+#     Optional:
+#               UPDATE_URL         https://yourdomain.com/update.php
+#               UPDATE_TOKEN       value of public_html/.update-token
+#   When CPANEL_DEPLOY_ENABLED is true, the deploy job mirrors dist/staging/
+#   to your home directory and (if UPDATE_URL/UPDATE_TOKEN are set) triggers
+#   update.php to run migrations + caches automatically.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, curl, dom, exif, fileinfo, gd, intl, mbstring, openssl, pdo_mysql, pdo_sqlite, sqlite3, zip
+          coverage: none
+
+      - name: Build release package
+        run: php deploy/build-release.php
+
+      - name: Upload artifact (upload.zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptvellum-upload-${{ github.ref_name }}
+          path: dist/promptvellum-upload.zip
+          retention-days: 90
+
+      - name: Attach to GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/promptvellum-upload.zip
+          generate_release_notes: true
+
+  deploy:
+    needs: build
+    if: vars.CPANEL_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, curl, dom, exif, fileinfo, gd, intl, mbstring, openssl, pdo_mysql, pdo_sqlite, sqlite3, zip
+          coverage: none
+
+      - name: Rebuild release tree (no zip, for FTP mirroring)
+        run: php deploy/build-release.php --no-zip
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Mirror core/ to cPanel home
+        env:
+          CPANEL_FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          CPANEL_FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          CPANEL_FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
+        run: |
+          lftp "$CPANEL_FTP_HOST" -u "$CPANEL_FTP_USER","$CPANEL_FTP_PASS" -e "
+            set ftp:ssl-allow yes;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            mirror -R --parallel=8 --delete --verbose dist/staging/core core;
+            bye"
+
+      - name: Mirror public_html/ to cPanel docroot
+        env:
+          CPANEL_FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          CPANEL_FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          CPANEL_FTP_PASS: ${{ secrets.CPANEL_FTP_PASS }}
+        run: |
+          lftp "$CPANEL_FTP_HOST" -u "$CPANEL_FTP_USER","$CPANEL_FTP_PASS" -e "
+            set ftp:ssl-allow yes;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            mirror -R --parallel=4 --verbose dist/staging/public_html public_html;
+            bye"
+
+      - name: Trigger update.php (migrations + caches)
+        if: vars.UPDATE_URL != ''
+        env:
+          UPDATE_URL: ${{ vars.UPDATE_URL }}
+          UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        run: |
+          sleep 15   # let the FTP session settle
+          curl -fsS -X POST -d "token=$UPDATE_TOKEN" "$UPDATE_URL" | tail -40
