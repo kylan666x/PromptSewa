@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/*
+ * PromptVellum design system — DESIGN.md tokens.
+ * Warm paper light theme, near-black "inkwell" cards, saffron accent.
+ * Fonts: Space Grotesk (display/UI) + JetBrains Mono (code/labels).
+ */
+@theme {
+    --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --color-paper: #fafaf7;
+    --color-paper-deep: #f2f1ec;
+    --color-ink: #171715;
+    --color-ink-soft: #26261f;
+    --color-inkline: #2f2f28;
+    --color-saffron: #f5c518;
+    --color-saffron-deep: #e0a800;
+    --color-creak: #6b6a63;
+
+    --shadow-card: 0 1px 2px rgb(23 23 21 / 0.06), 0 8px 24px -12px rgb(23 23 21 / 0.12);
+    --shadow-card-hover: 0 2px 4px rgb(23 23 21 / 0.08), 0 16px 40px -16px rgb(23 23 21 / 0.2);
+}
+
+/* Theme the browser chrome the design forgot (craft-floor: browser surfaces). */
+::selection {
+    background: rgb(245 197 24 / 0.35);
+    color: var(--color-ink);
+}
+
+[x-cloak] {
+    display: none !important;
+}

@@ -1,0 +1,76 @@
+# =====================================================================
+# PromptVellum — public_html/.htaccess  (cPanel routing trick, PRD §6)
+# ---------------------------------------------------------------------
+# Layout on the server:
+#   /home/CPANELUSER/core/          <- whole Laravel app (hidden from web)
+#   /home/CPANELUSER/public_html/   <- index.php, .htaccess, .user.ini,
+#                                      install.php (delete after install)
+#
+# The front controller is THIS directory's index.php — it requires the
+# app from the sibling core/ folder via PHP (always allowed, regardless
+# of rewrite capabilities). Static assets are served from public_html
+# when present (install.php / update.php copy them there) with rewrites
+# into ../core/ as the fallback for manual deployments.
+# Works identically on Apache and LiteSpeed.
+# =====================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # -----------------------------------------------------------------
+    # 1) Real files/folders in public_html (copied build assets,
+    #    favicon, robots.txt, the storage symlink created by the
+    #    installer) are served as-is — no rewrite, no PHP hit.
+    # -----------------------------------------------------------------
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # -----------------------------------------------------------------
+    # 2) Media served through Laravel's storage symlink, if the
+    #    installer created it (core/public/storage -> storage/app/public).
+    #    Falls through to rule 3 when the symlink does not exist.
+    # -----------------------------------------------------------------
+    RewriteRule ^storage/(.*)$ ../core/public/storage/$1 [L]
+
+    # -----------------------------------------------------------------
+    # 3) Direct mapping of the real storage dir + Vite build output
+    #    (used when build/ was NOT copied into public_html — e.g. after
+    #    a manual zip upload without running update.php).
+    # -----------------------------------------------------------------
+    RewriteRule ^storage/(.*)$ ../core/storage/app/public/$1 [L]
+    RewriteRule ^build/(.*)$ ../core/public/build/$1 [L]
+
+    # -----------------------------------------------------------------
+    # 4) Everything else -> the docroot front controller (index.php in
+    #    THIS directory), which boots the hidden core/ application.
+    #    Query strings and the Authorization header are preserved.
+    # -----------------------------------------------------------------
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# ---------------------------------------------------------------------
+# Hardening: block sensitive dotfiles (defense in depth — .env lives
+# outside the docroot; this also hides .update-token from the web).
+# ---------------------------------------------------------------------
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# ---------------------------------------------------------------------
+# Charset: cPanel defaults can be off; be explicit for Blade output.
+# ---------------------------------------------------------------------
+AddDefaultCharset utf-8
+
+# Gzip text assets if the host has mod_deflate (cheap bandwidth win).
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Long-cache immutable Vite builds (hashed filenames = safe to cache hard).
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>
