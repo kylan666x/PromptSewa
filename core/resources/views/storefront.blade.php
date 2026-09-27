@@ -101,6 +101,27 @@
         @endif
     </section>
 
+    {{-- Image prompt gallery — PromptPlum-style visual wall --}}
+    @if ($imagePrompts->isNotEmpty())
+        <section class="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight text-ink">Image prompt gallery</h2>
+                    <p class="mt-1 text-sm text-ink/60">See the result first — the prompt is right on the card.</p>
+                </div>
+                <a href="{{ route('library.index', ['type' => 'image']) }}" class="shrink-0 text-sm font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 transition hover:text-saffron-deep">
+                    Browse all image prompts →
+                </a>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                @foreach ($imagePrompts as $prompt)
+                    <x-image-prompt-card :prompt="$prompt"/>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     {{-- Categories — paper tiles --}}
     @if ($categories->isNotEmpty())
         <section class="mx-auto max-w-7xl px-4 pt-16 sm:px-6">

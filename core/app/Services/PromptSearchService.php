@@ -19,16 +19,18 @@ class PromptSearchService
 
     /**
      * Search public prompts, or list the newest ones for a blank term.
+     * Optional $type narrows to one prompt type (text|image|video).
      *
      * @return LengthAwarePaginator<int, Prompt>
      */
-    public function search(string $term, int $perPage = 12): LengthAwarePaginator
+    public function search(string $term, int $perPage = 12, ?string $type = null): LengthAwarePaginator
     {
         $term = trim($term);
 
         if ($term === '') {
             return Prompt::query()
                 ->publicListing()
+                ->when($type !== null, fn ($query) => $query->where('type', $type))
                 ->with(['category', 'creator', 'latestVersion'])
                 ->latest()
                 ->paginate($perPage);
@@ -37,6 +39,7 @@ class PromptSearchService
         return Prompt::search($term)
             ->query(fn ($query) => $query
                 ->publicListing()
+                ->when($type !== null, fn ($q) => $q->where('type', $type))
                 ->with(['category', 'creator', 'latestVersion']))
             ->paginate($perPage);
     }

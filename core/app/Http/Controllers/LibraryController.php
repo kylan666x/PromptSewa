@@ -23,12 +23,13 @@ class LibraryController extends Controller
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:'.PromptSearchService::MAX_TERM_LENGTH],
+            'type' => ['nullable', 'in:text,image,video'],
         ]);
 
         $term = trim($validated['q'] ?? '');
 
         return view('library', [
-            'prompts' => $this->search->search($term),
+            'prompts' => $this->search->search($term, 12, $validated['type'] ?? null),
             'categories' => $this->sidebarCategories(),
             'category' => null,
             'q' => $term,

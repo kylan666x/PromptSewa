@@ -21,6 +21,24 @@ window.Alpine = Alpine;
  * interaction. Typed variable values instantly re-render the preview;
  * copying always copies the rendered text.
  */
+/**
+ * Card-level copy: gallery cards expose the raw prompt body with a one-click
+ * copy button (PromptPlum pattern — the user sees the prompt before clicking
+ * through). Free prompts only; paid cards deep-link to the detail page.
+ */
+Alpine.data('promptCopy', (rawBody) => ({
+    copied: false,
+
+    copy() {
+        navigator.clipboard.writeText(rawBody).then(() => {
+            this.copied = true;
+            setTimeout(() => {
+                this.copied = false;
+            }, 2000);
+        });
+    },
+}));
+
 Alpine.data('promptViewer', (rawBody, names) => ({
     copied: false,
     variables: Object.fromEntries((names || []).map((name) => [name, ''])),

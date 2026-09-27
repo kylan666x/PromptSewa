@@ -92,5 +92,5 @@ test('reporting respects prompt ownership for private listings', function () {
         ])
         ->assertNotFound();
 
-    $this->assertDatabaseCount('prompt_reports', 0alam);
+    $this->assertDatabaseCount('prompt_reports', 0);
 });
