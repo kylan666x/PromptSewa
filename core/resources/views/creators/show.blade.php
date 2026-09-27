@@ -2,51 +2,92 @@
     @php
         /** @var \App\Models\User $creator */
         /** @var \Illuminate\Pagination\LengthAwarePaginator $prompts */
+        $isOwner = auth()->check() && auth()->id() === $creator->id;
+        // Deterministic gradient banner when no custom upload exists.
+        $bannerHues = [
+            'from-saffron via-amber-400 to-orange-500',
+            'from-ink via-stone-700 to-saffron-deep',
+            'from-orange-300 via-saffron to-amber-500',
+            'from-stone-500 via-ink-soft to-ink',
+            'from-yellow-300 via-saffron to-rose-400',
+            'from-emerald-400 via-teal-500 to-saffron',
+        ];
+        $bannerClass = $creator->banner_path
+            ? null
+            : $bannerHues[$creator->id % count($bannerHues)];
     @endphp
 
-    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        {{-- Profile header — inkwell panel --}}
-        <div class="rounded-3xl bg-ink p-8 shadow-card-hover sm:p-10">
-            <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
-                <span class="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-saffron text-3xl font-bold text-ink">
-                    {{ mb_substr($creator->name, 0, 1) }}
+    {{-- Cover banner — edge-to-edge inside the content column, X/Facebook-style --}}
+    <div class="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
+        <div class="relative h-40 overflow-hidden rounded-3xl shadow-card sm:h-56">
+            @if ($creator->banner_path)
+                <img src="{{ Storage::url($creator->banner_path) }}" alt="Banner of {{ $creator->name }}"
+                     class="absolute inset-0 size-full object-cover">
+            @elseif ($bannerClass)
+                <div class="absolute inset-0 bg-gradient-to-br {{ $bannerClass }}">
+                    <div class="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_2px_2px,rgba(255,255,255,0.35)_2px,transparent_0)] [background-size:28px_28px]"></div>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="mx-auto max-w-5xl px-4 sm:px-6">
+        {{-- Identity row — avatar overlapping the banner like X.com --}}
+        <div class="relative -mt-12 flex flex-col gap-4 px-1 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
+            <div class="flex items-end gap-4">
+                <span class="flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
+                    @if ($creator->avatar_path)
+                        <img src="{{ Storage::url($creator->avatar_path) }}" alt="" class="size-full rounded-[20px] object-cover">
+                    @else
+                        {{ mb_substr($creator->name, 0, 1) }}
+                    @endif
                 </span>
-                <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <h1 class="text-3xl font-bold tracking-tight text-paper">{{ $creator->name }}</h1>
+                <div class="pb-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{{ $creator->name }}</h1>
+                        <x-verified-badge :user="$creator" size="lg"/>
+                    </div>
+                    <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-ink/50">
                         @if ($creator->isAtLeast(\App\Models\User::ROLE_CREATOR))
-                            <span class="rounded-full bg-saffron px-3 py-1 font-mono text-xs font-bold text-ink">Creator</span>
+                            <span class="rounded-full bg-saffron/20 px-2.5 py-0.5 font-mono text-[11px] font-bold text-saffron-deep">Creator</span>
                         @endif
                         @if ($creator->isModerator())
-                            <span class="rounded-full border border-paper/30 px-3 py-1 font-mono text-xs font-medium text-paper/80">Moderator</span>
+                            <span class="rounded-full border border-ink/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-ink/70">Staff</span>
                         @endif
-                    </div>
-                    @if ($creator->bio)
-                        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-paper/70">{{ $creator->bio }}</p>
-                    @endif
-                    <dl class="mt-4 flex flex-wrap gap-x-8 gap-y-2 font-mono text-sm">
-                        <div class="flex items-baseline gap-2">
-                            <dt class="text-paper/50">Prompts</dt>
-                            <dd class="font-bold text-saffron">{{ number_format($stats['prompts']) }}</dd>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <dt class="text-paper/50">Total sales</dt>
-                            <dd class="font-bold text-saffron">{{ number_format($stats['total_sales']) }}</dd>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <dt class="text-paper/50">Joined</dt>
-                            <dd class="text-paper/80">{{ $stats['joined']->format('M Y') }}</dd>
-                        </div>
-                    </dl>
+                        <span class="font-mono text-xs">Joined {{ $stats['joined']->format('M Y') }}</span>
+                    </p>
                 </div>
             </div>
+
+            @if ($isOwner)
+                <a href="{{ route('dashboard') }}"
+                   class="shrink-0 rounded-full border-2 border-ink/80 bg-white px-5 py-2 text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper hover:shadow-card">
+                    Edit profile
+                </a>
+            @endif
+        </div>
+
+        {{-- Bio + stats strip --}}
+        <div class="mt-4 px-1">
+            @if ($creator->bio)
+                <p class="max-w-2xl text-[15px] leading-relaxed text-ink/80">{{ $creator->bio }}</p>
+            @endif
+
+            <dl class="mt-4 flex flex-wrap gap-x-8 gap-y-2">
+                <div class="flex items-baseline gap-1.5">
+                    <dd class="text-lg font-bold text-ink">{{ number_format($stats['prompts']) }}</dd>
+                    <dt class="text-sm text-ink/50">{{ \Illuminate\Support\Str::plural('prompt', $stats['prompts']) }}</dt>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                    <dd class="text-lg font-bold text-ink">{{ number_format($stats['total_sales']) }}</dd>
+                    <dt class="text-sm text-ink/50">{{ \Illuminate\Support\Str::plural('sale', $stats['total_sales']) }}</dt>
+                </div>
+            </dl>
         </div>
 
         {{-- Catalog --}}
-        <section class="mt-10" aria-label="Prompts by {{ $creator->name }}">
-            <div class="flex items-end justify-between gap-4">
-                <h2 class="text-2xl font-bold tracking-tight text-ink">Prompts by {{ $creator->name }}</h2>
-            </div>
+        <section class="mt-8 pb-16" aria-label="Prompts by {{ $creator->name }}">
+            <h2 class="border-b border-ink/10 pb-3 font-mono text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">Prompts</h2>
 
             @if ($prompts->isEmpty())
                 <div class="mt-6">

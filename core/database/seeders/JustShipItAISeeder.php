@@ -36,6 +36,8 @@ class JustShipItAISeeder extends Seeder
         );
 
         if ($user->prompts()->exists()) {
+            // Ensure the flagship account always carries the verified badge.
+            $user->forceFill(['is_verified' => true])->save();
             $this->command?->warn('JustShipItAISeeder skipped — prompts already exist for this account.');
 
             return;
@@ -181,5 +183,8 @@ class JustShipItAISeeder extends Seeder
 
         $this->command?->info("JustShipItAI seeded: {$created} flagship prompts published.");
         $this->command?->line('  Login: justshipitai@gmail.com / JustShipIt!2026');
+
+        // Flagship account ships verified out of the box.
+        $user->forceFill(['is_verified' => true])->save();
     }
 }

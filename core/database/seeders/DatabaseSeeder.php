@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
 
         // Default AI-tool registry (ChatGPT, Gemini, …) for logo management.
         $this->call(ToolLogoSeeder::class);
+        $this->call(BulkCatalogSeeder::class);
 
         // A secondary test user for auth flows (kept from the skeleton).
         // firstOrCreate so re-seeding never collides on the unique email.

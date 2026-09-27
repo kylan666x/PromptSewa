@@ -70,6 +70,16 @@ class UpdateFromRelease extends Command
             Artisan::call('migrate', ['--force' => true]);
             $this->line('  migrate ✓ '.trim(Artisan::output()));
 
+            // Idempotent seeders: DemoContent/BulkCatalog/JustShipIt all guard
+            // on existing rows, so this is a no-op for installs that already
+            // have the catalog and fills in new content on upgrades.
+            try {
+                Artisan::call('db:seed', ['--force' => true]);
+                $this->line('  seed ✓ '.trim(Artisan::output()));
+            } catch (Throwable $e) {
+                $this->warn('  seed failed: '.$e->getMessage());
+            }
+
             foreach (['config:cache', 'route:cache', 'view:cache'] as $cmd) {
                 try {
                     Artisan::call($cmd);

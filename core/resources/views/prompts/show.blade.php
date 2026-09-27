@@ -159,19 +159,25 @@
                             </div>
                         </div>
                     @elseif ($latest)
-                        {{-- Locked teaser for paid prompts --}}
-                        <div class="relative mt-3 overflow-hidden rounded-2xl border border-ink/10">
-                            <pre class="max-h-64 overflow-hidden whitespace-pre-wrap bg-ink p-5 font-mono text-[13px] leading-relaxed text-paper/70">{{ $teaser }}</pre>
-                            <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/90 to-ink/40"></div>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-                                <svg class="size-6 text-saffron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
-                                </svg>
-                                <p class="text-sm font-semibold text-paper">The full prompt is locked</p>
-                                <p class="max-w-xs text-xs leading-relaxed text-paper/60">
+                        {{-- Locked teaser for paid prompts: overlay content sits in
+                             normal flow under a fixed-height teaser, so nothing can
+                             spill outside the rounded box on narrow screens. --}}
+                        <div class="mt-3 overflow-hidden rounded-2xl bg-ink shadow-card">
+                            <div class="relative max-h-56 overflow-hidden">
+                                <pre class="whitespace-pre-wrap p-5 font-mono text-[13px] leading-relaxed text-paper/70">{{ $teaser }}</pre>
+                                <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink to-transparent"></div>
+                            </div>
+                            <div class="flex flex-col items-center gap-3 border-t border-paper/10 px-6 py-6 text-center">
+                                <span class="flex size-10 items-center justify-center rounded-full bg-saffron/20">
+                                    <svg class="size-5 text-saffron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                                    </svg>
+                                </span>
+                                <p class="text-sm font-bold text-paper">The full prompt is locked</p>
+                                <p class="max-w-sm text-xs leading-relaxed text-paper/60">
                                     Purchase includes the complete prompt, all future versions, and usage tips.
                                 </p>
-                                <span class="rounded-full bg-saffron px-3.5 py-1 font-mono text-xs font-bold text-ink">{{ $prompt->priceLabel() }}</span>
+                                <span class="rounded-full bg-saffron px-4 py-1.5 font-mono text-xs font-bold text-ink shadow-[0_3px_0_0_#a16207]">{{ $prompt->priceLabel() }}</span>
                             </div>
                         </div>
                     @endif
@@ -241,14 +247,14 @@
                                     @csrf
                                     <button
                                         type="submit"
-                                        class="w-full rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-saffron-deep"
+                                        class="w-full rounded-full bg-saffron px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none"
                                     >
                                         Buy now — {{ $prompt->priceLabel() }}
                                     </button>
                                 </form>
                             @else
                                 <a href="{{ route('login') }}"
-                                   class="flex w-full items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-saffron-deep"
+                                   class="flex w-full items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none"
                                 >
                                     Log in to buy — {{ $prompt->priceLabel() }}
                                 </a>

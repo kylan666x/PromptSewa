@@ -60,7 +60,7 @@
         {{-- Auth area --}}
         <div class="flex shrink-0 items-center gap-2">
             @auth
-                <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-saffron-deep">+ Add prompt</a>
+                <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">+ Add prompt</a>
                 <a href="{{ route('purchases.index') }}" class="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink sm:block">Library</a>
                 <a href="{{ route('dashboard') }}" class="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink sm:block">Dashboard</a>
                 @if (auth()->user()->isModerator())
@@ -73,7 +73,7 @@
             @endauth
             @guest
                 <a href="{{ route('login') }}" class="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink sm:block">Log in</a>
-                <a href="{{ route('register') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-saffron-deep">Sign up</a>
+                <a href="{{ route('register') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">Sign up</a>
             @endguest
         </div>
     </div>

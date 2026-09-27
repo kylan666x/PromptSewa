@@ -56,4 +56,16 @@ class UserAdminController extends Controller
 
         return back()->with('success', "{$user->name} is now a {$validated['role']}.");
     }
+
+    /** Toggle the verified badge (admin only). */
+    public function toggleVerified(Request $request, User $user)
+    {
+        abort_unless($request->user()?->isAdmin(), 403, 'Only admins can issue verified badges.');
+
+        $user->fill(['is_verified' => ! $user->is_verified])->save();
+
+        $state = $user->is_verified ? 'verified ✓' : 'unverified';
+
+        return back()->with('success', "{$user->name} is now {$state}.");
+    }
 }

@@ -24,13 +24,17 @@
                     <th class="hidden px-5 py-3 font-semibold sm:table-cell">Prompts</th>
                     <th class="hidden px-5 py-3 font-semibold md:table-cell">Joined</th>
                     <th class="px-5 py-3 font-semibold">Role</th>
+                    <th class="px-5 py-3 font-semibold">Verified</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-ink/10 bg-white">
                 @forelse ($users as $user)
                     <tr class="transition hover:bg-paper-deep">
                         <td class="px-5 py-3.5">
-                            <p class="font-medium text-ink">{{ $user->name }}</p>
+                            <p class="flex items-center gap-1.5 font-medium text-ink">
+                                {{ $user->name }}
+                                <x-verified-badge :user="$user" size="xs"/>
+                            </p>
                             <p class="text-xs text-ink0">{{ $user->email }}</p>
                         </td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $user->prompts_count }}</td>
@@ -51,9 +55,24 @@
                                 <span class="rounded-md bg-paper-deep px-2 py-0.5 text-xs font-medium text-ink/80">{{ ucfirst($user->role) }}</span>
                             @endif
                         </td>
+                        <td class="px-5 py-3.5">
+                            @if (auth()->user()->isAdmin())
+                                <form method="POST" action="{{ route('admin.users.verified', $user) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                            class="rounded-lg px-2.5 py-1 text-xs font-semibold transition {{ $user->is_verified ? 'bg-saffron/25 text-saffron-deep hover:bg-saffron/40' : 'border border-ink/10 text-ink/60 hover:border-saffron-deep hover:text-saffron-deep' }}"
+                                            @if ($user->is_verified) title="Revoke verified badge" @else title="Issue verified badge" @endif>
+                                        {{ $user->is_verified ? '✓ Verified' : 'Verify' }}
+                                    </button>
+                                </form>
+                            @else
+                                <x-verified-badge :user="$user" size="xs"/>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
+                    <tr><td colspan="5" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
                 @endforelse
             </tbody>
         </table>

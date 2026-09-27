@@ -38,7 +38,7 @@
                     <span class="flex size-6 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-saffron transition group-hover/creator:bg-saffron group-hover/creator:text-ink">
                         {{ mb_substr($prompt->creator->name, 0, 1) }}
                     </span>
-                    <span class="text-xs text-ink/60 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">{{ $prompt->creator->name }}</span>
+                    <span class="flex items-center gap-1 text-xs text-ink/60 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">{{ $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="xs"/></span>
                 </a>
             @else
                 <div class="flex items-center gap-2">

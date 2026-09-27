@@ -47,7 +47,7 @@
             </div>
         @endif
 
-        <form method="post" action="{{ route('dashboard.update.run') }}" enctype="multipart/form-data" class="mt-8 rounded-2xl border border-ink/10 bg-white p-6">
+        <form method="post" action="{{ route('admin.update.run') }}" enctype="multipart/form-data" class="mt-8 rounded-2xl border border-ink/10 bg-white p-6">
             @csrf
             <label for="release_zip" class="block text-sm font-semibold text-ink/90">Release zip</label>
             <input id="release_zip" type="file" name="release_zip" accept=".zip" required

@@ -130,6 +130,7 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     // User management (admin only for role changes).
     Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
     Route::patch('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
+    Route::patch('/users/{user}/verified', [UserAdminController::class, 'toggleVerified'])->name('users.verified');
 
     // Abuse reports triage ("Report this prompt").
     Route::get('/reports', [PromptReportAdminController::class, 'index'])->name('reports.index');

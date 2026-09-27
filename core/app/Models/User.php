@@ -33,6 +33,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_verified',
         'xp',
         'banner_path',
         'avatar_path',
@@ -61,6 +62,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'xp' => 'integer',
+            'is_verified' => 'boolean',
         ];
     }
 

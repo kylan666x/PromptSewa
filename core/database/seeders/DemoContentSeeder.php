@@ -413,6 +413,9 @@ class DemoContentSeeder extends Seeder
             ]);
         }
 
+        // Bulk catalog expansion lives in BulkCatalogSeeder — it runs
+        // independently so live servers can pick it up through db:seed.
+
         $this->command?->info('Demo content seeded:');
         $this->command?->line('  Admin login:    admin@promptsewa.test / password');
         $this->command?->line('  Creator logins: bibek@ / maya@ / dorje@promptsewa.test / password');
