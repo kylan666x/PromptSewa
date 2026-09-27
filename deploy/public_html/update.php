@@ -135,7 +135,7 @@ function recurse_rmdir(string $dir): void
  * Update zips may ship core/ ONLY (no docroot files) — the docroot
  * files are already installed and never change between updates.
  *
- * @return string[] human-readable log lines
+ * @return list<array{0: string, 1: string}> Array of [level, line] pairs.
  */
 function extract_release_zip(string $zipPath, string $core, string $docroot): array
 {
@@ -173,7 +173,7 @@ function extract_release_zip(string $zipPath, string $core, string $docroot): ar
             throw new RuntimeException('Zip extraction failed — check disk quota and permissions.');
         }
         $zip->close();
-        $log[] = 'ok|Zip extracted to a staging directory';
+        $log[] = ['ok', 'Zip extracted to a staging directory'];
 
         // Move core/ over the existing core (preserve live .env etc. — the
         // release ships .env.example only, and copy() overwrites binaries).
@@ -181,13 +181,13 @@ function extract_release_zip(string $zipPath, string $core, string $docroot): ar
         $srcPublic = $staging.DIRECTORY_SEPARATOR.'public_html';
 
         recurse_copy($srcCore, $core);
-        $log[] = 'ok|core/ merged over the existing installation';
+        $log[] = ['ok', 'core/ merged over the existing installation'];
 
         if (is_dir($srcPublic)) {
             recurse_copy($srcPublic, $docroot);
-            $log[] = 'ok|public_html/ merged into the docroot';
+            $log[] = ['ok', 'public_html/ merged into the docroot'];
         } else {
-            $log[] = 'ok|core-only update zip — docroot files untouched';
+            $log[] = ['ok', 'core-only update zip — docroot files untouched'];
         }
     } finally {
         recurse_rmdir($staging);
@@ -196,7 +196,7 @@ function extract_release_zip(string $zipPath, string $core, string $docroot): ar
     return $log;
 }
 
-/** @return string[] */
+/** @return list<array{0: string, 1: string}> Array of [level, line] pairs. */
 function run_update(string $core): array
 {
     $log = [];

@@ -27,25 +27,31 @@ class PromptController extends Controller
 
         $isOwner = $viewer !== null && $viewer->id === $prompt->user_id;
 
+        // Staff preview escape hatch: ?preview=1 works only for moderators AND
+        // only when arriving from the admin panel (referer check). Staff can
+        // never browse the storefront into paid content otherwise.
+        $staffPreview = $viewer !== null
+            && $viewer->isModerator()
+            && $request->boolean('preview')
+            && str_contains((string) $request->header('referer'), '/admin');
+
         return view('prompts.show', [
             'prompt' => $prompt,
             'canEdit' => $viewer !== null && Gate::forUser($viewer)->allows('update', $prompt),
-            'canViewFullBody' => $this->canViewFullBody($viewer, $prompt, $isOwner),
+            'canViewFullBody' => $staffPreview || $this->canViewFullBody($viewer, $prompt, $isOwner),
         ]);
     }
 
     /**
      * The prompt body is the product: it renders in full for free listings,
-     * the owner, moderators, and verified buyers. Everyone else gets a
-     * locked teaser on paid listings.
+     * the owner, and verified buyers. Everyone else gets a locked teaser on
+     * paid listings — INCLUDING staff. Staff moderation happens through the
+     * admin panel (which uses the full-body pipeline), never by browsing the
+     * storefront for free.
      */
     private function canViewFullBody(?object $viewer, Prompt $prompt, bool $isOwner): bool
     {
         if ($prompt->price_cents === 0 || $isOwner) {
-            return true;
-        }
-
-        if ($viewer !== null && $viewer->isModerator()) {
             return true;
         }
 

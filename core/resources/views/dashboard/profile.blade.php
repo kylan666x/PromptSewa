@@ -1,0 +1,97 @@
+<x-app-layout>
+    @php /** @var \App\Models\User $user */ @endphp
+
+    <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <header>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-saffron-deep">Your account</p>
+            <h1 class="mt-1 text-3xl font-bold tracking-tight text-ink">Edit profile</h1>
+            <p class="mt-1 text-sm text-ink/60">This is what buyers see at <a href="{{ route('creators.show', $user) }}" class="text-saffron-deep hover:underline decoration-saffron decoration-2 underline-offset-4">{{ url('/creators/'.$user->name) }}</a>.</p>
+        </header>
+
+        @if (session('success'))
+            <div class="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-800">{{ session('success') }}</div>
+        @endif
+
+        <form method="POST" action="{{ route('dashboard.profile.update') }}" enctype="multipart/form-data" class="mt-8 space-y-6">
+            @csrf
+
+            {{-- Identity --}}
+            <section class="rounded-2xl border border-ink/10 bg-white p-6">
+                <h2 class="text-sm font-semibold text-ink">Identity</h2>
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <x-form.label name="name" label="Display name" :required="true"/>
+                        <div class="mt-1.5">
+                            <x-form.input name="name" :value="old('name', $user->name)" :required="true" maxlength="60"/>
+                        </div>
+                        @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <x-form.label name="bio" label="Bio" hint="Up to 400 characters — who are you, what do you build?"/>
+                        <div class="mt-1.5">
+                            <textarea id="bio" name="bio" rows="4" maxlength="400"
+                                      class="block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink placeholder-creak outline-none transition focus:border-saffron-deep"
+                                      placeholder="Prompt engineer, designer, founder…">{{ old('bio', $user->bio) }}</textarea>
+                        </div>
+                        @error('bio') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </section>
+
+            {{-- Images --}}
+            <section class="rounded-2xl border border-ink/10 bg-white p-6">
+                <h2 class="text-sm font-semibold text-ink">Photos</h2>
+                <p class="mt-1 text-xs text-ink/50">JPG/PNG/WebP. Files are compressed automatically — no need to shrink them first.</p>
+
+                <div class="mt-4 grid gap-6 sm:grid-cols-2">
+                    <div>
+                        <span class="block text-xs font-semibold text-ink/70">Avatar</span>
+                        <div class="mt-2 flex items-center gap-3">
+                            <span class="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-saffron text-xl font-bold text-ink">
+                                @if ($user->avatar_path)
+                                    <img src="{{ Storage::url($user->avatar_path) }}" alt="" class="size-full object-cover">
+                                @else
+                                    {{ mb_substr($user->name, 0, 1) }}
+                                @endif
+                            </span>
+                            <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"
+                                   class="block w-full cursor-pointer rounded-xl border border-ink/10 bg-paper-deep px-2.5 py-1.5 text-xs text-ink/80 file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-paper-deep file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-ink hover:file:bg-ink/10">
+                        </div>
+                        @if ($user->avatar_path)
+                            <label class="mt-2 flex items-center gap-2 text-xs text-ink/60">
+                                <input type="checkbox" name="remove_avatar" value="1" class="size-3.5 rounded border-ink/20 accent-saffron-deep"> Remove avatar
+                            </label>
+                        @endif
+                        @error('avatar') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <span class="block text-xs font-semibold text-ink/70">Cover banner</span>
+                        <div class="mt-2 overflow-hidden rounded-xl border border-ink/10">
+                            @if ($user->banner_path)
+                                <img src="{{ Storage::url($user->banner_path) }}" alt="" class="h-20 w-full object-cover">
+                            @else
+                                <div class="flex h-20 items-center justify-center bg-gradient-to-br from-saffron/60 to-amber-200/40 font-mono text-[11px] text-ink/40">no banner yet</div>
+                            @endif
+                        </div>
+                        <input type="file" name="banner" accept="image/jpeg,image/png,image/webp"
+                               class="mt-2 block w-full cursor-pointer rounded-xl border border-ink/10 bg-paper-deep px-2.5 py-1.5 text-xs text-ink/80 file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-paper-deep file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-ink hover:file:bg-ink/10">
+                        @if ($user->banner_path)
+                            <label class="mt-2 flex items-center gap-2 text-xs text-ink/60">
+                                <input type="checkbox" name="remove_banner" value="1" class="size-3.5 rounded border-ink/20 accent-saffron-deep"> Remove banner
+                            </label>
+                        @endif
+                        @error('banner') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </section>
+
+            <div class="flex items-center gap-3">
+                <button type="submit" class="rounded-full bg-saffron px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">
+                    Save changes
+                </button>
+                <a href="{{ route('creators.show', $user) }}" class="text-sm font-medium text-ink/60 transition hover:text-ink">View public profile →</a>
+            </div>
+        </form>
+    </div>
+</x-app-layout>

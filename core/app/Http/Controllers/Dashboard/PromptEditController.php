@@ -48,6 +48,22 @@ class PromptEditController extends Controller
         $validated = $request->fields();
         $user = $request->user();
 
+        // Cover art replacement (image prompts only, GD-compressed).
+        $uploader = app(\App\Services\ImageUploadService::class);
+        if ($request->boolean('remove_cover') && $prompt->cover_image_path) {
+            $uploader->delete($prompt->cover_image_path);
+            $prompt->cover_image_path = null;
+        }
+        if ($request->hasFile('cover_image')) {
+            try {
+                $newPath = $uploader->store($request->file('cover_image'), 'cover');
+            } catch (\RuntimeException $e) {
+                return back()->withInput()->withErrors(['cover_image' => $e->getMessage()]);
+            }
+            $uploader->delete($prompt->cover_image_path);
+            $prompt->cover_image_path = $newPath;
+        }
+
         DB::transaction(function () use ($validated, $user, $request, $prompt): void {
             // Listing metadata updates in place.
             $prompt->fill([
@@ -59,6 +75,7 @@ class PromptEditController extends Controller
                 'search_text' => $request->searchText(),
                 'license_tier' => $validated['license_tier'],
                 'price_cents' => $validated['price_cents'],
+                'cover_image_path' => $prompt->cover_image_path,
             ])->save();
 
             // Append-only body history: next immutable version row.

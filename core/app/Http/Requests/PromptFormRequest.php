@@ -47,6 +47,12 @@ class PromptFormRequest extends FormRequest
             'changelog' => ['nullable', 'string', 'max:500'],
             'price_npr' => ['required', 'integer', 'min:0', 'max:50000'],
             'visibility' => ['required', 'string', 'in:'.Prompt::VISIBILITY_PUBLIC.','.Prompt::VISIBILITY_PRIVATE],
+            // Cover art: image prompts only, validated harder in the controller
+            // (GD re-encode). 8 MB here is a pre-filter; compression does the rest.
+            'cover_image' => ['nullable', 'image', 'max:8192',
+                Rule::when(fn () => $this->input('type') !== Prompt::TYPE_IMAGE, ['prohibited']),
+            ],
+            'remove_cover' => ['nullable', 'boolean'],
         ];
     }
 

@@ -113,6 +113,9 @@ core/app/Models/Prompt.php                        + ratings()
 core/app/Models/User.php                          + is_verified (fillable, cast)
 core/app/Services/PromptSearchService.php         + $type param, searchCreators()
 core/database/migrations/2026_09_27_000100_add_is_verified_to_users_table.php  NEW
+core/app/Services/ImageUploadService.php       NEW (GD compress & re-encode)
+core/app/Http/Controllers/Dashboard/ProfileController.php  NEW (profile editing)
+core/resources/views/dashboard/profile.blade.php  NEW
 core/database/migrations/2026_09_28_000100_create_ratings_table.php            NEW
 core/database/seeders/BulkCatalogSeeder.php       NEW (240 prompts, no auto-verify)
 core/database/seeders/{DatabaseSeeder,DemoContentSeeder,JustShipItAISeeder}.php

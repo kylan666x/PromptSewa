@@ -85,7 +85,10 @@ test('prompt cards show a cover image when present and a placeholder otherwise',
     $content = $response->getContent();
 
     expect(str_contains($content, '/storage/covers/demo.jpg'))->toBeTrue()
-        ->and(str_contains($content, 'BP'))->toBeTrue(); // deterministic initials for the placeholder "Bare Probe"
+        // Generated SVG title banner: the prompt name is typeset into the
+        // cover artwork for prompts without an uploaded image.
+        ->and(str_contains($content, 'data:image/svg+xml'))->toBeTrue()
+        ->and(str_contains($content, 'Bare'))->toBeTrue();
 });
 
 test('navbar shows login and register links for guests, dashboard for users', function () {

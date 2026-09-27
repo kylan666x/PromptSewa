@@ -31,7 +31,7 @@
             </a>
         </header>
 
-        <form method="POST" action="{{ route('dashboard.prompts.update', $prompt) }}" class="mt-8" @submit="onSubmit()">
+        <form method="POST" enctype="multipart/form-data" action="{{ route('dashboard.prompts.update', $prompt) }}" class="mt-8" @submit="onSubmit()">
             @csrf
             @method('PUT')
             <input type="hidden" name="type" :value="type">
@@ -195,6 +195,25 @@
                 </div>
 
                 <aside class="space-y-5 lg:sticky lg:top-24 lg:self-start">
+                    <div class="rounded-2xl border border-ink/10 bg-white p-5" x-show="type === 'image'" x-cloak>
+                        <h3 class="text-sm font-semibold text-ink">Cover image</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-ink/50">Show buyers the result your prompt produces. JPG/PNG/WebP — large files are compressed automatically.</p>
+                        @if ($prompt->cover_image_path)
+                            <div class="mt-3 overflow-hidden rounded-xl border border-ink/10">
+                                <img src="{{ Storage::url($prompt->cover_image_path) }}" alt="Current cover" class="aspect-[4/3] w-full object-cover">
+                            </div>
+                            <label class="mt-2 flex items-center gap-2 text-xs text-ink/60">
+                                <input type="checkbox" name="remove_cover" value="1" class="size-3.5 rounded border-ink/20 accent-saffron-deep">
+                                Remove current cover
+                            </label>
+                        @endif
+                        <div class="mt-3">
+                            <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp"
+                                   class="block w-full cursor-pointer rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-xs text-ink/80 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-saffron file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink hover:file:bg-saffron-deep">
+                        </div>
+                        @error('cover_image') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+
                     <div class="rounded-2xl border border-ink/10 bg-white p-5">
                         <h3 class="text-sm font-semibold text-ink">Pricing</h3>
                         <div class="mt-4">

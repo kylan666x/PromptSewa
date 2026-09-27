@@ -70,9 +70,21 @@ class PromptFormController extends Controller
         $validated = $request->fields();
         $user = $request->user();
 
+        // Cover art: image prompts only. Compressed + re-encoded through GD
+        // (strips metadata, downscales to 1600px) — see ImageUploadService.
+        $coverPath = null;
+        if ($request->hasFile('cover_image')) {
+            try {
+                $coverPath = app(\App\Services\ImageUploadService::class)
+                    ->store($request->file('cover_image'), 'cover');
+            } catch (\RuntimeException $e) {
+                return back()->withInput()->withErrors(['cover_image' => $e->getMessage()]);
+            }
+        }
+
         // All new listings enter the review queue — the founder (admin)
         // publishes them. Free vs paid changes money wiring, not moderation.
-        $prompt = DB::transaction(function () use ($validated, $user, $request) {
+        $prompt = DB::transaction(function () use ($validated, $user, $request, $coverPath) {
             $prompt = Prompt::create([
                 'user_id' => $user->id,
                 'category_id' => $validated['category_id'],
@@ -85,6 +97,7 @@ class PromptFormController extends Controller
                 'license_tier' => $validated['license_tier'],
                 'price_cents' => $validated['price_cents'],
                 'status' => Prompt::STATUS_PENDING,
+                'cover_image_path' => $coverPath,
             ]);
 
             $prompt->versions()->create([

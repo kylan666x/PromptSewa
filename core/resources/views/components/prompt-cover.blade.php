@@ -1,35 +1,72 @@
-@props(['prompt', 'large' => false])
+@props(['prompt', 'large' => false, 'gallery' => false])
 
 @php
-    // Deterministic placeholder: same prompt always renders the same
-    // gradient — no random flicker between page loads. Palette derives
-    // from DESIGN.md: ink + saffron + warm paper tints.
+    /**
+     * Cover artwork for a prompt listing, three layers deep:
+     *  1. Uploaded cover image (creators, image prompts) — always wins.
+     *  2. Generated SVG "title banner" — the prompt's own name typeset on a
+     *     deterministic brand gradient. Every text prompt gets a beautiful,
+     *     unique banner without any upload.
+     *  3. (Legacy fallback inside the SVG path is not needed — the SVG IS the
+     *     generator; initials only appear for the image-prompt placeholder.)
+     */
     $palettes = [
-        ['from-saffron/60', 'to-saffron-deep/20', 'text-ink/50'],
-        ['from-ink/80', 'to-ink/30', 'text-paper/70'],
-        ['from-orange-300/50', 'to-amber-200/30', 'text-ink/50'],
-        ['from-stone-400/40', 'to-stone-200/30', 'text-ink/50'],
-        ['from-yellow-400/50', 'to-amber-100/40', 'text-ink/50'],
-        ['from-ink-soft/70', 'to-saffron/20', 'text-paper/70'],
+        ['#F5C518', '#B45309'], // saffron → bronze
+        ['#FBBF24', '#78350F'], // amber → espresso
+        ['#FCD34D', '#C2410C'], // honey → rust
+        ['#FDE68A', '#92400E'], // cream → caramel
+        ['#F59E0B', '#1C1917'], // gold → ink
+        ['#FACC15', '#7C2D12'], // lemon → clay
     ];
-    $palette = $palettes[$prompt->id % count($palettes)];
-    $initials = collect(explode(' ', $prompt->title))
-        ->filter()
-        ->map(fn ($word) => mb_substr($word, 0, 1))
-        ->take(2)
-        ->implode('');
+    [$c1, $c2] = $palettes[$prompt->id % count($palettes)];
+
+    $title = (string) $prompt->title;
+
+    // Word-wrap the title into at most 3 lines of ~14 chars for SVG text.
+    $words = preg_split('/\s+/u', $title) ?: [];
+    $lines = [];
+    $current = '';
+    foreach ($words as $word) {
+        $candidate = $current === '' ? $word : $current.' '.$word;
+        if (mb_strlen($candidate) > 14 && $current !== '') {
+            $lines[] = $current;
+            $current = $word;
+        } else {
+            $current = $candidate;
+        }
+        if (count($lines) === 2 && mb_strlen($current) > 14) {
+            break;
+        }
+    }
+    if ($current !== '' && count($lines) < 3) {
+        $lines[] = $current;
+    }
+    $lines = array_slice($lines, 0, 3);
+
+    $svgId = 'g'.$prompt->id;
+    $fs = $large ? 46 : 34;
+    $lh = (int) ($fs * 1.15);
+    $cy = 190 - (count($lines) - 1) * (int) ($lh / 2);
+    $quote = fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+
+    $banner = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">'
+        .'<defs><linearGradient id="'.$svgId.'" x1="0" y1="0" x2="1" y2="1">'
+        .'<stop offset="0%" stop-color="'.$c1.'"/><stop offset="100%" stop-color="'.$c2.'"/></linearGradient></defs>'
+        .'<rect width="400" height="250" fill="url(#'.$svgId.')"/>'
+        .'<circle cx="330" cy="215" r="90" fill="rgba(255,255,255,0.10)"/>'
+        .'<circle cx="70" cy="30" r="55" fill="rgba(255,255,255,0.08)"/>'
+        .'<text x="200" y="'.$cy.'" font-family="Space Grotesk, system-ui, sans-serif" font-size="'.$fs.'" font-weight="700" fill="rgba(23,23,21,0.88)" text-anchor="middle">'
+        .implode('', array_map(fn (string $line, int $i): string => '<tspan x="200" dy="'.($i === 0 ? 0 : $lh).'">'.$quote($line).'</tspan>', $lines, array_keys($lines)))
+        .'</text></svg>';
+    $bannerUri = 'data:image/svg+xml;charset=utf-8,'.rawurlencode($banner);
 @endphp
 
-<div class="relative {{ $large ? 'aspect-[16/9]' : 'aspect-[16/10]' }} w-full overflow-hidden {{ $attributes->only('class') }}">
+<div class="relative {{ $gallery ? 'aspect-[4/5]' : ($large ? 'aspect-[16/9]' : 'aspect-[16/10]') }} w-full overflow-hidden {{ $attributes->only('class') }}">
     @if ($prompt->cover_image_path)
-        <img src="{{ Storage::url($prompt->cover_image_path) }}" alt="Cover for {{ $prompt->title }}"
+        <img src="{{ Storage::url($prompt->cover_image_path) }}" alt="Cover for {{ $title }}"
              class="absolute inset-0 size-full object-cover">
     @else
-        <div class="absolute inset-0 bg-gradient-to-br {{ $palette[0] }} {{ $palette[1] }}">
-            <div class="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,rgba(23,23,21,0.18)_1px,transparent_0)] [background-size:14px_14px]"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-                <span class="{{ $large ? 'text-6xl' : 'text-4xl' }} font-bold tracking-tight {{ $palette[2] }}">{{ $initials }}</span>
-            </div>
-        </div>
+        {{-- Generated title banner: the prompt's name IS the artwork. --}}
+        <img src="{{ $bannerUri }}" alt="" class="absolute inset-0 size-full object-cover" aria-hidden="true">
     @endif
 </div>

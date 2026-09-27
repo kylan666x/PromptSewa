@@ -87,6 +87,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard');
 
+// Full profile editing (identity + avatar + banner).
+Route::get('/dashboard/profile', [\App\Http\Controllers\Dashboard\ProfileController::class, 'edit'])
+    ->middleware('auth')
+    ->name('dashboard.profile.edit');
+Route::put('/dashboard/profile', [\App\Http\Controllers\Dashboard\ProfileController::class, 'update'])
+    ->middleware('auth')
+    ->name('dashboard.profile.update');
+
 // Type-aware "Add Prompt" flow (God of Prompt pattern).
 Route::get('/dashboard/prompts/create', [PromptFormController::class, 'create'])
     ->middleware('auth')

@@ -1,86 +1,190 @@
+<div align="center">
+
+<img src="https://img.shields.io/badge/🧵_PromptSewa-v1.2.0-F5C518?style=for-the-badge&labelColor=171715" alt="PromptSewa"/>
+
 # PromptSewa
 
-**Version control for your AI prompts.** A premium prompt-library &
-marketplace: discover, test, buy, sell, fork, and pull-request AI prompts —
-designed from day one to run on **cheap cPanel shared hosting**.
+### *Version control for your AI prompts*
 
-- 📦 **Marketplace** — buy/sell prompts (eSewa / manual payments), tiered licensing
-- 🧪 **Playground** — test prompts against LLM APIs with your own encrypted keys
-- 🌿 **Version control** — git-like history, forking, pull-requests for prompts
-- 🏆 **Gamification** — XP, badges, leaderboards, creator profiles
-- 🔎 **Search** — Laravel Scout `database` driver (MySQL FULLTEXT on shared
-  hosting, `LIKE` on SQLite locally); Meilisearch is a config swap away later
+**Discover · Test · Buy · Sell** battle-tested AI prompts — with git-like version history, licensing, and eSewa payments built in. Built for Nepal, priced in NPR.
 
-## The cPanel Guarantee
+[![Laravel](https://img.shields.io/badge/Laravel_12-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP_8.2+-777BB4?style=flat-square&logo=php&logoColor=white)](https://php.net)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Alpine.js](https://img.shields.io/badge/Alpine.js-3-77C1CB?style=flat-square&logo=alpinedotjs&logoColor=white)](https://alpinejs.dev)
+[![Tests](https://img.shields.io/badge/Tests-102_passing-16A34A?style=flat-square)](#testing)
+[![License](https://img.shields.io/badge/License-MIT-F5C518?style=flat-square)](LICENSE)
 
-| Concern | Solution |
-| --- | --- |
-| No Docker/Sail/Redis/Memcached/Supervisor | Enforced — see `AGENTS.md` |
-| Sessions / Cache / Queue drivers | **`database`** (one MySQL DB does everything) |
-| Background work | Single cPanel cron: `* * * * * php artisan schedule:run` |
-| Document root | `public_html/` holds 3 tiny files; the app lives in `/home/user/core/` |
-| Node.js on server | **Not required** — assets compiled locally, uploaded static |
-| **Installing** | Upload one zip → open **`install.php`** in the browser — no SSH, no CLI |
-| **Updating** | Upload new zip → `update.php` (token-protected), or full GitHub CI/CD via FTP |
+[Features](#-features) · [Quick Start](#-quick-start) · [Deployment](#-cpanel-deployment) · [Architecture](#-architecture) · [Docs](#-documentation)
 
-## Current Status
+</div>
 
-- ✅ **Catalog core** — prompts/categories/versions schema, Scout-backed search
-  abstraction, public-visibility contract (drafts/private never leak)
-- ✅ **Commerce core (MKT-001)** — orders, order items, NPR paisa money,
-  idempotent checkout, license grants with DB-level uniqueness
-- ✅ **Storefront (UI-001)** — landing page, prompt library, category pages,
-  auth, 22-prompt demo catalog across 12 categories
-- ✅ **Prompt authoring & detail** — type-aware create/edit forms
-  (text/image/video), git-like versioned edits, copy/variable-fill detail
-  pages, license-gated prompt bodies
-- ✅ **Public creator profiles** — `/creators/{user}` pages with published
-  catalog, sales stats and bio; creator chips on cards/detail link to them
-- ✅ **Admin brand management** — site name, tagline, contact/support
-  emails, logo and favicon uploadable from Admin → Brand (`SettingsService`)
-- 🔜 **Creator dashboard & admin shell (UI-003)** · wallet ledger (FIN-001) ·
-  eSewa checkout (PAY-001) · delivery-proof uploads (PAY-002)
+---
 
-## Repository Layout
+## 📖 What is PromptSewa?
+
+A full prompt marketplace — think **GitHub meets Gumroad for AI prompts**:
+
+- **Creators** publish versioned prompts (text / image / video types) with changelogs, tags, recommended tools and usage tips
+- **Buyers** purchase with eSewa (or manual payment verification) and receive lifetime license grants — every future version included
+- **Admins** moderate the review queue, issue verified badges, manage packs, brands and payment gateways
+
+Every prompt is *versioned like git*: edits append immutable `prompt_versions` rows with changelogs, never overwrite.
+
+---
+
+## ✨ Features
+
+### 🛍 Marketplace
+| | |
+|---|---|
+| 🔍 **Unified search** | Prompts **and creators** in one search bar (Scout-backed, never raw LIKE) |
+| 🖼 **Image gallery** | PromptPlum-style visual wall — covers full-bleed, prompt snippet visible on the card, one-click copy for free prompts |
+| 🎨 **Generated cover banners** | Every text prompt gets a beautiful SVG title banner (its own name typeset on a deterministic brand gradient) — no upload needed |
+| 📦 **Packs** | Bundle prompts at a bundle price |
+| ⭐ **Ratings** | 1–5 stars — free prompts rateable by any logged-in user, paid prompts only by verified buyers |
+
+### 👤 Creators
+| | |
+|---|---|
+| ✅ **Verified badges** | Saffron seal, site-wide, issued by admins only |
+| 🖼 **Profile uploads** | Avatar + cover banner with automatic GD compression & re-encode |
+| 📝 **Full profile editing** | Facebook-style: identity, bio, photos — live preview link |
+| 💰 **NPR pricing** | Free → Rs. 50,000, paisa-accurate integer math, automatic product sync |
+
+### 🛡 Trust & safety
+| | |
+|---|---|
+| 🔒 **Paywall integrity** | Paid prompt bodies render ONLY for owners and buyers — **staff included**. Moderation preview works via admin panel link only |
+| 🚩 **Reports** | One-click prompt reporting with admin triage queue |
+| 🪪 **RBAC** | member → creator → moderator → admin hierarchy, self-demotion guard |
+
+### 🧑‍💼 Admin panel
+Review queue (publish/reject) · Users & roles · Verified badge issuance · Orders & manual payment verification · Packs CRUD · Payment gateway settings (eSewa credentials encrypted at rest) · Brand settings (logo, favicon, site name) · AI tool logos · **One-click self-update from a zip**
+
+### 🏠 Pages & polish
+Branded error pages (403/404/419/429/500/503) · Mobile-first navbar with hamburger drawer · Game-feel buttons (arcade press) · X/Facebook-style creator profiles with cover banners
+
+---
+
+## 🚀 Quick Start
+
+```bash
+git clone https://github.com/kylan666x/PromptSewa.git
+cd PromptSewa/core
+
+composer install
+npm install && npm run build
+
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+
+php artisan migrate --seed     # seeds 269 demo prompts + users
+php artisan storage:link
+php artisan serve              # → http://127.0.0.1:8000
+```
+
+**Demo logins** (after seeding):
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@promptsewa.test` | `password` |
+| Flagship creator | `justshipitai@gmail.com` | `JustShipIt!2026` |
+| Creators | `bibek@` / `maya@` / `dorje@promptsewa.test` | `password` |
+
+> The seeders are **idempotent** — safe to run repeatedly; existing data is never touched.
+
+---
+
+## 🖥 CPanel Deployment
+
+PromptSewa is engineered for **$3/mo shared cPanel hosting** — the prime directive:
+
+> No SSH, no Node, no Composer, no Redis, no Supervisor on the host. Apache *and* LiteSpeed. `exec()` assumed disabled.
 
 ```
-├── prd.md               Product Requirements Document
-├── AGENTS.md            Rules for AI coding agents working in this repo
-├── core/                The Laravel application (see core/AGENTS.md)
-├── deploy/
-│   ├── public_html/     The files that go into cPanel's document root,
-│   │                    incl. the one-file install.php + update.php tools
-│   └── build-release.php  Builds dist/promptsewa-upload.zip (vendor + assets)
-├── .github/workflows/   CI (tests) + Release/Deploy (upload.zip artifact, optional FTP push)
-└── docs/
-    ├── ARCHITECTURE.md  Design decisions & data model
-    ├── DEPLOYMENT.md    Step-by-step cPanel deployment runbook (web-installer first)
-    └── CONTRIBUTING.md  Development setup & atomic-commit standards
+/home/CPANELUSER/
+├── core/           ← Laravel app (vendor/, .env, storage/) — NOT web-visible
+└── public_html/    ← index.php, .htaccess, install.php, update.php
 ```
 
-## Quick Start (local development)
+**First install:** upload `dist/promptsewa-*-install.zip` → extract → create MySQL DB + user (ALL PRIVILEGES) → visit `install.php`.
+
+**Updates:** build a code-only zip (`php deploy/build-update-zip.php`), then either:
+- upload it at `https://<domain>/update.php` (token-protected), or
+- upload through **Admin → Update** (`/admin/update`)
+
+The pipeline: maintenance mode → extract → migrate → idempotent seed → caches → asset sync → live. Your `.env`, database and token are preserved.
+
+---
+
+## 🏗 Architecture
+
+```
+core/
+├── app/
+│   ├── Console/Commands/UpdateFromRelease.php   ← pv:update pipeline
+│   ├── Http/Controllers/                        ← Storefront, Dashboard, Admin
+│   ├── Http/Requests/PromptFormRequest.php      ← shared create/edit validation
+│   ├── Models/                                  ← Prompt, PromptVersion, User, Rating…
+│   └── Services/
+│       ├── CheckoutService.php                  ← eSewa + manual payments
+│       ├── EntitlementService.php               ← license grants
+│       ├── ImageUploadService.php               ← GD compress & re-encode
+│       └── PromptSearchService.php              ← Scout search + creators
+├── database/seeders/                            ← idempotent demo + bulk catalog
+└── resources/views/                             ← Blade + Alpine components
+deploy/
+├── public_html/                                 ← docroot + installer + updater
+├── build-release.php                            ← full install zip
+└── build-update-zip.php                         ← code-only update zip
+```
+
+**Key invariants** (break these and something important breaks):
+
+1. `prompt_versions` is append-only — edits create new rows, never mutate
+2. Paid bodies render only with an active `LicenseGrant` — staff included
+3. `@js()` inside `x-data` always uses **double-quoted** attributes (single quotes truncate)
+4. No `use` statements inside Blade `@php` blocks of anonymous components
+5. All uploads pass through `ImageUploadService` (GD re-encode strips metadata & downscales)
+
+---
+
+## 📚 Documentation
+
+| Doc | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design deep-dive |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | cPanel deployment, end to end |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Dev workflow & conventions |
+| [`DESIGN.md`](DESIGN.md) | Visual design system (ink · saffron · paper) |
+| [`PRODUCT.md`](PRODUCT.md) | Product spec & roadmap |
+| [`handoff.md`](handoff.md) | **Engineering handoff for the next maintainer** |
+
+---
+
+## 🧪 Testing
 
 ```bash
 cd core
-composer install
-cp .env.example .env && php artisan key:generate
-php artisan migrate            # SQLite out of the box
-npm install && npm run dev
-php artisan serve              # http://127.0.0.1:8000
+php artisan test        # Pest — 102 tests, 416 assertions, all green
 ```
 
-## Quick Start (production)
+Covers: storefront rendering, search, category pages, checkout flow (eSewa + manual), entitlements, prompt visibility, reports, brand settings, seeder integrity.
 
-See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — upload the release zip,
-open `install.php`, done (no SSH needed). Updating = upload a new zip +
-open `update.php`, or let GitHub Actions deploy on tags.
+---
 
-## Stack
+## 🤝 Contributing
 
-PHP 8.2+ · Laravel 12 · MySQL/MariaDB · Blade · Tailwind CSS · Alpine.js ·
-Laravel Scout (database driver) · database sessions/queue/cache ·
-Apache `.htaccess` · cPanel cron
+PRs welcome — run the test suite first, follow the existing Blade/PHP conventions (they're commented in-place), and keep the cPanel prime directive in mind: everything must run on the cheapest shared hosting on earth.
 
-## License
+---
 
-Proprietary — all rights reserved. (Adjust before public release.)
+<div align="center">
+
+**PromptSewa** — *Built in Nepal 🇳🇵 for the prompt economy.*
+
+[⬆ back to top](#promptsewa)
+
+</div>

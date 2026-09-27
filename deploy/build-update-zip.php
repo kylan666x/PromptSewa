@@ -29,7 +29,7 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 
 $repoRoot = dirname(__DIR__);
 $zipPath = $repoRoot.DIRECTORY_SEPARATOR.'dist'
