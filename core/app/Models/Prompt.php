@@ -144,6 +144,11 @@ class Prompt extends Model
         return $this->hasOne(PromptVersion::class)->orderByDesc('version_number');
     }
 
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(Rating::class);
+    }
+
     /** The sellable product backing this listing (MKT-001). */
     public function product(): HasMany
     {

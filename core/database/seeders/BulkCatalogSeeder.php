@@ -261,10 +261,10 @@ class BulkCatalogSeeder extends Seeder
             }
         }
 
-        // Verified badges for the demo creators so the badge renders out of the box.
-        foreach ($creators as $creator) {
-            $creator->forceFill(['is_verified' => true])->save();
-        }
+        // NOTE: verification is deliberately NOT auto-granted here. Only the
+        // admin and the flagship JustShipItAI account carry the badge (seeded
+        // in their own seeders); everyone else is issued by an admin from the
+        // Users panel.
 
         $this->command?->info("Bulk catalog seeded: {$bulkCount} additional prompts.");
     }

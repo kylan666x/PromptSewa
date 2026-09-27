@@ -35,7 +35,7 @@
         {{-- Identity row — avatar overlapping the banner like X.com --}}
         <div class="relative -mt-12 flex flex-col gap-4 px-1 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
             <div class="flex items-end gap-4">
-                <span class="flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
+                <span class="relative flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
                     @if ($creator->avatar_path)
                         <img src="{{ Storage::url($creator->avatar_path) }}" alt="" class="size-full rounded-[20px] object-cover">
                     @else

@@ -43,4 +43,29 @@ class PromptSearchService
                 ->with(['category', 'creator', 'latestVersion']))
             ->paginate($perPage);
     }
+
+    /**
+     * Search creator profiles by name for the library page sidebar section.
+     * Only users with at least one public prompt are surfaced.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\User>
+     */
+    public function searchCreators(string $term, int $limit = 6): \Illuminate\Support\Collection
+    {
+        $term = trim($term);
+        if ($term === '') {
+            return collect();
+        }
+
+        return \App\Models\User::query()
+            ->whereNull('deleted_at')
+            ->where(fn ($q) => $q
+                ->where('name', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%"))
+            ->whereHas('prompts', fn ($q) => $q->publicListing())
+            ->withCount(['prompts' => fn ($q) => $q->publicListing()])
+            ->orderByDesc('prompts_count')
+            ->limit($limit)
+            ->get();
+    }
 }

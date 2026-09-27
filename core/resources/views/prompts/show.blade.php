@@ -64,7 +64,7 @@
                             <span class="flex size-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-saffron transition group-hover/creator:bg-saffron group-hover/creator:text-ink">
                                 {{ mb_substr($prompt->creator->name, 0, 1) }}
                             </span>
-                            <span class="font-medium text-ink/80 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">{{ $prompt->creator->name }}</span>
+                            <span class="flex items-center gap-1 font-medium text-ink/80 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">{{ $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="md"/></span>
                         </a>
                     @else
                         <span class="flex items-center gap-2">
@@ -76,8 +76,20 @@
                     <span>Updated {{ $prompt->updated_at->format('M j, Y') }}</span>
                     <span class="text-ink/30" aria-hidden="true">·</span>
                     <span class="font-mono">{{ $prompt->versions->count() }} {{ Str::plural('version', $prompt->versions->count()) }}</span>
-                    <span class="flex items-center gap-0.5 text-ink/50" title="Ratings arrive with reviews">
-                        ★☆☆☆☆ <span class="ml-1 font-mono text-xs">No ratings yet</span>
+                    @php
+                        $ratingCount = $prompt->ratings()->count();
+                        $avgScore = $ratingCount > 0 ? round((float) $prompt->ratings()->avg('score'), 1) : null;
+                        $myRating = auth()->check() ? $prompt->ratings()->where('user_id', auth()->id())->value('score') : null;
+                        $canRate = auth()->check() && ($prompt->price_cents === 0 || ($canViewFullBody && $isPaid));
+                    @endphp
+                    <span class="flex items-center gap-1 text-ink/60" title="@if($ratingCount){{ $avgScore }} / 5 from {{ $ratingCount }} {{ Str::plural('rating', $ratingCount) }}@else No ratings yet @endif">
+                        <span class="font-mono text-xs">
+                            @if ($ratingCount)
+                                ★ {{ number_format($avgScore, 1) }} ({{ $ratingCount }})
+                            @else
+                                No ratings yet
+                            @endif
+                        </span>
                     </span>
                 </div>
 
@@ -92,13 +104,17 @@
                     @endphp
                     <section class="mt-8" aria-label="Recommended tools">
                         <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Works best in</h2>
-                        <div class="mt-2.5 flex flex-wrap gap-2">
+                        <div class="mt-3 flex flex-wrap gap-3">
                             @foreach ($tools as $tool)
-                                <span class="flex items-center gap-1.5 rounded-full border border-emerald-700/20 bg-emerald-100 px-3 py-1 font-mono text-xs font-medium text-emerald-900">
+                                <span class="flex items-center gap-2.5 rounded-2xl border border-emerald-700/20 bg-white px-4 py-2.5 shadow-sm">
                                     @if ($toolLogos->has($tool) && $toolLogos->get($tool))
-                                        <img src="{{ asset('storage/'.$toolLogos->get($tool)) }}" alt="" class="size-4 rounded object-contain">
+                                        {{-- Uploaded logos render large and clean --}}
+                                        <img src="{{ asset('storage/'.$toolLogos->get($tool)) }}" alt="{{ $tool }} logo" class="size-9 rounded-lg object-contain">
+                                        <span class="text-sm font-semibold text-ink">{{ $tool }}</span>
+                                    @else
+                                        {{-- No logo yet: keep the compact chip --}}
+                                        <span class="rounded-full border border-emerald-700/20 bg-emerald-100 px-3 py-1 font-mono text-xs font-medium text-emerald-900">{{ $tool }}</span>
                                     @endif
-                                    {{ $tool }}
                                 </span>
                             @endforeach
                         </div>
@@ -182,6 +198,32 @@
                         </div>
                     @endif
                 </section>
+
+                {{-- Community rating widget --}}
+                @if (auth()->check() && $canRate)
+                    <section class="mt-8 rounded-2xl border border-ink/10 bg-white p-5 shadow-sm" aria-label="Rate this prompt">
+                        <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">
+                            {{ $myRating ? 'Your rating' : 'Rate this prompt' }}
+                        </h2>
+                        <form method="POST" action="{{ route('prompts.rate', $prompt) }}" class="mt-3 flex items-center gap-2">
+                            @csrf
+                            @for ($i = 1; $i <= 5; $i++)
+                                <button type="submit" name="score" value="{{ $i }}"
+                                        class="text-2xl leading-none transition hover:scale-125 focus:outline-none {{ $myRating !== null && $i <= $myRating ? 'text-saffron' : 'text-ink/20 hover:text-saffron' }}"
+                                        aria-label="Rate {{ $i }} star{{ $i > 1 ? 's' : '' }}">
+                                    ★
+                                </button>
+                            @endfor
+                            @if ($myRating)
+                                <span class="ml-2 font-mono text-xs text-ink/50">You rated {{ $myRating }}/5 — click to change</span>
+                            @endif
+                        </form>
+                    </section>
+                @elseif (auth()->check() && $isPaid && ! $canViewFullBody)
+                    <p class="mt-8 rounded-2xl border border-ink/10 bg-paper-deep px-4 py-3 text-sm text-ink/60">
+                        ★ Bought it? Ratings open after purchase.
+                    </p>
+                @endif
 
                 @if ($tips->isNotEmpty())
                     <section class="mt-8" aria-label="Usage tips">

@@ -30,6 +30,7 @@ class LibraryController extends Controller
 
         return view('library', [
             'prompts' => $this->search->search($term, 12, $validated['type'] ?? null),
+            'creators' => $this->search->searchCreators($term),
             'categories' => $this->sidebarCategories(),
             'category' => null,
             'q' => $term,
@@ -46,6 +47,7 @@ class LibraryController extends Controller
                 ->with(['category', 'creator', 'latestVersion'])
                 ->latest()
                 ->paginate(12),
+            'creators' => collect(),
             'categories' => $this->sidebarCategories(),
             'category' => $category,
             'q' => '',

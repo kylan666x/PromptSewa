@@ -41,8 +41,14 @@ Route::post('/prompts/{prompt:slug}/report', [PromptReportController::class, 'st
     ->name('prompts.report.store')
     ->middleware('throttle:10,1');
 
+// Community ratings: paid prompts require an active license; free are open
+// to any logged-in user. One rating per user per prompt (upsert).
+Route::post('/prompts/{prompt:slug}/rate', [\App\Http\Controllers\RatingController::class, 'store'])
+    ->name('prompts.rate')
+    ->middleware('auth');
+
 // Public creator profiles — identity, bio and published catalog.
-Route::get('/creators/{user}', [CreatorProfileController::class, 'show'])
+Route::get('/creators/{user:name}', [CreatorProfileController::class, 'show'])
     ->name('creators.show');
 
 // Search goes through the Scout-backed service; throttle guards the

@@ -37,6 +37,29 @@
                 </nav>
             </aside>
 
+            {{-- Matching creators (search only) --}}
+            @if (isset($creators) && $creators->isNotEmpty())
+                <section class="mb-8" aria-label="Matching creators">
+                    <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Creators</h2>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        @foreach ($creators as $creator)
+                            <a href="{{ route('creators.show', $creator) }}"
+                               class="group flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
+                                <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-saffron">{{ mb_substr($creator->name, 0, 1) }}</span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="flex items-center gap-1.5 font-semibold text-ink transition group-hover:text-saffron-deep">
+                                        {{ $creator->name }}
+                                        <x-verified-badge :user="$creator" size="xs"/>
+                                    </span>
+                                    <span class="block font-mono text-xs text-ink/50">{{ $creator->prompts_count }} {{ \Illuminate\Support\Str::plural('prompt', $creator->prompts_count) }}</span>
+                                </span>
+                                <span class="text-ink/30 transition group-hover:text-saffron-deep">→</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             {{-- Prompt grid --}}
             <div class="min-w-0 flex-1">
                 @if ($prompts->isEmpty())
