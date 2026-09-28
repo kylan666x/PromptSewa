@@ -80,13 +80,23 @@ class UpdateFromRelease extends Command
                 $this->warn('  seed failed: '.$e->getMessage());
             }
 
-            foreach (['config:cache', 'route:cache', 'view:cache'] as $cmd) {
+            // view:clear first: stale compiled views from the previous
+            // release must never survive into the new view:cache (the
+            // v1.4.1 prod 500 came from a drifted compiled view).
+            foreach (['config:cache', 'route:cache'] as $cmd) {
                 try {
                     Artisan::call($cmd);
                     $this->line("  $cmd ✓");
                 } catch (Throwable $e) {
                     $this->warn("  $cmd failed: ".$e->getMessage());
                 }
+            }
+            try {
+                Artisan::call('view:clear');
+                Artisan::call('view:cache');
+                $this->line('  view:clear + view:cache ✓');
+            } catch (Throwable $e) {
+                $this->warn('  view cache failed: '.$e->getMessage());
             }
 
             $this->syncAssets($core, $docroot);

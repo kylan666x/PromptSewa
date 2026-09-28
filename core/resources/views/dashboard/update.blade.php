@@ -43,7 +43,7 @@
 
         @if ($tokenHint === 'missing')
             <div class="mt-8 rounded-2xl border border-saffron-deep/60 bg-saffron/20 p-5 text-sm text-saffron-deep">
-                <b>Update token missing.</b> The docroot needs a <code>.update-token</code> file (hidden file) containing a long random string. Create it via cPanel → File Manager with <i>Show Hidden Files</i> enabled, then reload this page. Example content: <code>{{ bin2hex(random_bytes(16)) }}</code>
+                <b>Update token missing.</b> The docroot needs a <code>.update-token</code> file (hidden file) containing a long random string. Create it via cPanel &rarr; File Manager with <i>Show Hidden Files</i> enabled, then reload this page. Example content: <code>{{ bin2hex(random_bytes(16)) }}</code>
             </div>
         @endif
 
@@ -52,9 +52,16 @@
             <label for="release_zip" class="block text-sm font-semibold text-ink/90">Release zip</label>
             <input id="release_zip" type="file" name="release_zip" accept=".zip" required
                    class="mt-2 block w-full cursor-pointer rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink/80 file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-saffron file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-saffron-deep"/>
-            @error('release_zip')
+            @php
+                /** Standalone-safe: $errors only exists inside the web
+                    middleware group (ShareErrorsFromSession). Rendering
+                    without it (error paths, artisan contexts) must not 500 —
+                    this is the v1.4.1 prod regression, fixed at the root. */
+                $zipErrors = isset($errors) ? $errors->getBag('default')->get('release_zip') : [];
+            @endphp
+            @foreach ($zipErrors as $message)
                 <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
-            @enderror
+            @endforeach
 
             <p class="mt-4 text-xs leading-relaxed text-ink0">
                 The zip must be a PromptSewa release (containing <code>core/</code> and <code>public_html/</code>).
