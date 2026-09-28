@@ -98,6 +98,25 @@ test('every blade form verb matches its target route', function () {
                 }
             }
         }
+
+        // A2: hardcoded-action forms — an action="..." that is neither a
+        // route() call nor an explicit variable (eSewa gateway URLs) is a
+        // drift hazard: it bypasses the route registry and can silently
+        // point at a verb-mismatched or dead path.
+        preg_match_all('/<form\b[^>]*>/i', $content, $hardcoded, PREG_OFFSET_CAPTURE);
+        foreach ($hardcoded[0] as [$tag, $offset]) {
+            if (! preg_match('/action\s*=\s*"([^"]*)"/i', $tag, $action)) {
+                continue;
+            }
+            $actionValue = $action[1];
+            if ($actionValue === '' || str_contains($actionValue, 'route(')) {
+                continue; // route-resolved or empty (submits to self)
+            }
+            if (preg_match('/^\{\{|^\$/', $actionValue)) {
+                continue; // runtime variable (e.g. eSewa gateway action)
+            }
+            $violations[] = "{$relative}: form has a hardcoded action \"{$actionValue}\" — use route('…') or an explicit gateway variable";
+        }
     }
 
     expect($violations)->toBe([], implode("\n", $violations));

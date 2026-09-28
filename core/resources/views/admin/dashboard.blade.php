@@ -5,6 +5,12 @@
         /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $manualQueue */
     @endphp
 
+    {{-- A1: running release chip — value lives in config/app.php 'version' --}}
+    <p class="mb-4 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-3 py-1 font-mono text-xs text-ink/60 shadow-sm">
+        <span class="size-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
+        v{{ config('app.version') }}
+    </p>
+
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         @foreach ([
             'Prompts' => [$stats['prompts'], 'text-ink'],

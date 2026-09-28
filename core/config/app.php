@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Application Version Chip (A1)
+    |--------------------------------------------------------------------------
+    |
+    | Single source of truth for the running release. The admin dashboard
+    | renders it as a chip; deploy/build-update-zip.php stamps the same
+    | value when cutting a zip — the two must never drift.
+    |
+    */
+
+    'version' => '1.4.2',
+
 ];
