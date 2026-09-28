@@ -16,8 +16,11 @@
             <span class="hidden sm:inline">{{ $siteName }}</span>
         </a>
 
-        {{-- Search — full width on mobile, inline from md --}}
-        <form action="{{ route('library.index') }}" method="GET" role="search" class="order-3 min-w-0 flex-1 basis-full md:order-none md:basis-auto">
+        {{-- Search — full width on mobile, inline from md; typeahead dropdown --}}
+        <form action="{{ route('library.index') }}" method="GET" role="search"
+              class="order-3 min-w-0 flex-1 basis-full md:order-none md:basis-auto"
+              x-data="searchPreview(@js(route('search.preview')))"
+              @click.outside="close()">
             <label class="relative block">
                 <span class="sr-only">Search prompts and creators</span>
                 <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-creak" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
@@ -29,8 +32,55 @@
                     value="{{ $query ?? '' }}"
                     maxlength="80"
                     placeholder="Search prompts, creators…"
+                    autocomplete="off"
+                    x-model="q"
+                    @input.debounce.300ms="onInput()"
+                    @focus="if (items.length > 0) open = true"
+                    @keydown="onKeydown($event)"
                     class="w-full rounded-full border border-ink/15 bg-white py-2 pl-9 pr-3 text-sm text-ink placeholder-creak shadow-sm outline-none transition focus:border-saffron-deep focus:ring-2 focus:ring-saffron/40"
                 >
+
+                {{-- Typeahead dropdown (TASK 2) --}}
+                <div x-show="open" x-cloak x-transition.opacity
+                     class="absolute top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-xl">
+                    <p x-show="loading" class="px-4 py-2 text-xs font-medium text-ink/40">Searching…</p>
+
+                    <template x-if="prompts.length > 0">
+                        <div>
+                            <p class="px-4 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-widest text-ink/40">Prompts</p>
+                            <template x-for="(prompt, index) in prompts" :key="'p'+index">
+                                <a :href="prompt.url"
+                                   class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
+                                   :class="isActive(index) ? 'bg-saffron/10' : ''"
+                                   @mouseenter="activeIndex = index">
+                                    <span class="min-w-0 truncate" x-text="prompt.title"></span>
+                                    <span class="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wide"
+                                          x-text="prompt.price > 0 ? 'Rs '+prompt.price : 'Free'"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="creators.length > 0">
+                        <div>
+                            <p class="px-4 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-widest text-ink/40">Creators</p>
+                            <template x-for="(creator, index) in creators" :key="'c'+index">
+                                <a :href="creator.url"
+                                   class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
+                                   :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"
+                                   @mouseenter="activeIndex = prompts.length + index">
+                                    <span class="min-w-0 truncate">
+                                        <span x-text="creator.name"></span>
+                                        <span class="font-mono text-xs text-ink/40" x-text="creator.username ? '@'+creator.username : ''"></span>
+                                    </span>
+                                    <span class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink/40"
+                                          x-text="creator.prompts_count + (creator.prompts_count === 1 ? ' prompt' : ' prompts')"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+
+                </div>
             </label>
         </form>
 

@@ -26,6 +26,96 @@ window.Alpine = Alpine;
  * copy button (PromptPlum pattern — the user sees the prompt before clicking
  * through). Free prompts only; paid cards deep-link to the detail page.
  */
+/**
+ * Navbar typeahead (TASK 2): debounced fetch to /search/preview renders a
+ * Prompts/Creators dropdown under the search box. Enter submits the normal
+ * full-page form (the input lives inside it, so no special handling).
+ * Escape or clicking outside closes the dropdown.
+ */
+Alpine.data('searchPreview', (previewUrl) => ({
+    q: '',
+    open: false,
+    loading: false,
+    prompts: [],
+    creators: [],
+    activeIndex: -1,
+    controller: null,
+
+    get items() {
+        return [
+            ...this.prompts.map((p) => ({ ...p, kind: 'prompt' })),
+            ...this.creators.map((c) => ({ ...c, kind: 'creator' })),
+        ];
+    },
+
+    onInput() {
+        const term = this.q.trim();
+        this.activeIndex = -1;
+
+        if (term.length < 2) {
+            this.close();
+            return;
+        }
+
+        this.loading = true;
+        this.controller?.abort();
+        this.controller = new AbortController();
+
+        fetch(`${previewUrl}?q=${encodeURIComponent(term)}`, {
+            signal: this.controller.signal,
+            headers: { Accept: 'application/json' },
+        })
+            .then((response) => (response.ok ? response.json() : { prompts: [], creators: [] }))
+            .then((data) => {
+                this.prompts = data.prompts || [];
+                this.creators = data.creators || [];
+                this.open = this.items.length > 0;
+                this.loading = false;
+            })
+            .catch((error) => {
+                if (error.name !== 'AbortError') {
+                    this.loading = false;
+                }
+            });
+    },
+
+    close() {
+        this.open = false;
+        this.activeIndex = -1;
+    },
+
+    onKeydown(event) {
+        if (!this.open) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            this.close();
+            return;
+        }
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const delta = event.key === 'ArrowDown' ? 1 : -1;
+            const count = this.items.length;
+            this.activeIndex = (this.activeIndex + delta + count + 1) % (count + 1) - 1;
+            if (this.activeIndex === -1) {
+                // Highlight wrapped back to the input itself.
+            }
+            return;
+        }
+
+        if (event.key === 'Enter' && this.activeIndex >= 0) {
+            event.preventDefault();
+            window.location.href = this.items[this.activeIndex].url;
+        }
+    },
+
+    isActive(index) {
+        return this.activeIndex === index;
+    },
+}));
+
 Alpine.data('promptCopy', (rawBody) => ({
     copied: false,
 
