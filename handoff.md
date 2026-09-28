@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28 · **Current version:** v1.3.0 (commit `55aecdd`)
+**Prepared:** 2026-09-28 · **Current version:** v1.4.0
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -34,6 +34,14 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 **Warning:** `deploy/public_html/.update-token` is committed to the public GitHub repo. Regenerate it on the server after install (random hex in `public_html/.update-token`, web-invisible dotfile).
 
 ## 4. Release history highlights
+
+### v1.4.0 — search & profile UX overhaul (this release)
+
+- **Username handles**: nullable unique `users.username` (30 chars, `alpha_dash`). Creator URLs are now `/creators/{username}` — binding is scoped to the `{creator}` parameter in `AppServiceProvider::boot` (username OR name fallback; soft-deleted excluded), so admin `{user:id}` routes are untouched. `User::getRouteKey()` returns handle-or-name, which makes `route('creators.show', $user)` emit the handle URL automatically. Profile edit form gains an @username input (`Rule::unique()->ignore()`, lowercased, clearable → falls back to name URL).
+- **AJAX typeahead**: `GET /search/preview` (throttled 60,1) returns 3 prompt + 3 creator hits as JSON. `x-search-preview` Alpine component in the navbar: 300 ms debounced, abortable fetch, Prompts/Creators sections, arrow-key navigation (`bg-saffron/10` active row), Escape closes, Enter falls through to the full-page search.
+- **Natural-language search**: `PromptSearchService::normalizeQuery()` strips English stop words ("I want a blog" → "blog") before Scout — the `database` driver's LIKE/FULLTEXT has no NLU. Falls back to the raw term if everything is stripped. Creator search now matches username too.
+- **Creator header layout (UI-003)**: only the avatar overlaps the banner; the identity text block has zero negative margins, `pt-3/pt-4` clearance and `truncate` on name/@username.
+- **Tests**: 14 new (SearchPreviewTest) — endpoint shape, throttle, 422 length, normalization, username rules, binding. Suite: 116 passed / 465 assertions.
 
 ### v1.2.0 — image uploads, profile editing, staff paywall
 
@@ -119,10 +127,10 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 
 ## 7. Deploying the current update
 
-1. Upload `dist/promptsewa-1.3.0-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form. The zip now contains BOTH `core/` and a `public_html/` allow-list (update.php + index.php + .htaccess + .user.ini).
+1. Upload `dist/promptsewa-1.4.0-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form. The zip contains `core/` and a `public_html/` allow-list (update.php + index.php + .htaccess + .user.ini).
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
-4. Post-check: profile edit at `/dashboard/profile` saves avatar/banner (v1.3.0 adds the missing `@method('PUT')` — fixes the live 405), creator profile name no longer collides with the banner, `/admin/update` loads.
+4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
 
 ## 8. File map (v1.1 → v1.3.0)
 

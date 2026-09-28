@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/🧵_PromptSewa-v1.3.0-F5C518?style=for-the-badge&labelColor=171715" alt="PromptSewa"/>
+<img src="https://img.shields.io/badge/🧵_PromptSewa-v1.4.0-F5C518?style=for-the-badge&labelColor=171715" alt="PromptSewa"/>
 
 # PromptSewa
 
@@ -12,7 +12,7 @@
 [![PHP](https://img.shields.io/badge/PHP_8.2+-777BB4?style=flat-square&logo=php&logoColor=white)](https://php.net)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Alpine.js](https://img.shields.io/badge/Alpine.js-3-77C1CB?style=flat-square&logo=alpinedotjs&logoColor=white)](https://alpinejs.dev)
-[![Tests](https://img.shields.io/badge/Tests-102_passing-16A34A?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/Tests-116_passing-16A34A?style=flat-square)](#testing)
 [![License](https://img.shields.io/badge/License-MIT-F5C518?style=flat-square)](LICENSE)
 
 [Features](#-features) · [Quick Start](#-quick-start) · [Deployment](#-cpanel-deployment) · [Architecture](#-architecture) · [Docs](#-documentation)
@@ -38,7 +38,7 @@ Every prompt is *versioned like git*: edits append immutable `prompt_versions` r
 ### 🛍 Marketplace
 | | |
 |---|---|
-| 🔍 **Unified search** | Prompts **and creators** in one search bar (Scout-backed, never raw LIKE) |
+| 🔍 **Unified search** | Prompts **and creators** in one search bar — with a live AJAX typeahead dropdown and natural-language handling ("I want a blog" just works). Scout-backed, never raw LIKE |
 | 🖼 **Image gallery** | PromptPlum-style visual wall — covers full-bleed, prompt snippet visible on the card, one-click copy for free prompts |
 | 🎨 **Generated cover banners** | Every text prompt gets a beautiful SVG title banner (its own name typeset on a deterministic brand gradient) — no upload needed |
 | 📦 **Packs** | Bundle prompts at a bundle price |
@@ -48,6 +48,7 @@ Every prompt is *versioned like git*: edits append immutable `prompt_versions` r
 | | |
 |---|---|
 | ✅ **Verified badges** | Saffron seal, site-wide, issued by admins only |
+| 🌐 **Username handles** | `@username` public profiles at `/creators/{username}` — human-readable, name-fallback for legacy accounts |
 | 🖼 **Profile uploads** | Avatar + cover banner with automatic GD compression & re-encode |
 | 📝 **Full profile editing** | Facebook-style: identity, bio, photos — live preview link |
 | 💰 **NPR pricing** | Free → Rs. 50,000, paisa-accurate integer math, automatic product sync |
@@ -170,7 +171,7 @@ deploy/
 
 ```bash
 cd core
-php artisan test        # Pest — 102 tests, 416 assertions, all green
+php artisan test        # Pest — 116 tests, 465 assertions, all green
 ```
 
 Covers: storefront rendering, search, category pages, checkout flow (eSewa + manual), entitlements, prompt visibility, reports, brand settings, seeder integrity.
