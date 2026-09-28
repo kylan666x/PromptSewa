@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28 · **Current version:** v1.4.0
+**Prepared:** 2026-09-28 · **Current version:** v1.4.1
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -124,13 +124,31 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 9. **`core/public/index.php` is the LOCAL front controller** (boots the sibling `../` app, used by `artisan serve`). The cPanel docroot variant that looks for a sibling `core/` lives ONLY at `deploy/public_html/index.php` — they must never be swapped. This mix-up was shipped in v1.0 and silently made `artisan serve` 503 (tests still passed because they bypass the front controller).
 10. **Blade forms targeting PUT routes MUST include `@method('PUT')`** next to `@csrf`. v1.2.0's `dashboard/profile.blade.php` omitted it, so submits hit the PUT-only route as plain POST → live 405 Method Not Allowed. Local functional tests that `->post()` the spoofed field caught nothing because the view was never asserted for the hidden method field. When you add an edit form, verify the rendered HTML contains `_method`.
 11. **The update zip now ships a docroot allow-list** (`update.php`, `index.php`, `.htaccess`, `.user.ini`) under `public_html/` — v1.3.0. Before that, docroot bugfixes (like the update.php `extract_release_zip()` return-pairs fix) never reached live because the zip was core-only. `install.php` and `.update-token` are deliberately never shipped (the live token must stay server-side).
+12. **Blade form verb guard is an arch test** (`tests/Arch/BladeFormVerbTest.php`, v1.4.1). It scans every Blade `<form>` with a `route(...)` action, resolves the route's allowed verbs, and fails CI if (a) a form targets PUT/PATCH/DELETE without the matching `@method` spoof, or (b) a POST form targets a GET-only route. This is the permanent fix for the recurring 405 class (v1.3.0 profile, v1.4.1 admin review queue). New forms are covered automatically — do not add an `->only(...)` exclusion for it.
+13. **`CreatorProfileTest` caveat (v1.4.1)**: the 404 for unknown/soft-deleted creators moved from the controller into the route binder (`Route::bind('creator')` in `AppServiceProvider::boot` — Laravel 12 has no `RouteServiceProvider`; the boot binding is the approved equivalent). Tests asserting 404 for a bogus creator slug now exercise the binder, not controller code — a controller refactor that removes the 404 check is safe, but a binder regression will surface in that test first.
+14. **`users.username` is NOT NULL since v1.4.1.** The backfill migration (`2026_09_28_110000`) is idempotent (chunked, slug + numeric suffix on collision) and `2026_09_28_110100` enforces the constraint. Any new code path that creates users MUST supply a username (factory does it automatically; bare `User::create` in tests must include it). Profile edit also requires the handle — clearing it is a validation error, not a null-out.
 
 ## 7. Deploying the current update
 
-1. Upload `dist/promptsewa-1.4.0-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form. The zip contains `core/` and a `public_html/` allow-list (update.php + index.php + .htaccess + .user.ini).
+1. Upload `dist/promptsewa-1.4.1-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form. The zip contains `core/` and a `public_html/` allow-list (update.php + index.php + .htaccess + .user.ini).
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
+
+### Post-check (v1.4.1) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Run `php artisan migrate:status` (or let update.php log) | both `2026_09_28_110000_backfill_usernames` and `2026_09_28_110100_make_username_required` show as Ran | `SignupHardeningTest::every user ends up with a handle after the backfill migration`, `the username column is NOT NULL after migration` |
+| 2 | Admin → review queue → Preview on a pending paid prompt | amber "Moderation preview" banner, full body visible, URL `/admin/prompts/{id}/preview`, no `?preview=1` | `AdminPreviewTest` (6 tests) |
+| 3 | Approve/reject from the review queue | pending → published / rejected, no 405 | `AdminReviewTest::approve via the PATCH-spoofed admin form transitions pending to published` |
+| 4 | Sign up a fresh account | username required (≥4 chars, taken ones rejected), password meter animates, weak/common passwords rejected | `SignupHardeningTest` (10 tests) |
+| 5 | Navbar with uploaded logo (desktop + mobile) | desktop shows logo img without duplicate wordmark; mobile shows square mark; no logo → saffron badge + wordmark | `BrandLogoTest` (7 tests) |
+| 6 | Upload a transparent PNG logo in Admin → Brand | file stays `.png` (no JPEG re-encode), ≤768px | `BrandLogoTest::brand form accepts a transparent PNG logo and rejects JPEG logos` |
+| 7 | Ratings + reports + packs spot-check | buyer can rate paid prompt; staff resolve report; pack CRUD saves | `AdminFlowsTest` (14 tests) |
+| 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
+
+SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
 
 ## 8. File map (v1.1 → v1.3.0)
 
