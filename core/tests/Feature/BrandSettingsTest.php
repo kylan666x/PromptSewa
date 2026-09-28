@@ -12,6 +12,7 @@ function adminUser(): User
 {
     return User::create([
         'name' => 'Admin User',
+        'username' => 'admin-user',
         'email' => 'admin@example.test',
         'password' => 'password',
         'role' => User::ROLE_ADMIN,
@@ -25,6 +26,7 @@ test('guests cannot open the brand settings page', function () {
 test('non-admin members are forbidden from brand settings', function () {
     $user = User::create([
         'name' => 'Member',
+        'username' => 'brand-member',
         'email' => 'member@example.test',
         'password' => 'password',
         'role' => User::ROLE_MEMBER,

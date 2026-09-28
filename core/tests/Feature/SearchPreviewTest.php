@@ -16,6 +16,7 @@ function previewUser(array $overrides = []): User
 {
     return User::create(array_merge([
         'name' => 'Bibek Shrestha',
+        'username' => 'bibek-shrestha',
         'email' => 'bibek@promptsewa.test',
         'password' => 'password',
         'role' => User::ROLE_CREATOR,
@@ -153,7 +154,7 @@ test('username rejects non alpha-dash characters and long values', function () {
         ->assertSessionHasErrors('username');
 });
 
-test('username is optional and can be cleared', function () {
+test('username cannot be cleared once set (required since v1.4.1)', function () {
     $user = previewUser(['username' => 'clearme']);
 
     $this->actingAs($user)
@@ -161,9 +162,9 @@ test('username is optional and can be cleared', function () {
             'name' => $user->name,
             'username' => '',
         ])
-        ->assertRedirect();
+        ->assertSessionHasErrors('username');
 
-    expect($user->refresh()->username)->toBeNull();
+    expect($user->refresh()->username)->toBe('clearme');
 });
 
 test('profile edit form renders the method spoof and username field', function () {

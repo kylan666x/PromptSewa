@@ -101,6 +101,7 @@ test('navbar shows login and register links for guests, dashboard for users', fu
 
     $user = User::create([
         'name' => 'Nima Creator',
+        'username' => 'nima-creator',
         'email' => 'nima@example.test',
         'password' => Hash::make('super-secret-9'),
         'role' => User::ROLE_CREATOR,

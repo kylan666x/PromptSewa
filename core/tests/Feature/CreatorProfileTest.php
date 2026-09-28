@@ -11,6 +11,7 @@ function creatorWithPrompt(array $userOverrides = [], array $promptOverrides = [
 {
     $creator = User::create(array_merge([
         'name' => 'JustShipItAI',
+        'username' => 'justshipitai',
         'email' => 'justshipit@example.test',
         'password' => 'password',
         'role' => User::ROLE_CREATOR,
