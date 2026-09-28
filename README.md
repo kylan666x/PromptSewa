@@ -111,7 +111,7 @@ PromptSewa is engineered for **$3/mo shared cPanel hosting** — the prime direc
 
 **First install:** upload `dist/promptsewa-*-install.zip` → extract → create MySQL DB + user (ALL PRIVILEGES) → visit `install.php`.
 
-**Updates:** build a code-only zip (`php deploy/build-update-zip.php`), then either:
+**Updates:** build a code-only zip (`php deploy/build-update-zip.php`) — it contains `core/` **plus a `public_html/` allow-list** (`update.php`, `index.php`, `.htaccess`, `.user.ini`, so docroot fixes self-deliver; never `install.php` or `.update-token`) — then either:
 - upload it at `https://<domain>/update.php` (token-protected), or
 - upload through **Admin → Update** (`/admin/update`)
 
@@ -148,6 +148,8 @@ deploy/
 3. `@js()` inside `x-data` always uses **double-quoted** attributes (single quotes truncate)
 4. No `use` statements inside Blade `@php` blocks of anonymous components
 5. All uploads pass through `ImageUploadService` (GD re-encode strips metadata & downscales)
+6. PUT forms carry `@method('PUT')` next to `@csrf` — a missing spoof directive turns every submit into a 405
+7. `core/public/index.php` (local `artisan serve` front controller) and `deploy/public_html/index.php` (cPanel docroot variant) look similar but are **not** interchangeable
 
 ---
 

@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28
+**Prepared:** 2026-09-28 · **Current version:** v1.3.0 (commit `55aecdd`)
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -28,44 +28,63 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 ## 3. Releases & updates
 
 - **Full install zip** — `php deploy/build-release.php` → `dist/promptvellum-upload.zip` (core + vendor + built assets + docroot). Extract over `/home/USER/`, visit `install.php`.
-- **Update zip (live site)** — `php deploy/build-update-zip.php` → `dist/promptsewa-<VERSION>-update.zip` (code-only, no vendor). Apply at `https://<domain>/update.php` with the token in `public_html/.update-token`, **or** from the admin panel at `/admin/update`.
+- **Update zip (live site)** — `php deploy/build-update-zip.php` → `dist/promptsewa-<VERSION>-update.zip` (code-only: `core/` **plus a `public_html/` allow-list** — update.php, index.php, .htaccess, .user.ini — since v1.3.0; no vendor). Apply at `https://<domain>/update.php` with the token in `public_html/.update-token`, **or** from the admin panel at `/admin/update`. `install.php` and `.update-token` are never shipped (the live token must stay server-side).
 - **Update pipeline** (`core/app/Console/Commands/UpdateFromRelease.php`, command `pv:update`): maintenance mode → extract zip over `core/` (preserving live `.env`, token, storage) → `migrate` → **idempotent `db:seed`** (added v1.1) → config/route/view caches → asset sync into docroot → `storage:link` → maintenance off.
 
 **Warning:** `deploy/public_html/.update-token` is committed to the public GitHub repo. Regenerate it on the server after install (random hex in `public_html/.update-token`, web-invisible dotfile).
 
-## 4. v1.1.0 feature set (this release)
+## 4. Release history highlights
 
-### 4.1 Admin panel updater — 500 fixed
+### v1.2.0 — image uploads, profile editing, staff paywall
+
+- **`ImageUploadService`** (`app/Services/ImageUploadService.php`): GD decode-verify → downscale → JPEG re-encode (strips EXIF). Variants: cover 1600px q82 · banner 1600px q80 · avatar 512px q85 · logo 256px q90 · 8 MB ceiling · JPG/PNG/WebP only. All uploads (prompt covers, avatars, banners) go through it — nothing raw ever hits `storage/app/public`.
+- **Prompt cover upload** (image-type prompts only, `PromptFormRequest` rules) + **generated SVG title banners** (`components/prompt-cover.blade.php`): when no cover exists, a deterministic 6-palette saffron/bronze gradient banner typesets the title (word-wrapped ≤3 lines) as an SVG data-URI keyed by `prompt->id`.
+- **Full profile editing**: `GET/PUT /dashboard/profile` → `Dashboard\ProfileController` (name, bio, avatar, banner, remove toggles). Route name `dashboard.profile.update` is PUT-only.
+- **Navbar account dropdown** (desktop avatar menu + mobile drawer profile links).
+- **Staff paywall**: `PromptController::show` no longer grants staff free paid bodies; `?preview=1` is honored only when the viewer `isModerator()` AND the referer contains `/admin`. Admin prompts table has a Preview button.
+- **`deploy/public_html/update.php` fix**: `extract_release_zip()` returned `'ok|message'` strings while the caller destructured `[$level, $line]` → "Cannot use string as array … on line 362". Fixed to `list<array{0:string,1:string}>` pairs. (See §7 — the v1.2.0 zip was core-only, so live needed one manual cPanel upload of the file; from v1.3.0 every zip ships it.)
+
+### v1.3.0 — three live-incident fixes (this release)
+
+1. **Profile upload 405 (live)** — `dashboard/profile.blade.php` posted a plain POST but the route `dashboard.profile.update` is PUT-only and the form was **missing `@method('PUT')`**. Laravel correctly answered 405 Method Not Allowed. Fixed by adding the spoof directive; verified end-to-end with a real multipart upload (302 → avatar/banner stored). See watch-out §6.10.
+2. **Creator name overlapping the cover banner** — in `creators/show.blade.php` the identity row overlaps the banner by `-mt-12/-mt-16`; the name block now carries `pt-2 sm:pt-8` and `min-w-0` so name/badges clear the banner edge while the avatar keeps its X-style overlap.
+3. **update.php line-362 fix never reached live** — the v1.2.0 zip was `core/`-only, so `public_html/update.php` on the server stayed old. `build-update-zip.php` now ships the docroot allow-list in every zip (§3), so docroot fixes ride along from now on. v1.3.0 is the first zip that self-delivers the fixed updater.
+
+**Bonus fix:** `core/public/index.php` had been committed as the *cPanel docroot* front controller (looks for a sibling `core/` folder → 503 under `artisan serve`). Restored the real Laravel front controller; the cPanel variant lives only at `deploy/public_html/index.php`. See watch-out §6.9.
+
+### v1.1.0/v1.1.1 — earlier feature set
+
+#### Admin panel updater — 500 fixed
 `/admin/update` fat-errored because the view referenced the removed route name `dashboard.update.run`. Fixed to `admin.update.run` (`resources/views/dashboard/update.blade.php`).
 
-### 4.2 Verified badge (saffron seal)
+#### Verified badge (saffron seal)
 - `users.is_verified` (bool, migration `2026_09_27_000100`).
 - Issued **only by admins**: Admin → Users → per-row "Verify / ✓ Verified" toggle (`admin.users.verified` route → `UserAdminController::toggleVerified`). No automatic criteria.
 - Component `x-verified-badge` (`resources/views/components/verified-badge.blade.php`) with `size` variants xs/md/lg. Renders: prompt cards, image-gallery cards, **prompt detail byline**, creator profiles, admin users table, library search results.
 - **Policy:** only `admin@*` and the flagship `justshipitai@gmail.com` are seeded verified. Everyone else is admin-issued — the bulk seeder deliberately does *not* verify demo creators (removed in this release; earlier builds auto-verified them, revoke with one UPDATE if a legacy DB still has them).
 
-### 4.3 Creator profile redesign (X/Facebook-style)
+#### Creator profile redesign (X/Facebook-style)
 `resources/views/creators/show.blade.php`: gradient cover banner (deterministic per user id; swaps to uploaded image when `users.banner_path` is set), avatar overlapping the banner (`users.avatar_path`), large verified badge, role pills, joined date, bio, stats (prompts / sales), "Edit profile" CTA on own profile. **Route now binds by name**: `/creators/{user:name}` (was `/creators/{id}`) — URLs are human-readable, e.g. `/creators/Maya Tamang` → slugified by the browser.
 
-### 4.4 Game-feel buttons
+#### Game-feel buttons
 `components/button.blade.php` + inline CTAs use chunky offset shadows (`shadow-[0_4px_0_0_#a16207]`) that collapse on `:active` — arcade press feel. Applied to navbar CTAs, buy buttons, error pages, admin actions.
 
-### 4.5 Premium locked box fix
+#### Premium locked box fix
 The locked teaser on paid prompt detail was an absolutely-positioned overlay; the price pill overflowed the rounded box on narrow screens. Rebuilt as normal flow: teaser (max-h, gradient fade) → lock icon → copy → price pill, all inside `overflow-hidden rounded-2xl bg-ink`.
 
-### 4.6 Image prompt gallery (v1.0 ship)
+#### Image prompt gallery (v1.0 ship)
 Storefront "Image prompt gallery" section: `x-image-prompt-card` shows the cover visual full-bleed (4:5), category pill overlay, **prompt snippet visible on the card**, one-click copy for free prompts (`promptCopy` Alpine component), price CTA for paid. Library supports `?type=image|video|text` via `PromptSearchService::search($term, $perPage, $type)`.
 
-### 4.7 Custom branded error pages
+#### Custom branded error pages
 `resources/views/errors/{403,404,419,429,500,503}.blade.php` — brand layout, ink badge with error code, saffron CTAs (Back home / Browse prompts). Laravel picks these up automatically by status code.
 
-### 4.8 Mobile navbar rebuild
+#### Mobile navbar rebuild
 The old navbar put search, categories and auth links on one flex row — overlapping on small screens. Rebuilt: logo + search row 1 (search full-width on mobile), desktop links hidden on mobile behind a hamburger (`Alpine: mobile/cats` state) opening a drawer with all links + category chips. Desktop behavior unchanged.
 
-### 4.9 User search
+#### User search
 `PromptSearchService::searchCreators($term)` — name/email LIKE search over users who have ≥1 public prompt, surfaced as a "Creators" card grid above the prompt grid on `/prompts?q=…` (`library.blade.php`).
 
-### 4.10 Ratings
+#### Ratings
 - `ratings` table (unique user+prompt, `score` 1–5), `Rating` model, `RatingController@store` (upsert).
 - **Eligibility policy:** free prompts → any logged-in user; paid prompts → only buyers holding an `active` `LicenseGrant` (the same entitlement check as the full-body view). Enforced server-side; 403 otherwise.
 - UI: star row on prompt detail (below the prompt, above tips). Click a star = submit that score (progressive form, no JS needed). Shows "Your rating — click to change" after rating. Aggregate shows in the byline: `★ 4.5 (12)`.
@@ -105,7 +124,7 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check: profile edit at `/dashboard/profile` saves avatar/banner (v1.3.0 adds the missing `@method('PUT')` — fixes the live 405), creator profile name no longer collides with the banner, `/admin/update` loads.
 
-## 8. File map (what changed in v1.1)
+## 8. File map (v1.1 → v1.3.0)
 
 ```
 core/app/Console/Commands/UpdateFromRelease.php   + idempotent db:seed step
@@ -116,9 +135,6 @@ core/app/Models/Prompt.php                        + ratings()
 core/app/Models/User.php                          + is_verified (fillable, cast)
 core/app/Services/PromptSearchService.php         + $type param, searchCreators()
 core/database/migrations/2026_09_27_000100_add_is_verified_to_users_table.php  NEW
-core/app/Services/ImageUploadService.php       NEW (GD compress & re-encode)
-core/app/Http/Controllers/Dashboard/ProfileController.php  NEW (profile editing)
-core/resources/views/dashboard/profile.blade.php  NEW
 core/database/migrations/2026_09_28_000100_create_ratings_table.php            NEW
 core/database/seeders/BulkCatalogSeeder.php       NEW (240 prompts, no auto-verify)
 core/database/seeders/{DatabaseSeeder,DemoContentSeeder,JustShipItAISeeder}.php
@@ -130,7 +146,25 @@ core/resources/views/prompts/show.blade.php       badge, big tool logos, locked 
 core/resources/views/library.blade.php            + creators section
 core/resources/views/dashboard/update.blade.php   route-name fix
 core/routes/web.php                               + rate route, {user:name} binding
-deploy/build-update-zip.php                       version 1.1.0
+core/app/Services/ImageUploadService.php          NEW v1.2 (GD compress & re-encode)
+core/app/Http/Controllers/Dashboard/ProfileController.php  NEW v1.2 (profile editing)
+core/app/Http/Controllers/Dashboard/PromptEditController.php  + remove_cover
+core/app/Http/Requests/PromptFormRequest.php      + cover_image rules (image type only)
+core/resources/views/components/prompt-cover.blade.php  NEW v1.2 (SVG generated banners)
+core/resources/views/dashboard/profile.blade.php  NEW v1.2 (+ @method('PUT') in v1.3)
+core/resources/views/components/navbar.blade.php  account dropdown (v1.2)
+core/public/index.php                             RESTORED v1.3 (real Laravel front controller)
+deploy/public_html/update.php                     pairs-fix v1.2, shipped in zip since v1.3
+deploy/build-update-zip.php                       v1.3.0: ships public_html/ allow-list
 ```
+
+## 9. Live incident log (for context)
+
+| Date | Symptom | Root cause | Fixed in |
+| --- | --- | --- | --- |
+| v1.0 era | `/admin/update` 500 | view referenced removed route name `dashboard.update.run` | v1.1.0 |
+| v1.2 era | `update.php` "Cannot use string as array on line 362" | `extract_release_zip()` returned strings, caller destructured pairs; zip was core-only so the fix never reached the docroot | repo v1.2.0; delivered live by v1.3.0 zip |
+| v1.2 era | 405 Method Not Allowed on `/dashboard/profile` upload | form missing `@method('PUT')` | v1.3.0 |
+| v1.2 era | name overlapping cover photo on creator profiles | `-mt` overlap without top padding on the name block | v1.3.0 |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

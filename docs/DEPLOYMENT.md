@@ -121,14 +121,36 @@ Set up the same 1-minute cron as A5. The docroot files from
 
 ## Updates
 
-### Path 1 — upload.zip + update.php (works everywhere)
+### Path 1 — update zip + update.php (works everywhere)
 
-1. Get the new `promptsewa-upload.zip` (Actions artifact or local build).
-2. Upload to `/home/CPANELUSER/` → **Extract** (overwrites app files).
-3. Open **`https://yourdomain.com/update.php`**, paste the token from
-   `public_html/.update-token` (File Manager → *Show Hidden Files*), submit.
-4. The updater: maintenance mode on → migrations → config/route/view caches →
-   re-syncs `public_html/build` → maintenance mode off.
+Two zip flavors exist:
+
+- **Full install zip** (`promptsewa-upload.zip`, built by `build-release.php`):
+  core + vendor + built assets + docroot. Used for first installs and for
+  releases where `composer.lock` changed (the updater cannot run Composer).
+- **Update zip** (`promptsewa-<VERSION>-update.zip`, built by
+  `build-update-zip.php`): code-only. Contains `core/` **plus a small
+  `public_html/` allow-list** — `update.php`, `index.php`, `.htaccess`,
+  `.user.ini` (since v1.3.0; docroot bugfixes now ship with every release).
+  It never contains `install.php` or `.update-token` (the live token must
+  stay server-side), and never `vendor/` — safe only while
+  `composer.lock` is unchanged from the 1.0.0 baseline (the builder warns).
+
+Update steps:
+
+1. Get the new `promptsewa-*-update.zip` (Actions artifact or local build).
+2. Upload it at **`https://yourdomain.com/update.php`** (token from
+   `public_html/.update-token`, File Manager → *Show Hidden Files*), **or**
+   upload the zip to `/home/CPANELUSER/` → Extract, then open `update.php`.
+   The admin panel at `/admin/update` posts to the same pipeline.
+3. The updater: maintenance mode on → extract (core/ merged over the app;
+   the `public_html/` allow-list merged into the docroot) → migrations →
+   idempotent seed → config/route/view caches → re-syncs
+   `public_html/build` → maintenance mode off. `.env`, the database and
+   the token are preserved.
+4. If `update.php` itself is broken on the server (pre-v1.3.0 docroot),
+   upload `deploy/public_html/update.php` once via cPanel File Manager —
+   every later zip keeps it current automatically.
 5. Delete `update.php` afterwards if you prefer (it stays token-protected).
 
 > **Always take a cPanel backup** (*JetBackup* or manual) before updating.
@@ -176,3 +198,6 @@ One-time setup, then every tag `v*` deploys automatically:
 | `419 CSRF` | `APP_URL` doesn't match the browsing domain (subdomain vs domain). |
 | Sessions reset each click | `SESSION_DOMAIN` mismatch or `sessions` table missing (run `update.php`). |
 | Updater says invalid token | `public_html/.update-token` missing — recreate it with any long random string via File Manager (Show Hidden Files). |
+| `update.php` shows "Cannot use string as array … on line 362" | The docroot copy of `update.php` predates v1.3.0. Upload `deploy/public_html/update.php` via cPanel once (or run any v1.3.0+ update zip, which ships it). |
+| 405 Method Not Allowed after submitting a form | The Blade form is missing the method-spoof directive for a PUT route — the template must contain `@method('PUT')` next to `@csrf` (fixed for `/dashboard/profile` in v1.3.0). |
+| `artisan serve` shows "not installed yet" locally | `core/public/index.php` was overwritten with the cPanel docroot variant (which expects a sibling `core/` folder). Restore it from git — the cPanel front controller lives only in `deploy/public_html/index.php`. |

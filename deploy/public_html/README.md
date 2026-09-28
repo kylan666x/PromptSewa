@@ -11,10 +11,11 @@ Apache and LiteSpeed.
 | `index.php`   | Front controller — boots the hidden `core/` app; 503s with an install.php link if not installed |
 | `.user.ini`   | cPanel PHP-FPM/LiteSpeed per-directory limits (uploads, memory, exec time) |
 | `install.php` | **One-file web installer** — preflight checks, DB test, `.env`, migrations, admin user, asset copy; self-locks & self-deletes |
-| `update.php`  | **One-file web updater** — token-protected; maintenance mode → migrate → caches → asset sync |
+| `update.php`  | **One-file web updater** — token-protected; maintenance mode → migrate → caches → asset sync. Accepts update zips containing `core/` + `public_html/` entries and merges each into place; since v1.3.0 the update zip ships this file itself, so docroot fixes self-deliver |
 
 See [`docs/DEPLOYMENT.md`](../../docs/DEPLOYMENT.md) for the full flow.
 
-**Release builds** (`promptvellum-upload.zip` containing `core/` +
-`public_html/`): run `php deploy/build-release.php`, or download the artifact
-from the GitHub Actions *Release / Deploy* workflow.
+**Release builds:**
+
+- **Full install zip** (`core/` + `public_html/` + vendor): `php deploy/build-release.php`, or the GitHub Actions *Release / Deploy* artifact.
+- **Code-only update zip** (`core/` + a docroot allow-list of these four files minus install.php): `php deploy/build-update-zip.php`. It never contains `install.php` or `.update-token` — the live token must stay server-side.

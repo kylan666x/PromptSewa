@@ -11,8 +11,9 @@
 | `public_html/.htaccess` | Routes everything to docroot `index.php`; maps `/storage`, `/build`, favicon, robots.txt into `../core/`; blocks dotfiles |
 | `public_html/.user.ini` | LiteSpeed/PHP-FPM per-directory limits (uploads, memory, execution time) |
 | `public_html/install.php` | One-file web installer — preflight, DB test, `.env` generation, migrations, admin user, asset copy, self-locking + self-deleting |
-| `public_html/update.php` | One-file web updater — token-protected; maintenance mode → migrate → caches → asset sync → back online |
-| `build-release.php` | Builds `dist/promptvellum-upload.zip` (core + vendor + built assets + docroot files). `--no-zip` stages the tree for CI FTP mirroring |
+| `public_html/update.php` | One-file web updater — token-protected; maintenance mode → migrate → caches → asset sync → back online. Accepts zips containing `core/` AND `public_html/` entries (merges each to its place). Returns `list<array{0:string,1:string}>` [level, line] log pairs — do not regress to string concat |
+| `build-release.php` | Builds `dist/promptsewa-upload.zip` (core + vendor + built assets + docroot files). `--no-zip` stages the tree for CI FTP mirroring |
+| `build-update-zip.php` | Builds the code-only `dist/promptsewa-<VERSION>-update.zip`: `core/` **plus a `public_html/` allow-list** (`update.php`, `index.php`, `.htaccess`, `.user.ini` — so docroot fixes reach live). Never ships `install.php` or `.update-token`. Warns if `composer.lock` drifted from the 1.0.0 baseline (code-only zip cannot update `vendor/`) |
 
 ## Prime Directive (restated)
 
@@ -32,6 +33,15 @@ with `<IfModule>`.
    it without a session); it is never displayed on-screen by the installer.
 3. Never print secrets (DB passwords, tokens) in installer/updater output.
 4. `.env` is written with `chmod 0600` where the filesystem allows it.
+5. The update zip may only embed the four allow-listed docroot files —
+   NEVER `install.php` (post-install servers must not re-run it) and NEVER
+   `.update-token` (the live token must never transit the repo).
+6. **Front-controller variants must never be swapped:**
+   `deploy/public_html/index.php` (cPanel docroot, boots a sibling `core/`)
+   and `core/public/index.php` (real Laravel front controller for
+   `artisan serve`) look similar but are not interchangeable — mixing them
+   up 503s local serving. v1.3.0 fixed exactly this swap. The update zip
+   ships the docroot variant to `public_html/` only.
 
 ## Layout Contract
 
