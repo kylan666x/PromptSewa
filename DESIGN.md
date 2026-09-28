@@ -1,4 +1,4 @@
-# DESIGN.md — PromptVellum visual system
+# DESIGN.md — PromptSewa visual system
 
 > **Agents: read this file before ANY UI work** (new pages, components, copy
 > surfaces, or restyles). It is the durable design contract for this repo.
@@ -8,7 +8,7 @@
 **"Working manuscript on a maker's desk."** A light, warm-paper marketplace —
 the browsing surface — with **ink-dark product blocks** floating on it, and one
 saffron accent that always means *act now*. Inspired by the craft level of
-godofprompt.ai; **recreated from PromptVellum's own product truth — never a
+godofprompt.ai; **recreated from PromptSewa's own product truth — never a
 copy** of GoP content, illustrations, mascot, or copy.
 
 Two worlds, one system:
