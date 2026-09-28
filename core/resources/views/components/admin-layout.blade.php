@@ -23,6 +23,7 @@
                     'admin.brand.edit' => ['Brand', '◆'],
                     'admin.tool-logos.index' => ['Tool logos', '✦'],
                     'admin.update' => ['Software update', '⬆'],
+                    'admin.comp-grants.create' => ['Comp grants', '🎁'],
                 ];
             @endphp
             @foreach ($adminNav as $route => [$label, $icon])

@@ -19,6 +19,8 @@ class LicenseGrant extends Model
     protected $fillable = [
         'user_id',
         'order_item_id',
+        'issued_by',
+        'issue_reason',
         'prompt_id',
         'license_tier',
         'grant_code',
