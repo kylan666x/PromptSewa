@@ -2,55 +2,28 @@
 
 /*
 |--------------------------------------------------------------------------
-| PromptSewa — public_html/index.php (cPanel front controller)
+| PromptSewa — Laravel front controller (core/public/index.php)
 |--------------------------------------------------------------------------
 |
-| PRD §6: the Laravel app lives OUTSIDE the document root, at
-| /home/CPANELUSER/core/ (a sibling of public_html/). This file is the
-| ONLY PHP entry point exposed to the web; public_html/.htaccess routes
-| every non-static request here, and it boots the hidden application.
-|
-| Layout auto-detection: the sibling /home/USER/core is used first; if
-| you instead placed core inside public_html, that is picked up too.
+| This is the LOCAL / development entry point used by `php artisan serve`
+| and any webserver whose docroot is core/public. On the cPanel host the
+| docroot is public_html, whose own front controller
+| (deploy/public_html/index.php) boots THIS application from a sibling
+| directory — do not copy that variant here.
 |
 */
-
-// /home/CPANELUSER/core  (fallback: /home/CPANELUSER/public_html/core)
-$coreCandidates = [
-    dirname(__DIR__).DIRECTORY_SEPARATOR.'core',
-    __DIR__.DIRECTORY_SEPARATOR.'core',
-];
-
-foreach ($coreCandidates as $candidate) {
-    if (is_file($candidate.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php')) {
-        define('CORE_PATH', $candidate);
-        break;
-    }
-}
-
-if (! defined('CORE_PATH')) {
-    http_response_code(503);
-    exit("PromptSewa is not installed yet.<br>\nIf this is a fresh server, open <a href=\"install.php\">install.php</a> to install it.");
-}
-
-// A missing/unconfigured .env means the installer never ran — point the way.
-$envFile = CORE_PATH.'/.env';
-if (! is_file($envFile) || ! preg_match('/^APP_KEY=base64:.+$/m', (string) file_get_contents($envFile))) {
-    http_response_code(503);
-    exit("PromptSewa is not configured yet.<br>\nOpen <a href=\"install.php\">install.php</a> to install it.");
-}
 
 define('LARAVEL_START', microtime(true));
 
 // Maintenance mode: Laravel writes this file during `php artisan down`,
 // so honor it here exactly like the stock public/index.php would.
-if (file_exists($maintenance = CORE_PATH.'/storage/framework/maintenance.php')) {
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-require CORE_PATH.'/vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 /** @var \Illuminate\Foundation\Application $app */
-$app = require_once CORE_PATH.'/bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 
 $app->handleRequest(\Illuminate\Http\Request::capture());

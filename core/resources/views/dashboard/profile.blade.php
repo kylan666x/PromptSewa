@@ -14,6 +14,7 @@
 
         <form method="POST" action="{{ route('dashboard.profile.update') }}" enctype="multipart/form-data" class="mt-8 space-y-6">
             @csrf
+            @method('PUT')
 
             {{-- Identity --}}
             <section class="rounded-2xl border border-ink/10 bg-white p-6">

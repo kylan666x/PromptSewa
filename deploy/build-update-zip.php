@@ -6,11 +6,14 @@
 |--------------------------------------------------------------------------
 |
 | Unlike build-release.php (the full install zip with vendor/ + docroot
-| files), this script ships ONLY the application code under core/ —
-| no public_html/, no vendor/, no node_modules/. It is applied to a live
-| installation via update.php (token-protected), which merges core/ over
-| the existing installation, then migrates, seeds (idempotent), rebuilds
-| caches and re-syncs compiled assets into the docroot.
+| files), this script ships ONLY the application code under core/ plus a
+| small allow-list of docroot files under public_html/ — currently
+| update.php (so docroot bugfixes like the extract_release_zip() return-
+| pairs fix ride along), .htaccess and .user.ini. No vendor/, no
+| node_modules/. It is applied to a live installation via update.php
+| (token-protected), which merges core/ over the existing installation,
+| merges public_html/ into the docroot, then migrates, seeds (idempotent),
+| rebuilds caches and re-syncs compiled assets into the docroot.
 |
 | WHY code-only is safe:
 |   - composer.json / composer.lock are unchanged since the 1.0.0 release,
@@ -29,7 +32,7 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 $repoRoot = dirname(__DIR__);
 $zipPath = $repoRoot.DIRECTORY_SEPARATOR.'dist'
@@ -81,6 +84,25 @@ if (! extension_loaded('zip')) {
 $core = $repoRoot.DIRECTORY_SEPARATOR.'core';
 if (! is_dir($core)) {
     $fail('core/ not found — run this script from the repository root checkout.');
+}
+
+// Docroot files shipped alongside core/ — update.php already accepts both
+// 'core/' and 'public_html/' zip entries and merges them to the right place.
+// install.php and .update-token are deliberately NEVER shipped (the live
+// token must stay server-side; install.php should be gone after install).
+$publicHtmlAllowlist = [
+    'update.php',
+    'index.php',
+    '.htaccess',
+    '.user.ini',
+];
+$publicHtml = $repoRoot.DIRECTORY_SEPARATOR.'deploy'.DIRECTORY_SEPARATOR.'public_html';
+$publicHtmlFiles = [];
+foreach ($publicHtmlAllowlist as $name) {
+    if (! is_file($publicHtml.DIRECTORY_SEPARATOR.$name)) {
+        $fail("public_html allow-list file missing: {$name}");
+    }
+    $publicHtmlFiles[] = $name;
 }
 
 // --- Dependency guard -------------------------------------------------------
@@ -160,12 +182,17 @@ foreach ($files as $relative) {
     );
 }
 
+foreach ($publicHtmlFiles as $name) {
+    $zip->addFile($publicHtml.DIRECTORY_SEPARATOR.$name, 'public_html/'.$name);
+}
+
 $zip->close();
 
 $sizeMb = round((float) filesize($zipPath) / 1048576, 2);
 $sha = hash_file('sha256', $zipPath) ?: 'n/a';
 
-out("dist/promptsewa-".APP_VERSION."-update.zip built: ".count($files)." files, {$sizeMb} MB");
+out("dist/promptsewa-".APP_VERSION."-update.zip built: ".count($files)." core files + "
+    .count($publicHtmlFiles)." docroot files, {$sizeMb} MB");
 out("SHA-256: {$sha}");
 out('');
 out('Deploy steps (live site already installed — core-only update):');
@@ -173,5 +200,6 @@ out("  1. Upload dist/promptsewa-".APP_VERSION."-update.zip via cPanel File Mana
 out('     directly through the update.php form — it extracts + updates in one step).');
 out('  2. Open https://<your-domain>/update.php');
 out('  3. Paste the token from public_html/.update-token, click "Update now"');
-out('     (core/ merged, migrations run, idempotent seeders, caches rebuilt,');
+out('     (core/ merged, public_html/ docroot files merged — update.php itself');
+out('     gets refreshed, migrations run, idempotent seeders, caches rebuilt,');
 out('      compiled assets re-synced to public_html/build, maintenance mode toggled).');

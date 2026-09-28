@@ -82,7 +82,7 @@ php artisan migrate --seed  # seeds demo content + bulk catalog (269 prompts)
 
 Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still use old `admin@promptvellum.test` — both exist in some environments). Creators: `bibek@`, `maya@`, `dorje@promptsewa.test`.
 
-**Tests:** `php artisan test` — Pest, 102 tests / 415 assertions, all green as of this handoff. Cover storefront, search, categories, checkout flow, entitlements, reports, brand settings, seeder integrity.
+**Tests:** `php artisan test` — Pest, 102 tests / 416 assertions, all green as of this handoff (re-verified green at v1.3.0). Cover storefront, search, categories, checkout flow, entitlements, reports, brand settings, seeder integrity.
 
 ## 6. Known debt / watch-outs (for the senior engineer)
 
@@ -94,13 +94,16 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 6. **`storage/app/public/covers/*` demo SVGs are generated, not committed** (storage is gitignored). Fine in production — creators upload real covers — but a fresh local clone shows gradient placeholders for the gallery until seeded.
 7. **eSewa verification** is POST-based and exempt from CSRF (`checkout/esewa/verify`) — it signature-verifies the payload instead. Keep that exemption if you refactor checkout.
 8. **Ratings have no moderation/review text yet** — stars only. If you add reviews, add length limits + rate limiting (the report controller's `throttle:10,1` is the pattern) and consider a prompt-report link on reviews.
+9. **`core/public/index.php` is the LOCAL front controller** (boots the sibling `../` app, used by `artisan serve`). The cPanel docroot variant that looks for a sibling `core/` lives ONLY at `deploy/public_html/index.php` — they must never be swapped. This mix-up was shipped in v1.0 and silently made `artisan serve` 503 (tests still passed because they bypass the front controller).
+10. **Blade forms targeting PUT routes MUST include `@method('PUT')`** next to `@csrf`. v1.2.0's `dashboard/profile.blade.php` omitted it, so submits hit the PUT-only route as plain POST → live 405 Method Not Allowed. Local functional tests that `->post()` the spoofed field caught nothing because the view was never asserted for the hidden method field. When you add an edit form, verify the rendered HTML contains `_method`.
+11. **The update zip now ships a docroot allow-list** (`update.php`, `index.php`, `.htaccess`, `.user.ini`) under `public_html/` — v1.3.0. Before that, docroot bugfixes (like the update.php `extract_release_zip()` return-pairs fix) never reached live because the zip was core-only. `install.php` and `.update-token` are deliberately never shipped (the live token must stay server-side).
 
 ## 7. Deploying the current update
 
-1. Upload `dist/promptsewa-1.1.0-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form.
-2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run.
-3. Pipeline migrates the `ratings` + `is_verified` migrations, seeds the bulk catalog (only if missing — existing data untouched), rebuilds caches, syncs `public_html/build`.
-4. Post-check: homepage gallery renders, `/admin/update` loads (was 500), `/creators/Maya Tamang` works, verified badges visible on JustShipItAI prompts, star rating works on a free prompt while logged in.
+1. Upload `dist/promptsewa-1.3.0-update.zip` (or the newest `promptsewa-*-update.zip`) via cPanel or the `/admin/update` form. The zip now contains BOTH `core/` and a `public_html/` allow-list (update.php + index.php + .htaccess + .user.ini).
+2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
+3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
+4. Post-check: profile edit at `/dashboard/profile` saves avatar/banner (v1.3.0 adds the missing `@method('PUT')` — fixes the live 405), creator profile name no longer collides with the banner, `/admin/update` loads.
 
 ## 8. File map (what changed in v1.1)
 

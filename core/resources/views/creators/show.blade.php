@@ -32,7 +32,8 @@
     </div>
 
     <div class="mx-auto max-w-5xl px-4 sm:px-6">
-        {{-- Identity row — avatar overlapping the banner like X.com --}}
+        {{-- Identity row — avatar overlaps the banner like X.com; the name
+             block clears the banner edge so text never collides with the photo --}}
         <div class="relative -mt-12 flex flex-col gap-4 px-1 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
             <div class="flex items-end gap-4">
                 <span class="relative flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
@@ -42,7 +43,7 @@
                         {{ mb_substr($creator->name, 0, 1) }}
                     @endif
                 </span>
-                <div class="pb-1">
+                <div class="min-w-0 pb-1 pt-2 sm:pt-8">
                     <div class="flex flex-wrap items-center gap-2">
                         <h1 class="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{{ $creator->name }}</h1>
                         <x-verified-badge :user="$creator" size="lg"/>
