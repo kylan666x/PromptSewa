@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Category;
+use App\Models\User;
 use App\Services\SettingsService;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View;
 
@@ -24,6 +26,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::defaultView('pagination::tailwind');
+
+        // /creators/{creator} binds by the public handle (username) with a
+        // display-name fallback for accounts that never picked one. Scoped
+        // to this parameter only — admin {user} routes keep id binding.
+        Route::bind('creator', function (string $value) {
+            return User::query()
+                ->where(fn ($q) => $q
+                    ->where('username', $value)
+                    ->orWhere('name', $value))
+                ->whereNull('deleted_at')
+                ->first();
+        });
 
         // Every full page gets the navbar's category list without each
         // controller repeating the query (UI-001 navbar requirement).

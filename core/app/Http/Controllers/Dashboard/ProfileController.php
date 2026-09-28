@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Facebook-style full profile editing: identity (name/bio), avatar and
@@ -26,6 +27,13 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:60'],
+            'username' => [
+                'nullable',
+                'string',
+                'max:30',
+                'alpha_dash',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
             'bio' => ['nullable', 'string', 'max:400'],
             'avatar' => ['nullable', 'image', 'max:8192'],
             'banner' => ['nullable', 'image', 'max:8192'],
@@ -64,6 +72,12 @@ class ProfileController extends Controller
         }
 
         $user->name = trim($validated['name']);
+
+        // Handle: store lowercase-normalized or null (clearing it falls the
+        // profile URL back to the display name).
+        $username = strtolower(trim((string) ($validated['username'] ?? '')));
+        $user->username = $username !== '' ? $username : null;
+
         $bio = trim((string) ($validated['bio'] ?? ''));
         $user->bio = $bio !== '' ? $bio : null;
         $user->save();

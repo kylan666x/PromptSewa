@@ -10,12 +10,11 @@ use App\Models\User;
  */
 class CreatorProfileController extends Controller
 {
-    public function show(User $user)
+    // {creator} binds by username (name fallback) in AppServiceProvider::boot;
+    // soft-deleted accounts are excluded at the binding level.
+    public function show(User $creator)
     {
-        // Soft-deleted (banned) accounts are not public profiles.
-        abort_if($user->deleted_at !== null, 404);
-
-        $prompts = $user->prompts()
+        $prompts = $creator->prompts()
             ->publicListing()
             ->with(['category', 'latestVersion'])
             ->withCount('versions')
@@ -24,13 +23,13 @@ class CreatorProfileController extends Controller
             ->paginate(12);
 
         $stats = [
-            'prompts' => $user->prompts()->publicListing()->count(),
-            'total_sales' => (int) $user->prompts()->publicListing()->sum('sales_count'),
-            'joined' => $user->created_at,
+            'prompts' => $creator->prompts()->publicListing()->count(),
+            'total_sales' => (int) $creator->prompts()->publicListing()->sum('sales_count'),
+            'joined' => $creator->created_at,
         ];
 
         return view('creators.show', [
-            'creator' => $user,
+            'creator' => $creator,
             'prompts' => $prompts,
             'stats' => $stats,
         ]);

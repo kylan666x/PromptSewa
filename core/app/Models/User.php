@@ -30,6 +30,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
         'role',
@@ -114,5 +115,25 @@ class User extends Authenticatable
     public function licenseGrants(): HasMany
     {
         return $this->hasMany(LicenseGrant::class);
+    }
+
+    // ------------------------------------------------------------------
+    // Public handle (username) — used for /creators/{username} URLs.
+    // Falls back to the display name so legacy accounts without a chosen
+    // handle keep their profile URL working. Binding for {creator} is
+    // scoped in AppServiceProvider (username OR name); admin {user:id}
+    // routes pin the id explicitly and are unaffected by the override.
+    // ------------------------------------------------------------------
+
+    public function getRouteKey(): string
+    {
+        return ($this->username !== null && $this->username !== '')
+            ? $this->username
+            : $this->name;
+    }
+
+    public function creatorRouteKey(): string
+    {
+        return $this->getRouteKey();
     }
 }

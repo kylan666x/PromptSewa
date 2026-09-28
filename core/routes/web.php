@@ -21,6 +21,7 @@ use App\Http\Controllers\PackController;
 use App\Http\Controllers\Admin\PromptReportAdminController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\PromptReportController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StorefrontController;
 use App\Models\Prompt;
 use Illuminate\Support\Facades\Route;
@@ -48,13 +49,21 @@ Route::post('/prompts/{prompt:slug}/rate', [\App\Http\Controllers\RatingControll
     ->middleware('auth');
 
 // Public creator profiles — identity, bio and published catalog.
-Route::get('/creators/{user:name}', [CreatorProfileController::class, 'show'])
+// {creator} binds by the public username (AppServiceProvider) with a
+// display-name fallback for legacy accounts.
+Route::get('/creators/{creator}', [CreatorProfileController::class, 'show'])
     ->name('creators.show');
 
 // Search goes through the Scout-backed service; throttle guards the
 // public LIKE scans against trivial abuse (UI-001 security note).
 Route::get('/prompts', [LibraryController::class, 'index'])
     ->name('library.index')
+    ->middleware('throttle:60,1');
+
+// JSON typeahead for the navbar search preview (TASK 2) — same throttle
+// class as the full search since it hits the same underlying queries.
+Route::get('/search/preview', [SearchController::class, 'preview'])
+    ->name('search.preview')
     ->middleware('throttle:60,1');
 
 Route::get('/categories/{category:slug}', [LibraryController::class, 'category'])
@@ -141,10 +150,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/prompts', [PromptAdminController::class, 'index'])->name('prompts.index');
     Route::patch('/prompts/{prompt}/status', [PromptAdminController::class, 'updateStatus'])->name('prompts.status');
 
-    // User management (admin only for role changes).
+    // User management (admin only for role changes). {user:id} pins the
+    // id binding — User::getRouteKey() now returns the public username for
+    // creator URLs, and admin action URLs must stay id-stable.
     Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
-    Route::patch('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
-    Route::patch('/users/{user}/verified', [UserAdminController::class, 'toggleVerified'])->name('users.verified');
+    Route::patch('/users/{user:id}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
+    Route::patch('/users/{user:id}/verified', [UserAdminController::class, 'toggleVerified'])->name('users.verified');
 
     // Abuse reports triage ("Report this prompt").
     Route::get('/reports', [PromptReportAdminController::class, 'index'])->name('reports.index');

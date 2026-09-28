@@ -5,7 +5,7 @@
         <header>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-saffron-deep">Your account</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-ink">Edit profile</h1>
-            <p class="mt-1 text-sm text-ink/60">This is what buyers see at <a href="{{ route('creators.show', $user) }}" class="text-saffron-deep hover:underline decoration-saffron decoration-2 underline-offset-4">{{ url('/creators/'.$user->name) }}</a>.</p>
+            <p class="mt-1 text-sm text-ink/60">This is what buyers see at <a href="{{ route('creators.show', $user) }}" class="text-saffron-deep hover:underline decoration-saffron decoration-2 underline-offset-4">{{ url('/creators/'.$user->creatorRouteKey()) }}</a>.</p>
         </header>
 
         @if (session('success'))
@@ -26,6 +26,19 @@
                             <x-form.input name="name" :value="old('name', $user->name)" :required="true" maxlength="60"/>
                         </div>
                         @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <x-form.label name="username" label="Username" hint="Your public handle — letters, numbers, dashes. Up to 30 characters."/>
+                        <div class="mt-1.5">
+                            <div class="relative">
+                                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-sm text-ink/40">@</span>
+                                <input type="text" id="username" name="username" value="{{ old('username', $user->username) }}" maxlength="30"
+                                       class="block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 pl-8 text-sm text-ink placeholder-creak outline-none transition focus:border-saffron-deep"
+                                       placeholder="promptwizard"
+                                       autocomplete="off" spellcheck="false">
+                            </div>
+                        </div>
+                        @error('username') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <x-form.label name="bio" label="Bio" hint="Up to 400 characters — who are you, what do you build?"/>
