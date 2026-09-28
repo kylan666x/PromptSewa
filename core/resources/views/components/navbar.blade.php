@@ -2,18 +2,29 @@
     'categories',
     'siteName' => 'PromptSewa',
     'brandLogoPath' => '',
+    'brandMarkPath' => '',
 ])
 
 <nav class="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur" x-data="{ mobile: false, cats: false }">
     <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
-        {{-- Logo (admin upload) or the wordmark badge --}}
-        <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-ink">
+        {{-- Logo: desktop shows the full landscape logo (or fallback badge +
+             wordmark); mobile shows the square mark only (S3). --}}
+        <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-ink" aria-label="{{ $siteName }} — home">
             @if ($brandLogoPath !== '')
-                <img src="{{ asset('storage/'.$brandLogoPath) }}" alt="{{ $siteName }} logo" class="size-8 rounded-lg object-contain">
-            @else
+                {{-- Full logo carries the site name visually — alt text only,
+                     no adjacent wordmark (would duplicate for screen readers). --}}
+                <img src="{{ asset('storage/'.$brandLogoPath) }}" alt="{{ $siteName }}" class="hidden h-9 w-auto object-contain md:block">
+            @endif
+
+            @if ($brandMarkPath !== '')
+                <img src="{{ asset('storage/'.$brandMarkPath) }}" alt="" class="size-9 rounded-lg object-contain md:hidden" aria-hidden="true">
+            @elseif ($brandLogoPath === '')
                 <span class="flex size-8 items-center justify-center rounded-lg bg-saffron text-sm font-bold text-ink">{{ mb_substr($siteName, 0, 2) }}</span>
             @endif
-            <span class="hidden sm:inline">{{ $siteName }}</span>
+
+            @if ($brandLogoPath === '')
+                <span class="hidden sm:inline">{{ $siteName }}</span>
+            @endif
         </a>
 
         {{-- Search — full width on mobile, inline from md; typeahead dropdown --}}
@@ -132,7 +143,7 @@
                                 {{ auth()->user()->name }}
                                 <x-verified-badge :user="auth()->user()" size="xs"/>
                             </p>
-                            <p class="truncate text-xs text-ink/50">{{ auth()->user()->email }}</p>
+                            <p class="truncate font-mono text-xs text-ink/50">@{{ auth()->user()->username }}</p>
                         </div>
                         <a href="{{ route('creators.show', auth()->user()) }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>

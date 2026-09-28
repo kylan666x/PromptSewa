@@ -34,22 +34,37 @@
 
         <div class="rounded-2xl border border-ink/10 bg-white p-6">
             <h3 class="text-sm font-semibold text-ink">Logos</h3>
-            <p class="mt-1 text-xs text-ink0">PNG, JPG or SVG — square works best for the favicon.</p>
+            <p class="mt-1 text-xs text-ink0">Transparent PNG or WebP — transparency is preserved (never flattened to black). Use the logo for landscape wordmarks and the mark for square icons.</p>
 
             <div class="mt-4 grid gap-6 sm:grid-cols-2">
                 <div>
-                    <label class="block text-xs font-medium text-ink/60">Logo</label>
+                    <label class="block text-xs font-medium text-ink/60">Logo <span class="text-ink0">(landscape, e.g. 370×80)</span></label>
                     <div class="mt-1.5 flex items-center gap-3">
                         @if ($logoPath !== '')
-                            <img src="{{ asset('storage/'.$logoPath) }}" alt="Current logo" class="size-14 rounded-xl border border-ink/10 bg-white object-contain p-1">
+                            <img src="{{ asset('storage/'.$logoPath) }}" alt="Current logo" class="h-10 w-auto max-w-[160px] rounded-lg border border-ink/10 bg-white object-contain p-1">
                         @else
                             <span class="flex size-14 items-center justify-center rounded-xl border border-dashed border-ink/20 text-[10px] text-ink0">none</span>
                         @endif
-                        <input type="file" name="logo" accept="image/png,image/jpeg,image/svg+xml"
+                        <input type="file" name="logo" accept="image/png,image/webp"
                                class="block w-full text-sm text-ink/60 file:mr-3 file:rounded-lg file:border-0 file:bg-paper-deep file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink/90">
                     </div>
                     @error('logo') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-xs text-ink0">@if ($logoPath !== '') Uploaded — upload a new file to replace it. @else Falls back to the {{ mb_substr($siteName, 0, 2) }} badge. @endif</p>
+                    <p class="mt-1 text-xs text-ink0">Desktop navbar wordmark. @if ($logoPath !== '') Uploaded — upload a new file to replace it. @else Falls back to the {{ mb_substr($siteName, 0, 2) }} badge. @endif</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-ink/60">Mark / favicon <span class="text-ink0">(square 512×512)</span></label>
+                    <div class="mt-1.5 flex items-center gap-3">
+                        @if ($markPath !== '')
+                            <img src="{{ asset('storage/'.$markPath) }}" alt="Current mark" class="size-14 rounded-xl border border-ink/10 bg-white object-contain p-1">
+                        @else
+                            <span class="flex size-14 items-center justify-center rounded-xl border border-dashed border-ink/20 text-[10px] text-ink0">none</span>
+                        @endif
+                        <input type="file" name="mark" accept="image/png,image/webp"
+                               class="block w-full text-sm text-ink/60 file:mr-3 file:rounded-lg file:border-0 file:bg-paper-deep file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink/90">
+                    </div>
+                    @error('mark') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <p class="mt-1 text-xs text-ink0">Mobile navbar + favicon fallback. @if ($markPath !== '') Uploaded — upload a new file to replace it. @else Falls back to the saffron initial badge. @endif</p>
                 </div>
 
                 <div>

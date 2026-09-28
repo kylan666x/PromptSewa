@@ -26,6 +26,7 @@ class BrandSettingsAdminController extends Controller
             'contactEmail' => (string) $this->settings->get('contact_email', ''),
             'supportEmail' => (string) $this->settings->get('support_email', ''),
             'logoPath' => (string) $this->settings->get('brand_logo_path', ''),
+            'markPath' => (string) $this->settings->get('brand_mark_path', ''),
             'faviconPath' => (string) $this->settings->get('brand_favicon_path', ''),
         ]);
     }
@@ -39,7 +40,10 @@ class BrandSettingsAdminController extends Controller
             'site_tagline' => ['nullable', 'string', 'max:200'],
             'contact_email' => ['nullable', 'email', 'max:190'],
             'support_email' => ['nullable', 'email', 'max:190'],
-            'logo' => ['nullable', 'image', 'max:512'],
+            // S3: logo keeps transparency — PNG/WebP with alpha only, no
+            // SVG (XSS vector), no JPEG (flattens transparency).
+            'logo' => ['nullable', 'image', 'max:512', 'mimes:png,webp'],
+            'mark' => ['nullable', 'image', 'max:512', 'mimes:png,webp'],
             'favicon' => ['nullable', 'max:256', 'mimes:ico,png,svg'],
         ]);
 
@@ -51,6 +55,11 @@ class BrandSettingsAdminController extends Controller
         $logoPath = $this->storeUpload($request, 'logo', 'brand');
         if ($logoPath !== null) {
             $this->settings->set('brand_logo_path', $logoPath);
+        }
+
+        $markPath = $this->storeUpload($request, 'mark', 'brand');
+        if ($markPath !== null) {
+            $this->settings->set('brand_mark_path', $markPath);
         }
 
         $faviconPath = $this->storeUpload($request, 'favicon', 'brand');

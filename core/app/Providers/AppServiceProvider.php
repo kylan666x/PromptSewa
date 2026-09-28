@@ -51,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('siteName', $settings->siteName());
             $view->with('siteTagline', (string) $settings->get('site_tagline', ''));
             $view->with('brandLogoPath', (string) $settings->get('brand_logo_path', ''));
+            $view->with('brandMarkPath', (string) $settings->get('brand_mark_path', ''));
             $view->with('brandFaviconPath', (string) $settings->get('brand_favicon_path', ''));
             $view->with('contactEmail', (string) $settings->get('contact_email', ''));
             $view->with('supportEmail', (string) $settings->get('support_email', ''));

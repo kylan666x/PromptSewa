@@ -18,12 +18,19 @@ use Illuminate\Support\Str;
  */
 class ImageUploadService
 {
-    /** [max dimension, disk subdirectory, jpeg quality] per variant. */
+    /**
+     * [max dimension, disk subdirectory, jpeg quality, alpha-preserving] per
+     * variant. Alpha variants (logos, marks, future badges/frames) keep
+     * PNG/WebP transparency — they are NEVER JPEG-re-encoded, because JPEG
+     * has no alpha channel and would flatten every transparent logo onto a
+     * black box.
+     */
     public const VARIANTS = [
-        'cover' => ['max' => 1600, 'dir' => 'covers', 'quality' => 82],
-        'banner' => ['max' => 1600, 'dir' => 'banners', 'quality' => 80],
-        'avatar' => ['max' => 512, 'dir' => 'avatars', 'quality' => 85],
-        'logo' => ['max' => 256, 'dir' => 'logos', 'quality' => 90],
+        'cover' => ['max' => 1600, 'dir' => 'covers', 'quality' => 82, 'alpha' => false],
+        'banner' => ['max' => 1600, 'dir' => 'banners', 'quality' => 80, 'alpha' => false],
+        'avatar' => ['max' => 512, 'dir' => 'avatars', 'quality' => 85, 'alpha' => false],
+        'logo' => ['max' => 768, 'dir' => 'logos', 'quality' => 90, 'alpha' => true],
+        'mark' => ['max' => 768, 'dir' => 'marks', 'quality' => 90, 'alpha' => true],
     ];
 
     public const MAX_INPUT_KB = 8192; // 8 MB hard ceiling before compression
@@ -67,16 +74,29 @@ class ImageUploadService
 
         try {
             $cfg = self::VARIANTS[$variant];
-            $image = $this->downscale($src, $cfg['max']);
+            $image = $this->downscale($src, $cfg['max'], $cfg['alpha']);
             $quality = $cfg['quality'];
 
-            // Encode in-memory, then write through Storage so the public
-            // symlink exposes it at /storage/<variant>s/… immediately.
-            ob_start();
-            imagejpeg($image, null, $quality);
-            $binary = (string) ob_get_clean();
+            if ($cfg['alpha']) {
+                // Logos/marks keep transparency: PNG (or WebP for webp
+                // sources). No background flattening, no EXIF risk (PNG has
+                // none of consequence and GD strips everything anyway).
+                imagealphablending($image, false);
+                imagesavealpha($image, true);
 
-            $name = Str::random(40).'.jpg';
+                ob_start();
+                imagepng($image, null, 6);
+                $binary = (string) ob_get_clean();
+                $extension = 'png';
+            } else {
+                // Photos: JPEG re-encode strips metadata and crushes size.
+                ob_start();
+                imagejpeg($image, null, $quality);
+                $binary = (string) ob_get_clean();
+                $extension = 'jpg';
+            }
+
+            $name = Str::random(40).'.'.$extension;
             $path = $cfg['dir'].'/'.$name;
 
             Storage::disk('public')->put($path, $binary);
@@ -90,8 +110,9 @@ class ImageUploadService
         }
     }
 
-    /** Proportional downscale so no dimension exceeds $max. */
-    private function downscale(\GdImage $src, int $max): \GdImage
+    /** Proportional downscale so no dimension exceeds $max. Alpha
+     *  variants get a transparent canvas instead of GD's default black. */
+    private function downscale(\GdImage $src, int $max, bool $preserveAlpha = false): \GdImage
     {
         $w = imagesx($src);
         $h = imagesy($src);
@@ -105,6 +126,15 @@ class ImageUploadService
         $nh = max(1, (int) round($h * $scale));
 
         $dst = imagecreatetruecolor($nw, $nh);
+
+        if ($preserveAlpha) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefill($dst, 0, 0, $transparent);
+            imagealphablending($dst, true);
+        }
+
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
 
         return $dst;

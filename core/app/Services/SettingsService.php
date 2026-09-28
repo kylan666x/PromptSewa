@@ -26,6 +26,7 @@ class SettingsService
         'site_name' => 'PromptSewa',
         'site_tagline' => 'Discover, test, buy and sell premium AI prompts.',
         'brand_logo_path' => '',
+        'brand_mark_path' => '',
         'brand_favicon_path' => '',
         'contact_email' => '',
         'support_email' => '',
