@@ -32,40 +32,50 @@
     </div>
 
     <div class="mx-auto max-w-5xl px-4 sm:px-6">
-        {{-- Identity row — avatar overlaps the banner like X.com; the name
-             block clears the banner edge so text never collides with the photo --}}
-        <div class="relative -mt-12 flex flex-col gap-4 px-1 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
-            <div class="flex items-end gap-4">
-                <span class="relative flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
-                    @if ($creator->avatar_path)
-                        <img src="{{ Storage::url($creator->avatar_path) }}" alt="" class="size-full rounded-[20px] object-cover">
-                    @else
-                        {{ mb_substr($creator->name, 0, 1) }}
-                    @endif
-                </span>
-                <div class="min-w-0 pb-1 pt-2 sm:pt-8">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <h1 class="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{{ $creator->name }}</h1>
-                        <x-verified-badge :user="$creator" size="lg"/>
-                    </div>
-                    <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-ink/50">
-                        @if ($creator->isAtLeast(\App\Models\User::ROLE_CREATOR))
-                            <span class="rounded-full bg-saffron/20 px-2.5 py-0.5 font-mono text-[11px] font-bold text-saffron-deep">Creator</span>
+        {{-- Identity row (UI-003): ONLY the avatar overlaps the banner
+             (X/Facebook-style). The text block lives in its own flex-column
+             container below the banner's bottom edge — no negative margins,
+             guaranteed pt clearance — so name/handle/badges never collide
+             with the photo, on any screen size or name length. --}}
+        <div class="relative -mt-12 px-1 sm:-mt-16">
+            <div class="flex flex-col gap-3 pt-3 sm:flex-row sm:items-end sm:justify-between sm:pt-4">
+                <div class="flex min-w-0 items-end gap-4">
+                    <span class="relative flex size-24 shrink-0 items-center justify-center rounded-3xl border-4 border-paper bg-saffron text-4xl font-bold text-ink shadow-card-hover sm:size-28">
+                        @if ($creator->avatar_path)
+                            <img src="{{ Storage::url($creator->avatar_path) }}" alt="" class="size-full rounded-[20px] object-cover">
+                        @else
+                            {{ mb_substr($creator->name, 0, 1) }}
                         @endif
-                        @if ($creator->isModerator())
-                            <span class="rounded-full border border-ink/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-ink/70">Staff</span>
-                        @endif
-                        <span class="font-mono text-xs">Joined {{ $stats['joined']->format('M Y') }}</span>
-                    </p>
-                </div>
-            </div>
+                    </span>
 
-            @if ($isOwner)
-                <a href="{{ route('dashboard') }}"
-                   class="shrink-0 rounded-full border-2 border-ink/80 bg-white px-5 py-2 text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper hover:shadow-card">
-                    Edit profile
-                </a>
-            @endif
+                    {{-- Text block: normal document flow, pt clearance, truncate --}}
+                    <div class="min-w-0 flex-1 pb-1">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <h1 class="min-w-0 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">{{ $creator->name }}</h1>
+                            <span class="shrink-0"><x-verified-badge :user="$creator" size="lg"/></span>
+                        </div>
+                        @if ($creator->username)
+                            <p class="truncate font-mono text-sm text-ink/50">@{{ $creator->username }}</p>
+                        @endif
+                        <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-ink/50">
+                            @if ($creator->isAtLeast(\App\Models\User::ROLE_CREATOR))
+                                <span class="rounded-full bg-saffron/20 px-2.5 py-0.5 font-mono text-[11px] font-bold text-saffron-deep">Creator</span>
+                            @endif
+                            @if ($creator->isModerator())
+                                <span class="rounded-full border border-ink/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-ink/70">Staff</span>
+                            @endif
+                            <span class="font-mono text-xs">Joined {{ $stats['joined']->format('M Y') }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                @if ($isOwner)
+                    <a href="{{ route('dashboard') }}"
+                       class="shrink-0 self-start rounded-full border-2 border-ink/80 bg-white px-5 py-2 text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper hover:shadow-card sm:self-auto">
+                        Edit profile
+                    </a>
+                @endif
+            </div>
         </div>
 
         {{-- Bio + stats strip --}}
