@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/🧵_PromptSewa-v1.4.1-F5C518?style=for-the-badge&labelColor=171715" alt="PromptSewa"/>
+<img src="https://img.shields.io/badge/🧵_PromptSewa-v1.4.2-F5C518?style=for-the-badge&labelColor=171715" alt="PromptSewa"/>
 
 # PromptSewa
 

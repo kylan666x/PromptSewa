@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28 · **Current version:** v1.4.1
+**Prepared:** 2026-09-28 · **Current version:** v1.4.2
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -127,6 +127,9 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 12. **Blade form verb guard is an arch test** (`tests/Arch/BladeFormVerbTest.php`, v1.4.1). It scans every Blade `<form>` with a `route(...)` action, resolves the route's allowed verbs, and fails CI if (a) a form targets PUT/PATCH/DELETE without the matching `@method` spoof, or (b) a POST form targets a GET-only route. This is the permanent fix for the recurring 405 class (v1.3.0 profile, v1.4.1 admin review queue). New forms are covered automatically — do not add an `->only(...)` exclusion for it.
 13. **`CreatorProfileTest` caveat (v1.4.1)**: the 404 for unknown/soft-deleted creators moved from the controller into the route binder (`Route::bind('creator')` in `AppServiceProvider::boot` — Laravel 12 has no `RouteServiceProvider`; the boot binding is the approved equivalent). Tests asserting 404 for a bogus creator slug now exercise the binder, not controller code — a controller refactor that removes the 404 check is safe, but a binder regression will surface in that test first.
 14. **`users.username` is NOT NULL since v1.4.1.** The backfill migration (`2026_09_28_110000`) is idempotent (chunked, slug + numeric suffix on collision) and `2026_09_28_110100` enforces the constraint. Any new code path that creates users MUST supply a username (factory does it automatically; bare `User::create` in tests must include it). Profile edit also requires the handle — clearing it is a validation error, not a null-out.
+15. **Blade `@{{ }}` renders literal text — banned repo-wide; NoBladeLeakTest enforces.** The v1.4.1 handle rollup shipped six `@{{ }}` escapes that Blade never compiles, and prod rendered raw `{{ $prompt->creator->username ?? ... }}` on every card. Alpine interpolation must use `x-text`/`:attr`; literal `@` is `'@'.$handle` echoed inside a plain `{{ }}`. The arch test also bans raw U+2192 arrows (use `&rarr;`).
+16. **Views must render standalone (no ambient shared vars); StaffViewStandaloneRenderTest enforces.** The v1.4.1 prod 500 was `Undefined variable $errors` in dashboard/update — the `@error` directive compiles to `$errors->getBag()` and explodes when the view renders outside the web middleware group (release log pages, artisan contexts, error paths). Never use `@error`/`$errors` in a view without an `isset($errors)` guard, and never rely on `view()->composer` data in a view that can render outside HTTP. The update pipeline now runs `view:clear` immediately before `view:cache` — stale compiled views must never survive an upgrade.
+17. **Public history page = metadata only; Edit link is owner-only.** `/prompts/{slug}/versions` exposes labels, changelogs, authors, timestamps — never bodies or variable lists for paid prompts. The detail page's Edit link renders only for the owner; moderators use the admin preview route. Never link `dashboard.prompts.edit` from admin surfaces (the admin dashboard review queue links the preview route).
 
 ## 7. Deploying the current update
 
@@ -149,6 +152,21 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
 
 SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
+
+### Post-check (v1.4.2) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Run `php artisan migrate:status` | `2026_09_28_120000_add_banned_at_to_users_table` and `2026_09_28_121000_make_license_grants_comp_capable` show Ran | `UserBanTest`, `CompGrantTest` |
+| 2 | Open any prompt card / creator profile / prompt detail | real `@handle` renders in mono font — NEVER `{{ $… }}` literal text | `Arch\NoBladeLeakTest`, `CreatorProfileTest` handle assertions |
+| 3 | Spot-check served HTML of home, library, prompt detail, creator profile, dashboard profile, admin users | zero occurrences of `{{ $` echo leaks | `assertNoBladeLeak` applied in `StaffViewStandaloneRenderTest`, `PromptVersionsPageTest`, card/detail tests |
+| 4 | Open `/admin/update` as staff on prod | 200 with the upload form (works with token absent, cached config) — no 500 | `StaffViewStandaloneRenderTest::dashboard update view renders standalone…`, `AdminFlowsTest::admin update page loads…` |
+| 5 | Look at a long-titled prompt's generated banner | title centered on both axes, ≤3 lines, ellipsis at a word boundary, nothing clipped mid-glyph | `PromptCoverTypographyTest` (overflow + ellipsis assertions) |
+| 6 | Open a prompt detail as guest and as an unrelated member | "View history" link present; zero edit URLs; history page shows changelogs only (no bodies on paid prompts) | `PromptVersionsPageTest` (5 tests) |
+| 7 | Admin → Overview shows version chip | `v1.4.2` chip matches the deployed release | `config('app.version')` single source |
+| 8 | Admin → Users: ban a test account | banned user's next request is logged out and bounced; content stays live; admin cannot ban self | `UserBanTest` (6 tests) |
+| 9 | Admin → Comp grants: issue one | recipient sees the prompt in their library; ledger row says tier `comp` with issuer + reason | `CompGrantTest` (5 tests) |
+| 10 | `cd core && php artisan test` | 194 passed, 844 assertions | whole suite |
 
 ## 8. File map (v1.1 → v1.3.0)
 

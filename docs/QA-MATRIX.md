@@ -1,7 +1,7 @@
-# PromptSewa QA Matrix — v1.4.1 "Stability & Signup Hardening"
+# PromptSewa QA Matrix — v1.4.2 "Leak Extermination & Admin Hardening"
 
 Every admin + user flow, its status, and the Pest test that locks it.
-Suite: `cd core && php artisan test` → **159 passed, 607 assertions** (2026-09-28).
+Suite: `cd core && php artisan test` → **194 passed, 844 assertions** (2026-09-28).
 
 Run the matrix: `php artisan test` — every row below is covered by at least one
 named test; if a test regresses, the row goes red and the release blocks.
@@ -134,6 +134,35 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Empty/blank search states | ✅ | `SearchTest::empty search shows the polished empty state`, `blank search lists prompts newest first` |
 | Storefront + category pages | ✅ | `StorefrontTest::homepage shows storefront copy and stats`, `homepage shows prompt cards for seeded public prompts`, `CategoryPageTest::category page shows only prompts in that category`, `category pages render via route model binding with slug key`, `unknown category slug returns 404`, `inactive categories are not browsable` |
 | Creator profile privacy + bylines | ✅ | `CreatorProfileTest::guests can view a public creator profile with their published prompts`, `creator profile does not leak drafts or private prompts`, `PromptVisibilityTest` card/byline tests |
+
+## v1.4.2 B-series (stability block)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| B1 `/admin/update` renders standalone (no ambient `$errors`) | ✅ | `StaffViewStandaloneRenderTest::dashboard update view renders standalone without ambient globals`, `…with a log and failure state` |
+| B1 update pipeline clears stale compiled views before view:cache | ✅ | `pv:update` runs view:clear → view:cache (UpdateFromRelease), parity-verified 200 under APP_DEBUG=false + config/route/view:cache |
+| B1 every admin/dashboard page renders clean (no exception, no leak) | ✅ | `StaffViewStandaloneRenderTest::every admin page renders clean for staff`, `key dashboard pages render clean for their owners` |
+| B2 no `@{{` or raw U+2192 anywhere in views | ✅ | `Arch\NoBladeLeakTest::no blade view contains escaped-brace leaks or raw arrows` (mutation-checked) |
+| B2 rendered pages contain no Blade echo leaks | ✅ | `assertNoBladeLeak` in Pest.php, applied across staff/admin/detail/profile pages |
+| B2/B4 handles render via x-user-handle on every identity surface | ✅ | `CreatorProfileTest::guests can view a public creator profile…` (`@justshipitai` + mono class), `prompt cards link…never braces`, `prompt detail page…never braces` |
+| B2 typeahead JSON carries real handles | ✅ | `SearchPreviewTest::search preview returns prompts and creators as JSON with real handles` |
+| B3 banner fit-to-box (centered both axes, ≤3 lines, word-boundary ellipsis) | ✅ | `PromptCoverTypographyTest::long title truncates with an ellipsis at a word boundary`, `banner text block never overflows the viewBox bottom`, `short title renders untruncated and horizontally centered` |
+| B3 deterministic palette retained | ✅ | `PromptCoverTypographyTest::banner keeps the deterministic palette` |
+| B6 public version history (metadata only, changelogs listed oldest→newest) | ✅ | `PromptVersionsPageTest::guests see the versions link and the history page`, `paid prompt history is metadata only — no body fragments leak` |
+| B6 Edit owner-only; moderators use preview; admin queue links preview | ✅ | `PromptVersionsPageTest::unrelated member sees versions but zero edit links`, `owner sees the edit link; moderators do not`, `admin review queue links to the preview route…` |
+
+## v1.4.2 A-series (hardening block)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| A1 admin version chip reflects the running release | ✅ | `config('app.version')` single source; chip renders on admin overview (`StaffViewStandaloneRenderTest::every admin page renders clean` sweeps it) |
+| A2 no hardcoded form actions (route-registry bypass) | ✅ | `Arch\BladeFormVerbTest` A2 rule (eSewa gateway variable exempt) |
+| A3 admin surface audit documented + access ladder swept | ✅ | `docs/ADMIN-AUDIT.md`; `AdminSurfaceTest::guests bounce…`, `members are forbidden…`, `admins pass on every admin GET route`, `moderators are forbidden on admin-only action routes` |
+| A4 ban/unban toggle (admin only, never self) | ✅ | `UserBanTest::admin can ban and unban an account`, `moderators cannot ban accounts`, `an admin cannot ban their own account` |
+| A4 banned users locked out on next request (web group) | ✅ | `UserBanTest::banned users are logged out on their next request`, `banning keeps content but blocks access`, `banned middleware runs before the staff gate too` |
+| A5 comp grants (admin-only, idempotent, audited) | ✅ | `CompGrantTest::admin issues a comp grant that unlocks the paid prompt`, `comp grants are idempotent while active`, `moderators cannot issue comp grants`, `revoking a comp keeps the ledger row` |
+| A5 comp = purchased paywall equivalence | ✅ | `CompGrantTest::comp access matches purchased access on the paywall` |
+| A6 rendered HTML carries CSRF + method spoof in order | ✅ | `RenderedFormOrderTest` (7 tests: profile, prompt edit, brand, payments, packs, review/reports, tool logos + ban forms) |
 
 ## Release engineering
 
