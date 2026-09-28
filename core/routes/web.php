@@ -34,6 +34,12 @@ Route::get('/', [StorefrontController::class, 'index'])->name('home');
 // markdown, metadata sidebar) builds on this route.
 Route::get('/prompts/{prompt:slug}', [PromptController::class, 'show'])->name('prompts.show');
 
+// Public version history — metadata only (changelog, author, timestamp).
+// Bodies/variables never render here for paid prompts (B6).
+Route::get('/prompts/{prompt:slug}/versions', [PromptController::class, 'versions'])
+    ->middleware('throttle:60,1')
+    ->name('prompts.versions');
+
 // "Report this prompt" — public form, guests allowed, submission throttled.
 Route::get('/prompts/{prompt:slug}/report', [PromptReportController::class, 'create'])
     ->name('prompts.report.create')

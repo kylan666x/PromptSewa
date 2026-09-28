@@ -40,6 +40,34 @@ class PromptController extends Controller
     }
 
     /**
+     * Public version history (B6): metadata only — version label, changelog,
+     * author, timestamp, oldest → newest. No body fragments and no variable
+     * lists for paid prompts; the paywall lives on the detail page.
+     */
+    public function versions(Request $request, Prompt $prompt)
+    {
+        abort_unless($prompt->isViewableBy($request->user()), 404);
+
+        $prompt->load(['category', 'creator', 'versions.author']);
+
+        $versions = $prompt->versions
+            ->sortBy('version_number')
+            ->values()
+            ->map(fn ($version) => [
+                'label' => $version->label(),
+                'changelog' => (string) ($version->changelog ?? ''),
+                'author' => $version->author?->name ?? 'Unknown',
+                'created_at' => $version->created_at,
+            ]);
+
+        return view('prompts.versions', [
+            'prompt' => $prompt,
+            'versions' => $versions,
+            'isPaid' => $prompt->price_cents > 0,
+        ]);
+    }
+
+    /**
      * The prompt body is the product: it renders in full for free listings,
      * the owner, and verified buyers. Everyone else gets a locked teaser on
      * paid listings — INCLUDING staff. Staff moderation happens through the

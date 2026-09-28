@@ -29,6 +29,7 @@ class JustShipItAISeeder extends Seeder
             ['email' => 'justshipitai@gmail.com'],
             [
                 'name' => 'JustShipItAI',
+                'username' => 'justshipitai',
                 'password' => Hash::make(config('justshipitai.seed_password', 'JustShipIt!2026')),
                 'role' => User::ROLE_CREATOR,
                 'bio' => 'Flagship prompt lab — battle-tested prompts for shipping faster with AI. New drops weekly.',

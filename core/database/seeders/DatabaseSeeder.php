@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
         // firstOrCreate so re-seeding never collides on the unique email.
         User::firstOrCreate(
             ['email' => 'test@example.com'],
-            ['name' => 'Test User', 'password' => bcrypt('password')],
+            ['name' => 'Test User', 'username' => 'test-user', 'password' => bcrypt('password')],
         );
     }
 }
