@@ -20,7 +20,8 @@ class EnsureUserIsStaff
             return redirect()->route('login');
         }
 
-        abort_unless($user->isModerator(), 403);
+        // A4: banned staff lose panel access like everyone else.
+        abort_unless($user->isModerator() && ! $user->isBanned(), 403);
 
         return $next($request);
     }

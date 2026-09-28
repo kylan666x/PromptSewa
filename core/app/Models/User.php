@@ -35,6 +35,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_verified',
+        'banned_at',
         'xp',
         'banner_path',
         'avatar_path',
@@ -64,6 +65,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'xp' => 'integer',
             'is_verified' => 'boolean',
+            'banned_at' => 'datetime',
         ];
     }
 
@@ -91,6 +93,17 @@ class User extends Authenticatable
     public function isModerator(): bool
     {
         return $this->isAtLeast(self::ROLE_MODERATOR);
+    }
+
+    // ------------------------------------------------------------------
+    // Ban/disable (A4). A banned account cannot log in, but keeps its
+    // prompts, orders and license ledger — bans are an access decision,
+    // not content destruction.
+    // ------------------------------------------------------------------
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
     }
 
     // ------------------------------------------------------------------

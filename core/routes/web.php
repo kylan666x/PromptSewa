@@ -165,6 +165,11 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
     Route::patch('/users/{user:id}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
     Route::patch('/users/{user:id}/verified', [UserAdminController::class, 'toggleVerified'])->name('users.verified');
+    Route::patch('/users/{user:id}/banned', [UserAdminController::class, 'toggleBanned'])->name('users.banned');
+
+    // A5: complimentary grants (press copies, make-goods) — admin only.
+    Route::get('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'create'])->name('comp-grants.create');
+    Route::post('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'store'])->name('comp-grants.store');
 
     // Abuse reports triage ("Report this prompt").
     Route::get('/reports', [PromptReportAdminController::class, 'index'])->name('reports.index');

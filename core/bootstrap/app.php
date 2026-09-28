@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\RejectBannedUsers;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'staff' => EnsureUserIsStaff::class,
         ]);
+
+        // A4: banned accounts are locked out of everything authenticated.
+        // Appended to the web group (after StartSession so the logout can
+        // invalidate the session; guests never reach the user check).
+        $middleware->appendToGroup('web', RejectBannedUsers::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // cPanel hardening: never leak stack traces to visitors. The cron

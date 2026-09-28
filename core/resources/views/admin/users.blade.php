@@ -25,6 +25,7 @@
                     <th class="hidden px-5 py-3 font-semibold md:table-cell">Joined</th>
                     <th class="px-5 py-3 font-semibold">Role</th>
                     <th class="px-5 py-3 font-semibold">Verified</th>
+                    <th class="px-5 py-3 font-semibold">Status</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-ink/10 bg-white">
@@ -71,9 +72,27 @@
                                 <x-verified-badge :user="$user" size="xs"/>
                             @endif
                         </td>
+                        <td class="px-5 py-3.5">
+                            {{-- A4: ban/unban — admin only, never self. --}}
+                            @if (auth()->user()->isAdmin() && $user->id !== auth()->id())
+                                <form method="POST" action="{{ route('admin.users.banned', $user) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                            class="rounded-lg px-2.5 py-1 text-xs font-semibold transition {{ $user->isBanned() ? 'bg-rose-600/20 text-rose-700 hover:bg-rose-600/30' : 'border border-ink/10 text-ink/60 hover:border-rose-500 hover:text-rose-700' }}"
+                                            @if ($user->isBanned()) title="Lift the ban" @else title="Ban this account" @endif>
+                                        {{ $user->isBanned() ? 'Banned — lift' : 'Ban' }}
+                                    </button>
+                                </form>
+                            @elseif ($user->isBanned())
+                                <span class="rounded-md bg-rose-600/15 px-2 py-0.5 text-xs font-semibold text-rose-700">Banned</span>
+                            @else
+                                <span class="text-xs text-ink0">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
+                    <tr><td colspan="6" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
                 @endforelse
             </tbody>
         </table>

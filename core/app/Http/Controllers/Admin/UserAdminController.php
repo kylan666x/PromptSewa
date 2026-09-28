@@ -68,4 +68,22 @@ class UserAdminController extends Controller
 
         return back()->with('success', "{$user->name} is now {$state}.");
     }
+
+    /** Ban / unban an account (admin only, A4). */
+    public function toggleBanned(Request $request, User $user)
+    {
+        abort_unless($request->user()?->isAdmin(), 403, 'Only admins can ban accounts.');
+
+        // Never let an admin ban themselves — keeps at least one working
+        // admin alive (same guard as the self-demotion rule).
+        if ($user->id === $request->user()?->id) {
+            return back()->withErrors(['banned_at' => 'You cannot ban your own account.']);
+        }
+
+        $user->fill(['banned_at' => $user->isBanned() ? null : now()])->save();
+
+        $state = $user->isBanned() ? 'banned' : 'unbanned';
+
+        return back()->with('success', "{$user->name} is now {$state}.");
+    }
 }
