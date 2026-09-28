@@ -37,13 +37,14 @@
                                 <p class="truncate font-medium text-ink">{{ $item->title }}</p>
                                 <p class="text-xs text-ink0">{{ $item->creator?->name ?? 'Unknown' }} · {{ $item->category?->name ?? 'Uncategorized' }}</p>
                             </div>
-                            <a href="{{ route('dashboard.prompts.edit', $item) }}"
+                            {{-- B6: staff edit via dashboard route leaks the owner path; moderation goes through the admin preview route. --}}
+                            <a href="{{ route('admin.prompts.preview', $item) }}"
                                class="shrink-0 rounded-lg border border-ink/10 px-2.5 py-1 text-xs text-ink/80 transition hover:border-saffron-deep hover:text-saffron-deep">Review</a>
                         </li>
                     @endforeach
                 </ul>
             @endif
-            <a href="{{ route('admin.prompts.index') }}" class="mt-4 inline-block text-xs font-medium text-saffron-deep hover:text-saffron-deep">Open full moderation →</a>
+            <a href="{{ route('admin.prompts.index') }}" class="mt-4 inline-block text-xs font-medium text-saffron-deep hover:text-saffron-deep">Open full moderation &rarr;</a>
         </div>
 
         <div class="rounded-2xl border border-ink/10 bg-white p-5">
@@ -64,7 +65,7 @@
                     @endforeach
                 </ul>
             @endif
-            <a href="{{ route('admin.orders.index') }}" class="mt-4 inline-block text-xs font-medium text-saffron-deep hover:text-saffron-deep">All orders →</a>
+            <a href="{{ route('admin.orders.index') }}" class="mt-4 inline-block text-xs font-medium text-saffron-deep hover:text-saffron-deep">All orders &rarr;</a>
         </div>
     </div>
 
@@ -76,7 +77,7 @@
                 <p class="mt-0.5 text-xs text-ink0">Review "Report this prompt" submissions from the community.</p>
             </div>
             <span class="font-mono text-sm {{ $stats['open_reports'] > 0 ? 'font-bold text-rose-700' : 'text-ink0' }}">
-                {{ $stats['open_reports'] }} open →
+                {{ $stats['open_reports'] }} open &rarr;
             </span>
         </a>
     </div>

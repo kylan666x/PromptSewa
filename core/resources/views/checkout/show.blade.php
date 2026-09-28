@@ -46,7 +46,7 @@
             <div class="mt-6 rounded-2xl border border-saffron-deep/30 bg-saffron/15 p-6 text-center">
                 <p class="text-sm font-semibold text-ink">Payment reference received — an admin will verify it shortly.</p>
                 <p class="mt-1 font-mono text-xs text-ink/60">Reference: {{ $order->payment_reference }}</p>
-                <a href="{{ route('purchases.index') }}" class="mt-3 inline-block font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Go to my library →</a>
+                <a href="{{ route('purchases.index') }}" class="mt-3 inline-block font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Go to my library &rarr;</a>
             </div>
         @else
             <div class="mt-6 space-y-5">

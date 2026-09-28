@@ -104,7 +104,7 @@
                 <button type="submit" class="rounded-full bg-saffron px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">
                     Save changes
                 </button>
-                <a href="{{ route('creators.show', $user) }}" class="text-sm font-medium text-ink/60 transition hover:text-ink">View public profile →</a>
+                <a href="{{ route('creators.show', $user) }}" class="text-sm font-medium text-ink/60 transition hover:text-ink">View public profile &rarr;</a>
             </div>
         </form>
     </div>

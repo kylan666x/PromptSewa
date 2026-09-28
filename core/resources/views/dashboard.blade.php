@@ -17,7 +17,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <a href="{{ route('admin.dashboard') }}"
                            class="inline-flex items-center gap-1.5 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-saffron-deep">
-                            Open admin panel →
+                            Open admin panel &rarr;
                         </a>
                         <a href="{{ route('admin.update') }}"
                            class="inline-flex items-center gap-1.5 rounded-full border border-paper/20 px-3 py-1.5 font-mono text-xs font-semibold text-paper/80 transition hover:border-saffron hover:text-saffron">

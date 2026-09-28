@@ -33,7 +33,7 @@
                 <span class="text-emerald-800">✓</span>
                 <div>
                     <p class="text-sm font-semibold text-emerald-900">Report submitted — thank you.</p>
-                    <p class="mt-0.5 text-xs text-emerald-800/80">A moderator will review it shortly. Action is taken from the Admin → Reports panel.</p>
+                    <p class="mt-0.5 text-xs text-emerald-800/80">A moderator will review it shortly. Action is taken from the Admin &rarr; Reports panel.</p>
                 </div>
             </div>
         @endif
@@ -73,7 +73,7 @@
                             <span class="flex size-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-saffron transition group-hover/creator:bg-saffron group-hover/creator:text-ink">
                                 {{ mb_substr($prompt->creator->name, 0, 1) }}
                             </span>
-                            <span class="flex items-center gap-1 font-medium text-ink/80 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">@{{ $prompt->creator->username ?? $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="md"/></span>
+                            <span class="flex items-center gap-1 font-medium transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2"><x-user-handle :user="$prompt->creator" class="text-ink/80"/> <x-verified-badge :user="$prompt->creator" size="md"/></span>
                         </a>
                     @else
                         <span class="flex items-center gap-2">
@@ -142,11 +142,15 @@
                         <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-ink/60">
                             The prompt @if ($latest)<span class="ml-1 rounded bg-saffron/30 px-1.5 py-0.5 text-saffron-deep">{{ $latest->label() }}</span>@endif
                         </h2>
-                        @if ($canEdit)
+                        @if ($isOwner)
                             <a href="{{ route('dashboard.prompts.edit', $prompt) }}" class="font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 transition hover:text-saffron-deep">
-                                Edit · View history ↗
+                                Edit
                             </a>
                         @endif
+                        {{-- B6: history is public — every viewer gets the link. --}}
+                        <a href="{{ route('prompts.versions', $prompt) }}" class="font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 transition hover:text-saffron-deep">
+                            View history
+                        </a>
                     </div>
 
                     @if ($canViewFullBody && $latest)

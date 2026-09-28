@@ -79,7 +79,7 @@
                                     </span>
                                 </td>
                                 <td class="px-5 py-3.5 text-right">
-                                    <a href="{{ route('checkout.show', $order) }}" class="font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Details →</a>
+                                    <a href="{{ route('checkout.show', $order) }}" class="font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Details &rarr;</a>
                                 </td>
                             </tr>
                         @empty

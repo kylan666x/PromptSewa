@@ -33,14 +33,20 @@ function creatorWithPrompt(array $userOverrides = [], array $promptOverrides = [
 }
 
 test('guests can view a public creator profile with their published prompts', function () {
-    $creator = creatorWithPrompt(['name' => 'JustShipItAI'], ['title' => 'Signature Prompt']);
+    $creator = creatorWithPrompt(['name' => 'JustShipItAI', 'username' => 'justshipitai'], ['title' => 'Signature Prompt']);
+
+    $prompt = $creator->prompts()->first();
 
     $this->get(route('creators.show', $creator))
         ->assertOk()
         ->assertSee('JustShipItAI')
+        // B2/B4: the handle must render as text inside the mono component,
+        // never as braces (the v1.4.1 @{{ leak class).
+        ->assertSee('@justshipitai')
+        ->assertSee('font-mono', false)
         ->assertSee('Ships AI products.')
         ->assertSee('Signature Prompt')
-        ->assertSee(route('prompts.show', $prompt ?? Prompt::first()), false);
+        ->assertSee(route('prompts.show', $prompt), false);
 });
 
 test('creator profile does not leak drafts or private prompts', function () {
@@ -60,21 +66,27 @@ test('soft-deleted creators return 404', function () {
     $this->get(route('creators.show', $creator->id))->assertNotFound();
 });
 
-test('prompt cards link to the creator profile', function () {
-    $creator = creatorWithPrompt(['name' => 'JustShipItAI']);
+test('prompt cards link to the creator profile and render the handle, never braces', function () {
+    $creator = creatorWithPrompt(['name' => 'JustShipItAI', 'username' => 'justshipitai']);
 
-    $this->get('/prompts')
+    $response = $this->get('/prompts')
         ->assertOk()
         ->assertSee(route('creators.show', $creator), false)
-        ->assertSee('View profile of JustShipItAI', false);
+        ->assertSee('View profile of JustShipItAI', false)
+        ->assertSee('@justshipitai', false);
+
+    assertNoBladeLeak($response);
 });
 
-test('prompt detail page links to the creator profile', function () {
-    $creator = creatorWithPrompt(['name' => 'JustShipItAI']);
+test('prompt detail page links to the creator profile and renders the handle, never braces', function () {
+    $creator = creatorWithPrompt(['name' => 'JustShipItAI', 'username' => 'justshipitai']);
 
     $prompt = $creator->prompts()->first();
 
-    $this->get(route('prompts.show', $prompt))
+    $response = $this->get(route('prompts.show', $prompt))
         ->assertOk()
-        ->assertSee(route('creators.show', $creator), false);
+        ->assertSee(route('creators.show', $creator), false)
+        ->assertSee('@justshipitai', false);
+
+    assertNoBladeLeak($response);
 });

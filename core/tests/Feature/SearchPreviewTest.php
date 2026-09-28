@@ -46,7 +46,7 @@ function previewPrompt(User $creator, array $overrides = []): Prompt
 // /search/preview endpoint (TASK 2)
 // ---------------------------------------------------------------------------
 
-test('search preview returns prompts and creators as JSON', function () {
+test('search preview returns prompts and creators as JSON with real handles', function () {
     $creator = previewUser(['name' => 'Email Wizard', 'username' => 'emailwizard']);
     previewPrompt($creator);
 
@@ -57,7 +57,11 @@ test('search preview returns prompts and creators as JSON', function () {
             'creators' => [['name', 'username', 'prompts_count', 'url']],
         ])
         ->assertJsonFragment(['title' => 'Cold Email Sequencer'])
-        ->assertJsonFragment(['name' => 'Email Wizard', 'username' => 'emailwizard']);
+        ->assertJsonFragment(['name' => 'Email Wizard', 'username' => 'emailwizard'])
+        // B2: typeahead rows must carry the actual handle, never a placeholder.
+        ->assertJsonPath('creators.0.username', 'emailwizard');
+
+    expect(json_encode(route('search.preview', ['q' => 'email'])))->not->toContain('{{');
 });
 
 test('search preview enforces the max term length', function () {

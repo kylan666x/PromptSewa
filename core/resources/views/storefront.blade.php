@@ -81,7 +81,7 @@
                 <p class="mt-1 text-sm text-ink/60">Hand-reviewed prompts, ready to copy and run.</p>
             </div>
             <a href="{{ route('library.index') }}" class="shrink-0 text-sm font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 transition hover:text-saffron-deep">
-                Browse all →
+                Browse all &rarr;
             </a>
         </div>
 
@@ -110,7 +110,7 @@
                     <p class="mt-1 text-sm text-ink/60">See the result first — the prompt is right on the card.</p>
                 </div>
                 <a href="{{ route('library.index', ['type' => 'image']) }}" class="shrink-0 text-sm font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 transition hover:text-saffron-deep">
-                    Browse all image prompts →
+                    Browse all image prompts &rarr;
                 </a>
             </div>
 

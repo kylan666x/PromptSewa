@@ -42,7 +42,7 @@
                             <li><a href="mailto:{{ $supportEmail }}" class="text-ink/70 transition hover:text-ink">{{ $supportEmail }}</a></li>
                         @endif
                         @if ($contactEmail === '' && $supportEmail === '')
-                            <li><span class="text-ink/40">Set contact emails in admin → Brand</span></li>
+                            <li><span class="text-ink/40">Set contact emails in admin &rarr; Brand</span></li>
                         @endif
                     </ul>
                 </div>

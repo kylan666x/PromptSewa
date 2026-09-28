@@ -36,6 +36,7 @@
                                 <x-verified-badge :user="$user" size="xs"/>
                             </p>
                             <p class="text-xs text-ink0">{{ $user->email }}</p>
+                            <x-user-handle :user="$user" size="text-xs" class="opacity-70"/>
                         </td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $user->prompts_count }}</td>
                         <td class="hidden px-5 py-3.5 text-ink/60 md:table-cell">{{ $user->created_at->format('M j, Y') }}</td>

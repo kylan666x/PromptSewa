@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -15,11 +16,23 @@ use Tests\TestCase;
 
 pest()->extends(TestCase::class)->in('Feature', 'Unit', 'Arch');
 
-/*
-|--------------------------------------------------------------------------
-| Domain Expectations
-|--------------------------------------------------------------------------
-*/
+/**
+ * Assert a rendered response contains no Blade escape artifacts. A Blade
+ * ECHO leak renders as `{{ $...` in served HTML (the v1.4.1 byline leak).
+ * Prompt fill-in variables like `{{product_details}}` are legitimate page
+ * CONTENT (no `$`, no Blade spacing) and must not trip this guard.
+ */
+function assertNoBladeLeak(TestResponse $response): void
+{
+    $body = $response->getContent() ?? '';
 
-expect()->extend('toBePaisa', fn (int $expected) => $this->toBe($expected)
-    ->and($expected)->toBeInt());
+    $echoLeak = preg_match('/\{\{\s*\$/', $body, $m, PREG_OFFSET_CAPTURE) === 1;
+    $sample = $echoLeak
+        ? substr($body, max(0, $m[0][1] - 80), 200)
+        : '';
+
+    expect($echoLeak)
+        ->toBeFalse('Rendered page contains a Blade echo leak ("{{ $") — an un-echoed placeholder reached the user. Sample: '.$sample)
+        ->and(str_contains($body, "\u{2192}"))
+        ->toBeFalse('Rendered page contains a raw U+2192 arrow — use &rarr; in views.');
+}

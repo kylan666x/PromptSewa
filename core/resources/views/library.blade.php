@@ -48,12 +48,12 @@
                                 <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-saffron">{{ mb_substr($creator->name, 0, 1) }}</span>
                                 <span class="min-w-0 flex-1">
                                     <span class="flex items-center gap-1.5 font-semibold text-ink transition group-hover:text-saffron-deep">
-                                        {{ $creator->name }} <span class="font-mono text-xs font-normal text-ink/40">@{{ $creator->username }}</span>
+                                        {{ $creator->name }} <x-user-handle :user="$creator" size="text-xs" class="font-normal opacity-70"/>
                                         <x-verified-badge :user="$creator" size="xs"/>
                                     </span>
                                     <span class="block font-mono text-xs text-ink/50">{{ $creator->prompts_count }} {{ \Illuminate\Support\Str::plural('prompt', $creator->prompts_count) }}</span>
                                 </span>
-                                <span class="text-ink/30 transition group-hover:text-saffron-deep">→</span>
+                                <span class="text-ink/30 transition group-hover:text-saffron-deep">&rarr;</span>
                             </a>
                         @endforeach
                     </div>

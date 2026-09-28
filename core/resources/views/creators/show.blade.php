@@ -55,7 +55,7 @@
                             <span class="shrink-0"><x-verified-badge :user="$creator" size="lg"/></span>
                         </div>
                         @if ($creator->username)
-                            <p class="truncate font-mono text-sm text-ink/50">@{{ $creator->username }}</p>
+                            <x-user-handle :user="$creator" class="mt-0.5 block"/>
                         @endif
                         <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-ink/50">
                             @if ($creator->isAtLeast(\App\Models\User::ROLE_CREATOR))
