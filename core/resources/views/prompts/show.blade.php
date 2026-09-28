@@ -2,6 +2,8 @@
     /** @var \App\Models\Prompt $prompt */
     /** @var bool $canEdit */
     /** @var bool $canViewFullBody */
+    /** @var bool $previewMode */
+    $previewMode = $previewMode ?? false;
     $latest = $prompt->latestVersion;
     $tags = collect($latest?->tags ?? []);
     $tools = collect($latest?->toolList() ?? []);
@@ -19,6 +21,13 @@
 
 <x-app-layout>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        @if ($previewMode)
+            <div class="mb-6 flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-100 px-5 py-3" role="status">
+                <span class="font-mono text-sm font-bold text-amber-700">MOD PREVIEW</span>
+                <p class="text-sm font-medium text-amber-800">Moderation preview — no license granted. Buyers still need to purchase this prompt.</p>
+            </div>
+        @endif
+
         @if (session('report_submitted'))
             <div class="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-700/30 bg-emerald-100 px-5 py-4" role="status">
                 <span class="text-emerald-800">✓</span>
@@ -64,7 +73,7 @@
                             <span class="flex size-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-saffron transition group-hover/creator:bg-saffron group-hover/creator:text-ink">
                                 {{ mb_substr($prompt->creator->name, 0, 1) }}
                             </span>
-                            <span class="flex items-center gap-1 font-medium text-ink/80 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">{{ $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="md"/></span>
+                            <span class="flex items-center gap-1 font-medium text-ink/80 transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">@{{ $prompt->creator->username ?? $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="md"/></span>
                         </a>
                     @else
                         <span class="flex items-center gap-2">

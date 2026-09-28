@@ -58,6 +58,7 @@
                         @if ($report->status !== \App\Models\PromptReport::STATUS_RESOLVED)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
+                                @method('PATCH')
                                 <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_RESOLVED }}">
                                 <button class="rounded-lg border border-emerald-700/40 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-600/20">Resolve</button>
                             </form>
@@ -65,6 +66,7 @@
                         @if ($report->status !== \App\Models\PromptReport::STATUS_DISMISSED)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
+                                @method('PATCH')
                                 <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_DISMISSED }}">
                                 <button class="rounded-lg border border-ink/15 bg-paper-deep px-2.5 py-1 text-xs font-medium text-ink/80 transition hover:border-ink/40">Dismiss</button>
                             </form>
@@ -72,6 +74,7 @@
                         @if ($report->status === \App\Models\PromptReport::STATUS_OPEN)
                             <form method="POST" action="{{ route('admin.reports.status', $report) }}">
                                 @csrf
+                                @method('PATCH')
                                 <input type="hidden" name="status" value="{{ \App\Models\PromptReport::STATUS_OPEN }}">
                                 <button class="rounded-lg border border-ink/15 px-2.5 py-1 text-xs font-medium text-ink/50 transition hover:border-ink/40" title="Reopen">Reopen</button>
                             </form>

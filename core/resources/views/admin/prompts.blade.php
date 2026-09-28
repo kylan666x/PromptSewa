@@ -57,12 +57,14 @@
                         </td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center justify-end gap-1.5">
-                                <a href="{{ route('prompts.show', $prompt) }}?preview=1"
+                                <a href="{{ route('admin.prompts.preview', $prompt) }}"
                                    class="rounded-lg border border-ink/15 bg-white px-2.5 py-1 text-xs font-medium text-ink/70 transition hover:border-saffron-deep hover:text-saffron-deep"
-                                   title="Open the public page with full-body preview (staff only)">Preview</a>
+                                   title="Full-body moderation preview (staff only)">Preview</a>
                                 @if ($prompt->status !== \App\Models\Prompt::STATUS_PUBLISHED)
                                     <form method="POST" action="{{ route('admin.prompts.status', $prompt) }}">
                                         @csrf
+                                        @method('PATCH')
+                                        
                                         <input type="hidden" name="status" value="{{ \App\Models\Prompt::STATUS_PUBLISHED }}">
                                         <button class="rounded-lg border border-emerald-700/40 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 transition hover:bg-emerald-600/20">Publish</button>
                                     </form>
@@ -70,6 +72,8 @@
                                 @if ($prompt->status !== \App\Models\Prompt::STATUS_REJECTED)
                                     <form method="POST" action="{{ route('admin.prompts.status', $prompt) }}">
                                         @csrf
+                                        @method('PATCH')
+                                        
                                         <input type="hidden" name="status" value="{{ \App\Models\Prompt::STATUS_REJECTED }}">
                                         <button class="rounded-lg border border-rose-700/30 bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-200">Reject</button>
                                     </form>

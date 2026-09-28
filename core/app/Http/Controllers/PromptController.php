@@ -27,18 +27,15 @@ class PromptController extends Controller
 
         $isOwner = $viewer !== null && $viewer->id === $prompt->user_id;
 
-        // Staff preview escape hatch: ?preview=1 works only for moderators AND
-        // only when arriving from the admin panel (referer check). Staff can
-        // never browse the storefront into paid content otherwise.
-        $staffPreview = $viewer !== null
-            && $viewer->isModerator()
-            && $request->boolean('preview')
-            && str_contains((string) $request->header('referer'), '/admin');
+        // Staff moderation preview moved to GET /admin/prompts/{prompt}/preview
+        // (PromptPreviewController) — the old ?preview=1 + referer heuristic
+        // broke behind privacy extensions and Referrer-Policy headers.
 
         return view('prompts.show', [
             'prompt' => $prompt,
             'canEdit' => $viewer !== null && Gate::forUser($viewer)->allows('update', $prompt),
-            'canViewFullBody' => $staffPreview || $this->canViewFullBody($viewer, $prompt, $isOwner),
+            'canViewFullBody' => $this->canViewFullBody($viewer, $prompt, $isOwner),
+            'previewMode' => false,
         ]);
     }
 

@@ -148,6 +148,9 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     // Prompt moderation: publish / reject from the queue.
     Route::get('/prompts', [PromptAdminController::class, 'index'])->name('prompts.index');
+    // Moderation preview — full body for staff, grants nothing (replaces
+    // the fragile ?preview=1 + referer heuristic).
+    Route::get('/prompts/{prompt}/preview', [\App\Http\Controllers\Admin\PromptPreviewController::class, 'show'])->name('prompts.preview');
     Route::patch('/prompts/{prompt}/status', [PromptAdminController::class, 'updateStatus'])->name('prompts.status');
 
     // User management (admin only for role changes). {user:id} pins the
