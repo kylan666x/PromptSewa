@@ -41,6 +41,7 @@ class DemoContentSeeder extends Seeder
 
         $admin = User::create([
             'name' => 'Aasha Gurung',
+            'username' => 'aasha',
             'email' => 'admin@promptsewa.test',
             'password' => $password,
             'role' => User::ROLE_ADMIN,
@@ -53,6 +54,7 @@ class DemoContentSeeder extends Seeder
             ['Dorje Lama', 'dorje@promptsewa.test', 'Illustrator exploring generative art.'],
         ])->map(fn (array $data) => User::create([
             'name' => $data[0],
+            'username' => Str::slug($data[0]),
             'email' => $data[1],
             'password' => $password,
             'role' => User::ROLE_CREATOR,

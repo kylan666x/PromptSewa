@@ -84,7 +84,7 @@
             @if ($prompt->creator)
                 <a href="{{ route('creators.show', $prompt->creator) }}" class="flex min-w-0 items-center gap-1.5 text-xs text-ink/50 transition hover:text-ink">
                     <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[9px] font-bold text-saffron">{{ mb_substr($prompt->creator->name, 0, 1) }}</span>
-                    <span class="flex items-center gap-1 truncate">{{ $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="xs"/></span>
+                    <span class="flex items-center gap-1 truncate">@{{ $prompt->creator->username ?? $prompt->creator->name }} <x-verified-badge :user="$prompt->creator" size="xs"/></span>
                 </a>
             @endif
         </div>

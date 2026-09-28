@@ -23,12 +23,52 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
+            // S4: the handle is the identity — required, normalized, unique.
+            'username' => [
+                'required',
+                'string',
+                'min:4',
+                'max:30',
+                'alpha_dash',
+                'unique:users,username',
+            ],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'confirmed', Password::min(8)],
+            'password' => [
+                'required',
+                'string',
+                'confirmed',
+                Password::min(8),
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    if (\App\Support\PasswordPolicy::isCommon((string) $value)) {
+                        $fail('That password is too common — choose something less guessable.');
+                    }
+
+                    $haystack = mb_strtolower((string) $value);
+
+                    // Name containment: check each token ("sita", "sharma")
+                    // so "SitaSharma2026!" is caught even though the raw
+                    // display name contains a space. Read from $request —
+                    // $validated does not exist inside the rule yet.
+                    foreach (preg_split('/\s+/u', mb_strtolower(trim((string) $request->input('name')))) ?: [] as $token) {
+                        if (mb_strlen($token) >= 3 && str_contains($haystack, $token)) {
+                            $fail('Your password must not contain your name.');
+
+                            return;
+                        }
+                    }
+
+                    $emailLocal = mb_strtolower(\Illuminate\Support\Str::before((string) $request->input('email', ''), '@'));
+
+                    if (mb_strlen($emailLocal) >= 4 && str_contains($haystack, $emailLocal)) {
+                        $fail('Your password must not contain your email address.');
+                    }
+                },
+            ],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
+            'username' => mb_strtolower($validated['username']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => User::ROLE_MEMBER,

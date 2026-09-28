@@ -13,6 +13,7 @@ test('guests are redirected to login when visiting the dashboard', function () {
 test('a member can register and lands on the storefront signed in', function () {
     $response = $this->post('/register', [
         'name' => 'Sita Member',
+        'username' => 'sita-member',
         'email' => 'sita@example.test',
         'password' => 'long-enough-password',
         'password_confirmation' => 'long-enough-password',

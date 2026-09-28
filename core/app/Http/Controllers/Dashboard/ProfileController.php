@@ -28,7 +28,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:60'],
             'username' => [
-                'nullable',
+                'required',
                 'string',
                 'max:30',
                 'alpha_dash',

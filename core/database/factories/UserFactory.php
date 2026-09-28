@@ -24,8 +24,13 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $name = fake()->name();
+
         return [
-            'name' => fake()->name(),
+            'name' => $name,
+            // Post-v1.4.1 the column is NOT NULL — every user needs a handle.
+            // Unique across the whole users table.
+            'username' => Str::slug($name).'-'.fake()->unique()->numberBetween(1000, 9999),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),

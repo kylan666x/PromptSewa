@@ -27,6 +27,97 @@ window.Alpine = Alpine;
  * through). Free prompts only; paid cards deep-link to the detail page.
  */
 /**
+ * Signup form (S4): live username suggestions from the display name and an
+ * animated password strength meter. Purely advisory — the server re-checks
+ * everything (required/unique handle, common-password + name/email floor).
+ */
+Alpine.data('signupForm', () => ({
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    submitting: false,
+    suggestions: [],
+
+    init() {
+        this.$watch('name', () => this.buildSuggestions());
+    },
+
+    buildSuggestions() {
+        const slug = this.name.trim().toLowerCase()
+            .replace(/[^a-z0-9\s_-]/g, '')
+            .replace(/[\s_]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 24);
+
+        if (slug.length < 4) {
+            this.suggestions = [];
+            return;
+        }
+
+        // First three variants; collisions with real accounts are caught
+        // server-side on submit — these are nudges, not guarantees.
+        this.suggestions = [slug, `${slug}-pro`, `${slug}${new Date().getFullYear()}`];
+    },
+
+    get hasUpperAndLower() {
+        return /[a-z]/.test(this.password) && /[A-Z]/.test(this.password);
+    },
+
+    get hasNumber() {
+        return /[0-9]/.test(this.password);
+    },
+
+    get notNameOrEmail() {
+        const lower = this.password.toLowerCase();
+        const namePart = this.name.trim().toLowerCase();
+        const emailPart = this.email.split('@')[0].toLowerCase();
+
+        if (namePart.length >= 3 && lower.includes(namePart)) {
+            return false;
+        }
+        if (emailPart.length >= 4 && lower.includes(emailPart)) {
+            return false;
+        }
+
+        return true;
+    },
+
+    get strength() {
+        const pw = this.password;
+        let score = 0;
+
+        if (pw.length >= 8) score++;
+        if (pw.length >= 12) score++;
+        const classes = (/[a-z]/.test(pw) ? 1 : 0) + (/[A-Z]/.test(pw) ? 1 : 0)
+            + (/[0-9]/.test(pw) ? 1 : 0) + (/[^a-zA-Z0-9]/.test(pw) ? 1 : 0);
+        if (classes >= 3) score++;
+        if (classes >= 4 && pw.length >= 10) score++;
+        if (/(?:0123|1234|2345|3456|4567|5678|6789|abcd|qwer|asdf|zxcv)/i.test(pw)) score--;
+        if (/(.)\1{2,}/.test(pw)) score--;
+        if (!this.notNameOrEmail) score = Math.min(score, 1);
+
+        return Math.max(0, Math.min(4, score));
+    },
+
+    get meterWidth() {
+        return this.strength * 25;
+    },
+
+    get meterColor() {
+        return ['bg-rose-500', 'bg-rose-400', 'bg-saffron', 'bg-lime-500', 'bg-emerald-500'][this.strength];
+    },
+
+    get meterTextClass() {
+        return ['text-rose-600', 'text-rose-500', 'text-saffron-deep', 'text-lime-600', 'text-emerald-600'][this.strength];
+    },
+
+    get meterLabel() {
+        return ['Too weak', 'Weak', 'Okay', 'Strong', 'Excellent'][this.strength];
+    },
+}));
+
+/**
  * Navbar typeahead (TASK 2): debounced fetch to /search/preview renders a
  * Prompts/Creators dropdown under the search box. Enter submits the normal
  * full-page form (the input lives inside it, so no special handling).
