@@ -1,7 +1,7 @@
-# PromptSewa QA Matrix — v1.4.4 "Avatar Fidelity & Manual Payment Proof"
+# PromptSewa QA Matrix — v1.4.5 "Release Hygiene"
 
 Every admin + user flow, its status, and the Pest test that locks it.
-Suite: `cd core && php artisan test` → **226 passed, 987 assertions** (2026-09-29).
+Suite: `cd core && php artisan test` → **233 passed, 1023 assertions** (2026-09-29; parity test skips without MySQL).
 
 Run the matrix: `php artisan test` — every row below is covered by at least one
 named test; if a test regresses, the row goes red and the release blocks.
@@ -135,6 +135,18 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Storefront + category pages | ✅ | `StorefrontTest::homepage shows storefront copy and stats`, `homepage shows prompt cards for seeded public prompts`, `CategoryPageTest::category page shows only prompts in that category`, `category pages render via route model binding with slug key`, `unknown category slug returns 404`, `inactive categories are not browsable` |
 | Creator profile privacy + bylines | ✅ | `CreatorProfileTest::guests can view a public creator profile with their published prompts`, `creator profile does not leak drafts or private prompts`, `PromptVisibilityTest` card/byline tests |
 
+## v1.4.5 D-series (release hygiene block)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| D1 update zip carries no host-local artifacts (bootstrap/cache, storage/**, .env*, *.sqlite) and keeps docroot allow-list + public/build | ✅ | `ReleaseHygieneTest::the built update zip carries no host-local artifacts and keeps docroot + build` |
+| D1 incident lock: the v1.4.4 zip IS in violation of the rule | ✅ | `ReleaseHygieneTest::the v1.4.4 zip is confirmed in violation of the D1 rule` |
+| D2+D3 poisoned-cache recovery: stale config.php purged, config reloaded in-process, view:cache succeeds on host paths, failure record absent | ✅ | `ReleaseHygieneTest::pv:update purges bootstrap caches and reloads config so view:cache succeeds with poisoned paths` |
+| D4 demo/bulk/flagship seeders HARD-refuse in production (zero demo rows possible) | ✅ | `ReleaseHygieneTest::demo, bulk and flagship seeders hard-refuse in production` |
+| D4 local seeding unchanged | ✅ | `ReleaseHygieneTest::local env seeding is unchanged` |
+| D5 pv:purge-demo dry-run writes nothing; force hard-deletes unused, bans+renames money-linked (financial invariant) | ✅ | `ReleaseHygieneTest::pv:purge-demo dry run writes nothing; force hard-deletes unused and bans linked` + `docs/RUNBOOK-DEMO-PURGE.md` |
+| D10 parity acceptance: v1.4.3-schema MySQL + sample rows → pv:update migrates exactly 130000+130100, rows intact, view:cache OK, no failure record | ✅ (MySQL-gated) | `DeployParityAcceptanceTest::v1.4.3-schema database migrates exactly 130000+130100 via pv:update and keeps rows` |
+
 ## v1.4.4 C-series (avatar fidelity + manual payment proof block)
 
 | Flow | Status | Locking test(s) |
@@ -203,4 +215,4 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Demo seeder (credible, idempotent, no body leaks) | ✅ | `DemoContentSeederTest::demo seeder produces a credible marketplace library`, `demo seeder is idempotent when prompts already exist`, `seeded prompt bodies survive seeding intact and hidden bodies never leak` |
 | Money formatting (integer paisa, no float math) | ✅ | `PromptMoneyFormatTest::price labels render integer NPR without float math`, `zero price renders the free label`, `large prices group thousands without decimals` |
 | Blade verb guard (arch test) | ✅ | `Arch\BladeFormVerbTest::every blade form verb matches its target route` |
-| Zip build + SHA-256 report | ✅ | manual — see handoff §7 post-check rows |
+| Zip build + SHA-256 report + D1 content assertion | ✅ | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` + builder self-audit (`hygiene audit: CLEAN`) — see handoff §7 post-check rows |

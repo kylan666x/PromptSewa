@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-29 · **Current version:** v1.4.4
+**Prepared:** 2026-09-29 · **Current version:** v1.4.5
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -35,7 +35,18 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.4.4 — avatar fidelity & manual payment proof (this release)
+### v1.4.5 — release hygiene (this release)
+
+- **D1 zip hygiene**: `build-update-zip.php` permanently excludes host-local artifacts — `bootstrap/cache/*`, `storage/**` (runtime), `public/storage`, `.env*`, `*.sqlite` (`.gitignore` placeholders excepted) — and runs a build-time audit that FAILS the build on any forbidden entry or missing docroot allow-list/compiled assets. The v1.4.4 zip's violation (dev `config.php` shipped) is locked by an incident test.
+- **D2 pre-boot purge**: `update.php` deletes `bootstrap/cache/config.php|routes*.php|packages.php|services.php` in plain PHP after extract, before boot — a poisoned cache can never survive an upload. `pv:update` runs the same purge as step 0 (admin-panel path).
+- **D3 in-process config refresh**: after `config:cache`, `pv:update` re-reads the freshly written cache into the live repository so later steps (route:cache, view:cache, seeds) act on host paths, never boot-time paths.
+- **D4 production seeder gate**: `DemoContentSeeder`, `BulkCatalogSeeder` and `JustShipItAISeeder` HARD-refuse when `APP_ENV=production` — the from-zero seed path on prod is structurally impossible.
+- **D9 stray-SQLite detector**: `update.php` warns in the summary if any `*.sqlite` sits under `core/database/` after extract (evidence is never deleted).
+- **D5 demo-account remediation**: `pv:purge-demo --dry-run|--force` (admin-gated, idempotent, logs every id) + `docs/RUNBOOK-DEMO-PURGE.md`. Unused demo identities hard-delete; money-adjacent ones ban+rename (financial invariant: never delete).
+- **D10 acceptance gate**: `DeployParityAcceptanceTest` — a real MySQL DB at the v1.4.3 schema + sample rows; `pv:update` migrates EXACTLY 130000+130100, sample rows untouched, view:cache OK, no failure record. This is the proof that the founder's next deploy repairs the schema instead of replaying the accident.
+- **Tests**: 7 new (ReleaseHygieneTest 6, DeployParityAcceptanceTest 1, MySQL-gated). Suite: 233 passed / 1023 assertions.
+
+### v1.4.4 — avatar fidelity & manual payment proof
 
 - **x-user-avatar component** (`components/user-avatar.blade.php`, sizes xs/sm/md/lg): real `avatar_path` photo on every creator-identity surface — prompt cards (both card variants), prompt detail byline, library creators grid, versions page author row, admin users table, navbar dropdown (desktop + mobile), search typeahead JSON (`avatar_url` + `initial`), creator profile hero. Initials badge is the FALLBACK only. Alt always carries the @handle; the verified tick stays a sibling element. Locked by `AvatarFidelityTest` (10 tests).
 - **C2 root cause ("can't update manual payment methods")**: the admin form field is `manual_enabled` but the runtime settings key is `manual_payment_enabled` — the save path persisted under the form name, so the toggle and instructions never took effect and the manual panel never activated. `PaymentMethodAdminController::update` now persists under the canonical key. Locked by rendered-form submission tests.
@@ -145,7 +156,8 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 18. **Creator surfaces render avatars via `x-user-avatar` — initials are a fallback, never the default (v1.4.4).** Any new identity surface (cards, tables, rows, JSON payloads) must use the component (sizes xs/sm/md/lg; extra classes merge through `$attributes`). Alt text always carries `@handle`; the verified tick stays OUTSIDE the img. Typeahead JSON must carry `avatar_url` (null when unset) so the client can fall back — `searchCreators` only returns users with a published prompt, so a bare-user test fixture shows an empty typeahead.
 19. **Payment proofs are private — served via owner/staff route, never raw storage URLs (v1.4.4).** Proof screenshots land on the `proofs` disk (`storage/app/proofs`, outside the public/storage symlink) and stream only through `GET /orders/{order}/proof` (`orders.proof.show`, owner or moderator). Never echo a proof path into `Storage::disk('public')->url()`; QR codes (public disk) are fine as plain URLs. Proof submission is throttled (10,1), never grants entitlement, and replaces the file server-side (old file deleted — files are not financial records; the order row keeps one current proof).
 20. **Order-history snapshots are write-once strings (v1.4.4).** Checkout stores the payment method NAME as `NAME · reference` on the order. Editing/deactivating a `manual_payment_methods` row must never rewrite it; `isUsedByOrders()` therefore matches the snapshot PREFIX (`name · %`), not bare equality — an exact match would miss every real order and let a referenced method hard-delete, orphaning history.
-21. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
+21. **Bootstrap caches are host-local artifacts — never ship them; update.php purges them pre-boot; prod never runs demo seeders (v1.4.5).** A `bootstrap/cache/config.php` from a dev machine carries dev view paths and a dev DB connection: on the host it poisons the boot AND redirects migrations/seeders to a stray database (the v1.4.4 incident). The zip builder hard-excludes these trees and fails its own audit on violations; `update.php` purges caches pre-boot regardless of zip contents; the demo/bulk/flagship seeders refuse `APP_ENV=production` outright.
+22. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
 
 ## 7. Deploying the current update
 
@@ -168,6 +180,19 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
 
 SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
+
+### Post-check (v1.4.5) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Zip contents (builder output) | `entries: N \| hygiene audit: CLEAN (0 forbidden entries)` — no `bootstrap/cache/`, `storage/`, `.env*`, `.sqlite` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | update.php run output | `Bootstrap caches purged pre-boot` line; NO stray-SQLite warning unless one actually exists | manual + D2/D9 plain-PHP code |
+| 3 | `php artisan migrate:status` on prod | exactly `130000` + `130100` newly Ran; everything else unchanged (v1.4.3 schema preserved) | `DeployParityAcceptanceTest` (MySQL parity) |
+| 4 | Prod users table after pipeline | zero `@promptsewa.test` / `@promptvellum.test` / `justshipitai@gmail.com` identities created by seeding | `ReleaseHygieneTest::demo, bulk and flagship seeders hard-refuse in production` |
+| 5 | Founder's real data intact | sample row checks in the parity test pattern: row count unchanged, identities intact | `DeployParityAcceptanceTest` |
+| 6 | Demo purge (after founder's check-4 list) | `php artisan pv:purge-demo --dry-run` → review → `--force`; report shows deleted vs quarantined ids | `ReleaseHygieneTest::pv:purge-demo dry run writes nothing…` + RUNBOOK |
+| 7 | Admin → Overview shows version chip | `v1.4.5` chip matches the deployed release | `config('app.version')` single source |
+| 8 | `cd core && php artisan test` | 233 passed, 1023 assertions (parity test skips without MySQL) | whole suite |
 
 ### Post-check (v1.4.4) — run in order after the update.php pipeline finishes
 
@@ -253,6 +278,7 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.2 era | name overlapping cover photo on creator profiles | `-mt` overlap without top padding on the name block | v1.3.0 |
 | v1.4.2 (2026-09-28) | SQLSTATE 1091 replaying `121000_make_license_grants_comp_capable` on prod | interrupted 121000 left partial DDL (unique index dropped, migrations row unwritten) — MySQL DDL autocommits, so the replay dropped an already-dropped index; SQLite never dropped the index at all, which later broke pack fulfillment (UNIQUE constraint on `order_item_id`) | v1.4.3 (120999 repair + 121100 guarded drop + SchemaInspector + drop-guard arch test + fatal-path maintenance lock) |
 | v1.4.3 (2026-09-29) | Creator avatars never rendered — initials everywhere despite uploads working | identity surfaces hand-rolled initials markup; no shared avatar component existed (the "trivial bug") | v1.4.4 (x-user-avatar on every surface, AvatarFidelityTest) |
+| v1.4.4 (2026-09-29) | Prod deploy ran from-zero migrations + dev-path view:cache failure; site served against a stray SQLite | the v1.4.4 update zip carried a dev `bootstrap/cache/config.php` (dev view.paths + dev SQLite connection); extract-before-boot poisoned the host boot; post-run config:cache masked the poison | v1.4.5 (D1 zip exclusion + audit, D2 pre-boot purge, D3 in-process config reload, D4 production seeder gate, D9 stray-SQLite warning, D10 parity acceptance) |
 | v1.4.3 (2026-09-29) | Founder: "I cannot update manual payment methods" | key mismatch: form field `manual_enabled` vs runtime key `manual_payment_enabled` — saves landed on a key nothing read (C2) | v1.4.4 (canonical-key persistence + rendered-form tests + manual methods v2) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.
