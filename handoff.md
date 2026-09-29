@@ -35,7 +35,14 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.5.0 — Official Identity, Taxonomy & Version Truth (this release)
+### v1.5.1 — SEO wiring & typeahead badges (this release)
+
+- **F1 the "missing meta" bug root cause**: `x-seo` rendered its `<title>`/`<meta>` tags WHEREVER the page invoked the component — inside the body slot — while the layout served its own hardcoded `<title>` from `<head>`. The live server was therefore serving the brand-only title on every page regardless of the per-page component. Fix: the component now `@push('head')`es ALL its output, so tags land inside `<head>` no matter where `<x-seo/>` sits; the layout's hardcoded `<title>` and `name="description"` are DELETED (locked by a layout-file scan test); every route class now renders x-seo (dashboard, purchases, profile, report, checkout, esewa redirect, admin pages via `x-admin-layout`, all error pages).
+- **F2 typeahead badges**: the JSON carried `badge: official|verified|none` since v1.5.0, but the Alpine dropdown never rendered it. The creators section now renders the official blue circle (`#1d9bf0`) or the saffron seal (`#EAB308`) inline (x-if gated on the badge field), sized for the compact row.
+- **T4 executed on dev**: `pv:adopt-catalog --force` adopted all 276 prompts to `@promptsewa` (bibek/maya/dorje/justshipitai now childless).
+- **Tests**: 7 new (SeoLayoutTest 7). Suite: 283 passed / 1221 assertions.
+
+### v1.5.0 — Official Identity, Taxonomy & Version Truth
 
 - **T1 official house account**: `pv:official-account` creates/flags `@promptsewa` (admin, verified, `users.is_official`), idempotent, production-safe. Profile/settings edits of the official account are admin-only (moderators 403) — enforced in `ProfileController` for both direct login AND impersonated sessions.
 - **T2 two-badge system**: `x-verified-badge` renders the official blue circle (`--color-official #1d9bf0`, the single sanctioned token addition) whenever `is_official`; saffron seal remains the verified badge. Typeahead JSON carries `badge: official|verified|none`.

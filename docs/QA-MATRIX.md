@@ -251,3 +251,14 @@ named test; if a test regresses, the row goes red and the release blocks.
 | T13 bookmarks (toggle idempotent, invisible-prompt 404) | ✅ | `BookmarkTest::bookmark toggle saves and unsaves idempotently`, `a user can never touch another user bookmark state — 404 on invisible prompts` |
 | T13 Saved tab + card heart pre-flip + detail save button | ✅ | `BookmarkTest::the saved tab lists bookmarked prompts`, `the prompt card heart is pre-flipped…`, `the detail page shows the save button with the correct state` |
 | Suite | ✅ | 276 passed / 1198 assertions |
+
+## v1.5.1 F-series (SEO wiring & typeahead badges)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| F1 x-seo output lands inside `<head>` via @stack (the missing-meta bug: tags rendered in the body slot before v1.5.1) | ✅ | `SeoLayoutTest::seo tags never render in the body`, `the homepage serves a dynamic title and og:title inside <head>` |
+| F1 single `<title>`, dynamic subject-first (homepage, prompt detail, creator profile) | ✅ | `SeoLayoutTest::the homepage serves a dynamic title…`, `the prompt detail page title leads with the prompt subject`, `the creator profile serves a ProfilePage title and og tags` |
+| F1 no hardcoded `<title>`/description in any layout file | ✅ | `SeoLayoutTest::no hardcoded brand-only title tag survives in any layout` |
+| F2 typeahead dropdown renders official (blue circle) + verified (saffron seal) badges from the JSON badge field | ✅ | `SeoLayoutTest::the typeahead dropdown template renders official and verified badge markup` (data gate from `OfficialIdentityTest::typeahead carries the badge field…`) |
+| F2 badge SVG on identity surfaces | ✅ | `SeoLayoutTest::official badge SVG appears in the served page for the official creator card` |
+| Suite | ✅ | 283 passed / 1221 assertions |

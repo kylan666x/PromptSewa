@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="$tab === 'saved' ? 'Saved prompts' : 'Your prompts'" robots="noindex, follow"/>
     @php
         /** @var \App\Models\Prompt $prompt */
         /** @var array{total: int, published: int, pending: int, draft: int} $stats */

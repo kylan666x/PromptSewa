@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'My purchases'" robots="noindex, follow"/>
     @php
         /** @var \Illuminate\Support\Collection<int, \App\Models\LicenseGrant> $grants */
         /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $orders */

@@ -94,6 +94,25 @@
                                         </span>
                                         <span class="min-w-0 truncate">
                                             <span x-text="creator.name"></span>
+                                            {{-- F2 (v1.5.1): official/verified badge in the typeahead —
+                                                 gated server-side data (badge: official|verified|none);
+                                                 rendered as raw SVG since x-verified-badge needs a User model. --}}
+                                            <template x-if="creator.badge === 'official'">
+                                                <span class="inline-flex shrink-0 items-center" title="Official PromptSewa account" aria-label="Official PromptSewa account">
+                                                    <svg class="size-3 drop-shadow-sm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                        <circle cx="12" cy="12" r="11" fill="#1d9bf0"/>
+                                                        <path d="M7.2 12.4l3.1 3.1 6.4-6.9" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </span>
+                                            </template>
+                                            <template x-if="creator.badge === 'verified'">
+                                                <span class="inline-flex shrink-0 items-center" title="Verified" aria-label="Verified creator">
+                                                    <svg class="size-3 drop-shadow-sm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                        <path d="M12 1.8l2.36 2.05 3.1-.35 1.02 2.95 2.8 1.44-.86 3 1.62 2.62-2.25 2.16.13 3.12-3.08.68-1.84 2.55L12 20.6l-3 1.47-1.84-2.55-3.08-.68.13-3.12L1.96 13.56l1.62-2.62-.86-3 2.8-1.44 1.02-2.95 3.1.35L12 1.8z" fill="#EAB308"/>
+                                                        <path d="M8.2 12.1l2.5 2.5 5.1-5.4" stroke="#171715" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </span>
+                                            </template>
                                             <span class="font-mono text-xs text-ink/40" x-text="creator.username ? '@'+creator.username : ''"></span>
                                         </span>
                                     </span>

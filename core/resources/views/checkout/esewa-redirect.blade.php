@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'Redirecting to eSewa…'" robots="noindex, nofollow"/>
     @php
         /** @var array{action: string, fields: array<string, string>} $form */
     @endphp

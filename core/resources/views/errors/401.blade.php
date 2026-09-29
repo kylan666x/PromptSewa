@@ -1,5 +1,6 @@
 <x-app-layout>
     @php $code = '401'; $title = 'Sign in first'; $message = 'You need to be logged in to see this page. Log in or create an account — your cart and progress are waiting.'; @endphp
+    <x-seo :title="$title" robots="noindex, nofollow"/>
     <div class="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center sm:px-6">
         <span class="flex size-16 items-center justify-center rounded-2xl bg-ink font-mono text-2xl font-bold text-saffron shadow-card-hover">✦</span>
         <p class="mt-6 font-mono text-sm font-bold uppercase tracking-[0.3em] text-saffron-deep">Error {{ $code }}</p>

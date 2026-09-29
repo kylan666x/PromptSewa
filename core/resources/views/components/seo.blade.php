@@ -8,18 +8,24 @@
 ])
 
 @php
-    /** T9 (v1.5.0): per-page SEO head block. Rendered inside @stack('head').
+    /** T9 (v1.5.0) / F1 (v1.5.1): per-page SEO head block.
+     *  F1 FIX: the component's output is PUSHED to the 'head' stack — before
+     *  v1.5.1 the <title>/<meta> tags rendered wherever the component sat
+     *  (usually the page body slot), so the live server kept serving the
+     *  layout's hardcoded <title>. Pushing places the tags inside <head>
+     *  regardless of where the page invokes <x-seo/>.
      *  Falls back to the shared composer vars ($siteName/$siteTagline) when
-     *  present; test contexts without the composer get safe literals. */
-    $seoSiteName = isset($siteName) && $siteName !== '' ? $siteName : 'PromptSewa';
+     *  present; test contexts without the composer get config('app.name'). */
+    $seoSiteName = isset($siteName) && $siteName !== '' ? $siteName : config('app.name', 'PromptSewa');
     $seoSiteTagline = $siteTagline ?? '';
     $seoTitle = $title !== null
         ? ($title === '' ? $seoSiteName : $title.' — '.$seoSiteName)
-        : null; // null = layout <title> stays as-is
+        : null; // null = no <title> override (page has no specific subject)
     $seoDescription = trim((string) ($description ?? $seoSiteTagline)) ?: 'PromptSewa — discover, test, buy and sell premium AI prompts.';
     $seoCanonical = $canonical ?? url()->current();
 @endphp
 
+@push('head')
 @if ($seoTitle !== null)
     <title>{{ $seoTitle }}</title>
 @endif
@@ -37,7 +43,7 @@
 <meta property="og:type" content="{{ $ogType }}">
 <meta property="og:url" content="{{ $seoCanonical }}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ $seoTitle ?? ($pageTitle ?? $seoSiteName) }}">
+<meta name="twitter:title" content="{{ $seoTitle ?? (isset($pageTitle) ? (string) $pageTitle : $seoSiteName) }}">
 <meta name="twitter:description" content="{{ $seoDescription }}">
 
 @if ($jsonLd !== null)
@@ -50,3 +56,4 @@
         @endif
     @endforeach
 @endif
+@endpush

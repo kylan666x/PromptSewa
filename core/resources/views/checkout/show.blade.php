@@ -1,4 +1,6 @@
-<x-app-layout>        @php
+<x-app-layout>
+    <x-seo :title="'Checkout'" robots="noindex, nofollow"/>
+        @php
         /** @var \App\Models\Order $order */
         /** @var bool $esewaEnabled */
         /** @var bool $manualEnabled */

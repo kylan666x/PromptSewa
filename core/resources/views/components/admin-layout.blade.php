@@ -1,4 +1,6 @@
 <x-app-layout>
+    {{-- F1 (v1.5.1): admin pages get noindex SEO with the page title. --}}
+    <x-seo :title="$title" robots="noindex, nofollow"/>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

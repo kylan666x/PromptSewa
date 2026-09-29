@@ -4,6 +4,7 @@
 @endphp
 
 <x-app-layout>
+    <x-seo :title="'Report a prompt'" robots="noindex, follow"/>
     <div class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-1.5 font-mono text-xs text-ink/50">
             <a href="{{ route('home') }}" class="transition hover:text-ink">Home</a>

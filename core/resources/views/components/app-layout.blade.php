@@ -4,8 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="{{ $siteTagline !== '' ? $siteTagline : 'PromptSewa — discover, test, buy and sell premium AI prompts.' }}">
-    <title>@isset($pageTitle){{ $pageTitle }} — @endisset{{ $siteName }}</title>
+    {{-- F1 (v1.5.1): x-seo is the SINGLE source of truth for <title> and
+         description — there is deliberately NO static <title> here. Every
+         page view (admin via x-admin-layout, errors via their own x-seo)
+         must render one through the component, which pushes into this
+         <head> via @stack('head') below. A page that omits <x-seo/> would
+         serve headless — SeoLayoutTest guards every route class. --}}
 
     {{-- Admin-managed favicon falls back to the static default. --}}
     @if ($brandFaviconPath !== '')

@@ -1,5 +1,6 @@
 <x-app-layout>
     @php $code = "419"; $title = "Session expired"; $message = "Your session timed out for security. Go back, refresh, and try again."; @endphp
+    <x-seo :title="$title" robots="noindex, nofollow"/>
     <div class="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center sm:px-6">
         <span class="flex size-16 items-center justify-center rounded-2xl bg-ink font-mono text-2xl font-bold text-saffron shadow-card-hover">419</span>
         <p class="mt-6 font-mono text-sm font-bold uppercase tracking-[0.3em] text-saffron-deep">Error 419</p>
