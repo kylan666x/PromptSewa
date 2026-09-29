@@ -42,8 +42,12 @@ class Prompt extends Model
 
     final public const TYPE_VIDEO = 'video';
 
+    final public const TYPE_AGENTIC = 'agentic';
+
+    final public const TYPE_SKILL = 'skill';
+
     /** @var list<string> */
-    final public const TYPES = [self::TYPE_TEXT, self::TYPE_IMAGE, self::TYPE_VIDEO];
+    final public const TYPES = [self::TYPE_TEXT, self::TYPE_IMAGE, self::TYPE_VIDEO, self::TYPE_AGENTIC, self::TYPE_SKILL];
 
     protected $fillable = [
         'user_id',
@@ -201,6 +205,8 @@ class Prompt extends Model
         return match ($this->type) {
             self::TYPE_IMAGE => 'Image prompt',
             self::TYPE_VIDEO => 'Video prompt',
+            self::TYPE_AGENTIC => 'Agentic workflow',
+            self::TYPE_SKILL => 'Skill / framework',
             default => 'Text prompt',
         };
     }

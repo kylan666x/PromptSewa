@@ -19,7 +19,10 @@
                             @endif
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-ink">{{ $tool->name }}</p>
-                                <p class="text-xs {{ $tool->is_active ? 'text-emerald-700' : 'text-ink0' }}">{{ $tool->is_active ? 'active' : 'hidden' }}</p>
+                                <p class="text-xs {{ $tool->is_active ? 'text-emerald-700' : 'text-ink0' }}">
+                                    {{ $tool->is_active ? 'active' : 'hidden' }}
+                                    · <span class="font-mono">{{ $tool->modality }}</span>
+                                </p>
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center gap-1.5">
@@ -28,6 +31,12 @@
                                 @method('PATCH')
                                 <input type="hidden" name="name" value="{{ $tool->name }}">
                                 <input type="hidden" name="is_active" value="{{ $tool->is_active ? '0' : '1' }}">
+                                <select name="modality" title="Prompt types this tool serves" onchange="this.form.submit()"
+                                        class="rounded-lg border border-ink/10 bg-paper-deep px-2 py-1 text-xs text-ink/80 outline-none">
+                                    @foreach ([\App\Models\ToolLogo::MODALITY_ANY, 'text', 'image', 'video', 'agentic', 'skill'] as $modalityOption)
+                                        <option value="{{ $modalityOption }}" @selected($tool->modality === $modalityOption)>{{ $modalityOption }}</option>
+                                    @endforeach
+                                </select>
                                 <label class="cursor-pointer rounded-lg border border-ink/10 px-2.5 py-1 text-xs text-ink/80 transition hover:border-saffron-deep hover:text-saffron-deep">
                                     {{ $tool->logo_path ? 'Replace logo' : 'Upload logo' }}
                                     <input type="file" name="logo" accept="image/*" class="hidden" onchange="this.form.submit()">
@@ -56,6 +65,15 @@
                     <input type="text" name="name" required maxlength="60" placeholder="e.g. ChatGPT"
                            class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
                     @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-ink/60">Modality</label>
+                    <select name="modality" class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
+                        @foreach ([\App\Models\ToolLogo::MODALITY_ANY, 'text', 'image', 'video', 'agentic', 'skill'] as $modalityOption)
+                            <option value="{{ $modalityOption }}">{{ $modalityOption }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-ink0">Which prompt types can list this tool — “any” fits all.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-ink/60">Logo (PNG/SVG, square works best)</label>

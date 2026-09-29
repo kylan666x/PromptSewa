@@ -16,6 +16,10 @@ use Tests\TestCase;
 
 pest()->extends(TestCase::class)->in('Feature', 'Unit', 'Arch');
 
+// T6 (v1.5.0): the tool-registry baseline lives in TestCase::setUp() —
+// a global beforeEach() in this file registers under Pest.php's filename
+// and never fires for actual test files (Pest v3 behavior).
+
 /**
  * Assert a rendered response contains no Blade escape artifacts. A Blade
  * ECHO leak renders as `{{ $...` in served HTML (the v1.4.1 byline leak).

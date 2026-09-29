@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Appended to the web group (after StartSession so the logout can
         // invalidate the session; guests never reach the user check).
         $middleware->appendToGroup('web', RejectBannedUsers::class);
+
+        // T3 (v1.5.0): effective-user resolution for admin impersonation —
+        // validates the session's impersonator_id after StartSession,
+        // before auth-dependent routes run.
+        $middleware->appendToGroup('web', \App\Http\Middleware\ResolveImpersonation::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // cPanel hardening: never leak stack traces to visitors. The cron

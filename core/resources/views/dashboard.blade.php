@@ -33,14 +33,57 @@
     <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-ink">Your prompts</h1>
-                <p class="mt-1 text-sm text-ink/60">Everything you've created, including drafts and private listings.</p>
+                <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $tab === 'saved' ? 'Saved prompts' : 'Your prompts' }}</h1>
+                <p class="mt-1 text-sm text-ink/60">{{ $tab === 'saved' ? "Listings you've bookmarked from the library." : "Everything you've created, including drafts and private listings." }}</p>
             </div>
-            <a href="{{ route('dashboard.prompts.create') }}"
-               class="inline-flex items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-saffron-deep">
-                <span class="text-base leading-none">+</span> New prompt
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                {{-- T13: dashboard tabs — Your prompts / Saved --}}
+                <a href="{{ route('dashboard') }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Your prompts</a>
+                <a href="{{ route('dashboard', ['tab' => 'saved']) }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Saved</a>
+                <a href="{{ route('dashboard.prompts.create') }}"
+                   class="inline-flex items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-saffron-deep">
+                    <span class="text-base leading-none">+</span> New prompt
+                </a>
+            </div>
         </header>
+
+        @if ($tab === 'saved')
+            {{-- ===== Saved tab (T13) ===== --}}
+            <div class="mt-8">
+                @if ($saved->isEmpty())
+                    <div class="rounded-2xl border border-dashed border-ink/20 bg-white p-10 text-center">
+                        <p class="text-sm text-ink/60">Nothing saved yet — tap the heart on any prompt to keep it here.</p>
+                        <a href="{{ route('library.index') }}" class="mt-3 inline-block rounded-full bg-saffron px-4 py-2 text-sm font-bold text-ink transition hover:bg-saffron-deep">Browse the library</a>
+                    </div>
+                @else
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($saved as $bookmark)
+                            @php $savedPrompt = $bookmark->prompt; @endphp
+                            @continue($savedPrompt === null)
+                            <div class="flex flex-col rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h3 class="font-semibold leading-snug text-ink">
+                                        <a href="{{ route('prompts.show', $savedPrompt) }}" class="hover:text-saffron-deep">{{ $savedPrompt->title }}</a>
+                                    </h3>
+                                    <span class="shrink-0 rounded-md bg-paper-deep px-2 py-0.5 font-mono text-[10px] font-bold text-ink/60">{{ $savedPrompt->typeLabel() }}</span>
+                                </div>
+                                <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ink/50">{{ $savedPrompt->description }}</p>
+                                <div class="mt-auto flex items-center justify-between pt-4">
+                                    <span class="font-mono text-[11px] text-ink/50">{{ $savedPrompt->priceLabel() }}</span>
+                                    <a href="{{ route('prompts.show', $savedPrompt) }}" class="rounded-full bg-saffron px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-saffron-deep">Open prompt</a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if ($saved->hasPages())
+                        <div class="mt-6">{{ $saved->links('pagination::tailwind') }}</div>
+                    @endif
+                @endif
+            </div>
+        @else
+        {{-- ===== Prompts tab (existing) ===== --}}
 
         {{-- Stat cards --}}
         <div class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -127,5 +170,6 @@
                 </div>
             @endif
         </div>
+        @endif {{-- end prompts tab --}}
     </div>
 </x-app-layout>

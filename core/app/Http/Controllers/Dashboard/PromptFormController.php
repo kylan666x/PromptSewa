@@ -48,6 +48,24 @@ class PromptFormController extends Controller
             'example_tools' => ['Runway Gen-3', 'Sora', 'Kling'],
             'audience_placeholder' => 'e.g. short-form creators, ad teams',
         ],
+        Prompt::TYPE_AGENTIC => [
+            'label' => 'Agentic workflow',
+            'icon' => '✦',
+            'blurb' => 'Multi-step agent runbooks: roles, tools, loops.',
+            'guidance' => "Define the agent's role, the tools it may call, the loop/termination condition, and the output contract. State the guardrails: what the agent must never do.",
+            'body_placeholder' => "You are an autonomous research agent.\n\nGoal: {{objective}}\n\nTools available: web_search, file_read, calculator\nLoop: plan → act → observe → revise (max 5 iterations)\nStop when: every claim carries a sourced citation\nNever: browse paid sources, fabricate URLs\n\nDeliverable: a markdown brief with a sources section.",
+            'example_tools' => ['CrewAI', 'AutoGPT', 'LangChain'],
+            'audience_placeholder' => 'e.g. automation engineers, ops teams',
+        ],
+        Prompt::TYPE_SKILL => [
+            'label' => 'Skill / framework',
+            'icon' => '✦',
+            'blurb' => 'Reusable skills and system frameworks to install.',
+            'guidance' => 'Write it like documentation for a capability: trigger conditions, inputs, procedure, output format, and failure modes. The reader should be able to install and use it without asking questions.',
+            'body_placeholder' => "# Skill: Meeting Synthesizer\n\nTrigger: user shares raw meeting notes or a transcript.\n\nInputs: {{notes}}, {{participants}}\n\nProcedure:\n1. Extract decisions with owners\n2. Derive action items with deadlines\n3. Surface unanswered questions\n\nOutput format: markdown with Decision/Action/Question sections.\nFailure mode: if notes are too sparse, ask for the transcript instead of guessing.",
+            'example_tools' => ['Claude', 'ChatGPT', 'Gemini'],
+            'audience_placeholder' => 'e.g. power users, team leads',
+        ],
     ];
 
     public function create()
@@ -62,6 +80,7 @@ class PromptFormController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'type_scope']),
             'typeContexts' => self::TYPE_CONTEXTS,
+            'tools' => \App\Models\ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
         ]);
     }
 

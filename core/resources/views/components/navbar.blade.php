@@ -5,7 +5,10 @@
     'brandMarkPath' => '',
 ])
 
-<nav class="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur" x-data="{ mobile: false, cats: false }">
+{{-- T12 (v1.5.0): the burger drawer is RETIRED — mobile navigation is the
+     bottom dock (x-mobile-dock). Category chips live at the top of the
+     library page; Packs/About/Admin/Logout live in the profile "You" menu. --}}
+<nav class="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur" x-data="{ cats: false }">
     <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
         {{-- Logo: desktop shows the full landscape logo (or fallback badge +
              wordmark); mobile shows the square mark only (S3). --}}
@@ -192,48 +195,20 @@
             @endguest
         </div>
 
-        {{-- Mobile hamburger --}}
-        <button @click="mobile = !mobile" class="flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition hover:bg-ink/5 md:hidden" aria-label="Menu" :aria-expanded="mobile">
-            <svg x-show="!mobile" class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
-            </svg>
-            <svg x-show="mobile" x-cloak class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-            </svg>
-        </button>
     </div>
 
-    {{-- Mobile drawer: search row stays in the bar; links + categories live here --}}
-    <div x-show="mobile" x-cloak x-transition class="border-t border-ink/10 bg-paper px-4 pb-4 pt-2 md:hidden">
-        <div class="flex flex-wrap items-center gap-1">
-            <a href="{{ route('packs.index') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">Packs</a>
-            <a href="{{ route('pages.about') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">About</a>
-            @auth
-                <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207]">+ Add prompt</a>
-                <a href="{{ route('creators.show', auth()->user()) }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">My profile</a>
-                <a href="{{ route('dashboard.profile.edit') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">Edit profile</a>
-                <a href="{{ route('purchases.index') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">Library</a>
-                <a href="{{ route('dashboard') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">Dashboard</a>
-                @if (auth()->user()->isModerator())
-                    <a href="{{ route('admin.dashboard') }}" class="rounded-full border border-saffron-deep bg-saffron/20 px-3 py-2 text-sm font-semibold text-ink">Admin</a>
-                @endif
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button type="submit" class="rounded-full border border-ink/15 px-3 py-2 text-sm font-medium text-ink/80">Log out</button>
-                </form>
-            @else
-                <a href="{{ route('login') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80">Log in</a>
-            @endauth
+@if (session('impersonator_id'))
+    @php
+        $impersonator = \App\Models\User::find(session('impersonator_id'));
+    @endphp
+    @if ($impersonator)
+        <div class="flex flex-wrap items-center justify-center gap-2 bg-[#1d9bf0] px-4 py-2 text-sm font-medium text-white">
+            <span>Acting as <strong>@{{ auth()->user()->username ?? auth()->user()->name }}</strong> — returned session restores {{ $impersonator->name }}</span>
+            <form method="POST" action="{{ route('impersonation.stop') }}">
+                @csrf
+                <button class="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#1d9bf0] transition hover:bg-blue-50">Return to my account</button>
+            </form>
         </div>
-
-        @if ($categories->isNotEmpty())
-            <p class="mt-3 px-1 font-mono text-[11px] font-bold uppercase tracking-widest text-ink/40">Categories</p>
-            <div class="mt-1 flex flex-wrap gap-1.5">
-                <a href="{{ route('library.index') }}" class="rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">All</a>
-                @foreach ($categories as $category)
-                    <a href="{{ route('library.category', $category) }}" class="rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">{{ $category->name }}</a>
-                @endforeach
-            </div>
-        @endif
-    </div>
+    @endif
+@endif
 </nav>

@@ -24,11 +24,13 @@ class ToolLogoAdminController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:60', 'unique:tool_logos,name'],
+            'modality' => ['required', 'string', 'in:'.implode(',', ToolLogo::MODALITIES)],
             'logo' => ['nullable', 'image', 'max:512'],
         ]);
 
         ToolLogo::query()->create([
             'name' => trim((string) $validated['name']),
+            'modality' => $validated['modality'],
             'logo_path' => $this->storeLogo($request),
             'position' => (int) ToolLogo::max('position') + 1,
             'is_active' => true,
@@ -43,12 +45,17 @@ class ToolLogoAdminController extends Controller
             'logo' => ['nullable', 'image', 'max:512'],
             'is_active' => ['nullable', 'boolean'],
             'name' => ['required', 'string', 'min:2', 'max:60'],
+            'modality' => ['nullable', 'string', 'in:'.implode(',', ToolLogo::MODALITIES)],
         ]);
 
         $attributes = [
             'name' => trim((string) $validated['name']),
             'is_active' => $request->boolean('is_active'),
         ];
+
+        if (! empty($validated['modality'])) {
+            $attributes['modality'] = $validated['modality'];
+        }
 
         $logoPath = $this->storeLogo($request);
         if ($logoPath !== null) {

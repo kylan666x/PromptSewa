@@ -31,7 +31,8 @@ function staffSeededWorld(): User
     $order = Order::factory()->for($buyer, 'buyer')->create();
     Pack::factory()->create();
     PromptReport::factory()->create();
-    ToolLogo::query()->create(['name' => 'Midjourney', 'is_active' => true, 'position' => 1]);
+    // Global beforeEach already seeds the registry — firstOrCreate here.
+    ToolLogo::query()->firstOrCreate(['name' => 'Midjourney'], ['is_active' => true, 'position' => 1]);
 
     return $admin;
 }

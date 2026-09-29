@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'About'" :description="'About PromptSewa — the Nepali marketplace for premium AI prompts.'"/>
     <div class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
         <h1 class="text-4xl font-bold tracking-tight text-ink">Quality prompts, <em class="italic">fairly priced.</em></h1>
 

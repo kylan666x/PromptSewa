@@ -17,6 +17,7 @@
     --color-saffron: #f5c518;
     --color-saffron-deep: #e0a800;
     --color-creak: #6b6a63;
+    --color-official: #1d9bf0; /* T2 v1.5.0: official-account badge only — never a UI accent (DESIGN.md addendum) */
 
     --shadow-card: 0 1px 2px rgb(23 23 21 / 0.06), 0 8px 24px -12px rgb(23 23 21 / 0.12);
     --shadow-card-hover: 0 2px 4px rgb(23 23 21 / 0.08), 0 16px 40px -16px rgb(23 23 21 / 0.2);
@@ -30,4 +31,22 @@
 
 [x-cloak] {
     display: none !important;
+}
+
+/* T12 (v1.5.0): bottom-dock tabs. ≥44px targets, visible focus rings. */
+.dock-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    transition: color 150ms ease;
+}
+
+.dock-tab:focus-visible {
+    outline: 2px solid var(--color-saffron);
+    outline-offset: -2px;
+    border-radius: 8px;
 }

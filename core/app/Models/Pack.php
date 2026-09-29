@@ -23,6 +23,8 @@ class Pack extends Model
         'name',
         'slug',
         'description',
+        'tagline',
+        'hero_copy',
         'price_paisa',
         'currency',
         'is_active',

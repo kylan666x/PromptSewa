@@ -142,7 +142,7 @@ test('admin can add, deactivate and remove an AI tool', function () {
     $admin = flowsAdmin();
 
     $this->actingAs($admin)
-        ->post(route('admin.tool-logos.store'), ['name' => 'Midjourney'])
+        ->post(route('admin.tool-logos.store'), ['name' => 'Midjourney', 'modality' => 'image'])
         ->assertRedirect();
 
     $tool = ToolLogo::query()->where('name', 'Midjourney')->sole();

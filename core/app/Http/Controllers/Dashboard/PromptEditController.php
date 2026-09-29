@@ -7,6 +7,8 @@ use App\Http\Requests\PromptFormRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Prompt;
+use App\Models\PromptVersion;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -36,6 +38,7 @@ class PromptEditController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'type_scope']),
             'typeContexts' => PromptFormController::TYPE_CONTEXTS,
+            'tools' => \App\Models\ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
             'tagsValue' => implode(', ', $latest?->tags ?? []),
             'tipsValue' => implode("\n", $latest?->tips ?? []),
         ]);
@@ -65,6 +68,11 @@ class PromptEditController extends Controller
         }
 
         DB::transaction(function () use ($validated, $user, $request, $prompt): void {
+            // T7 (v1.5.0): a published listing stays published through an
+            // edit — the edit commits a new version, it never silently
+            // unlists (or re-moderates) live content.
+            $wasPublished = $prompt->status === Prompt::STATUS_PUBLISHED;
+
             // Listing metadata updates in place.
             $prompt->fill([
                 'category_id' => $validated['category_id'],
@@ -78,12 +86,15 @@ class PromptEditController extends Controller
                 'cover_image_path' => $prompt->cover_image_path,
             ])->save();
 
-            // Append-only body history: next immutable version row.
+            // Append-only body history: next immutable version row, now
+            // carrying the full body/variables/tools snapshot (T7).
             $next = ((int) $prompt->versions()->max('version_number')) + 1;
 
-            $prompt->versions()->create([
+            $version = $prompt->versions()->create([
                 'version_number' => $next,
                 'body' => $validated['body'],
+                'variables' => $this->extractVariables((string) $validated['body']),
+                'tools' => $validated['recommended_tools'],
                 'tags' => $validated['tags'],
                 'recommended_tools' => $validated['recommended_tools'],
                 'audience' => $validated['audience'],
@@ -92,7 +103,18 @@ class PromptEditController extends Controller
                     ? trim((string) $request->input('changelog'))
                     : 'Updated prompt',
                 'user_id' => $user->id,
+                'status' => $wasPublished ? PromptVersion::STATUS_PUBLISHED : PromptVersion::STATUS_PENDING,
             ]);
+
+            // T7: a live listing with an OPEN abuse report goes back into
+            // the moderation queue after an edit (the report may be about
+            // the content that just changed).
+            if ($wasPublished) {
+                \App\Models\PromptReport::query()
+                    ->where('prompt_id', $prompt->id)
+                    ->where('status', \App\Models\PromptReport::STATUS_OPEN)
+                    ->update(['status' => 'pending']);
+            }
 
             // Keep the MKT-001 product price in sync with the listing price.
             $this->syncProduct($prompt, $validated['price_cents']);
@@ -101,6 +123,53 @@ class PromptEditController extends Controller
         return redirect()
             ->route('dashboard.prompts.edit', $prompt)
             ->with('success', 'Saved — version '.($prompt->versions()->max('version_number')).' committed to history.');
+    }
+
+    /**
+     * T7: restore an old snapshot as the newest version (append-only —
+     * nothing in history is mutated or deleted). Owner or moderator.
+     */
+    public function restore(Request $request, Prompt $prompt, PromptVersion $version)
+    {
+        Gate::authorize('update', $prompt);
+
+        abort_unless($version->prompt_id === $prompt->id, 404);
+        abort_unless($version->hasSnapshot(), 422, 'That version has no snapshot to restore from.');
+
+        $next = ((int) $prompt->versions()->max('version_number')) + 1;
+
+        $prompt->versions()->create([
+            'version_number' => $next,
+            'body' => $version->body,
+            'variables' => $version->variables,
+            'tools' => $version->tools,
+            'tags' => $version->tags,
+            'recommended_tools' => $version->recommended_tools,
+            'audience' => $version->audience,
+            'tips' => $version->tips,
+            'changelog' => "Restored from {$version->label()}",
+            'user_id' => $request->user()->id,
+            'status' => $prompt->status === Prompt::STATUS_PUBLISHED
+                ? PromptVersion::STATUS_PUBLISHED
+                : PromptVersion::STATUS_PENDING,
+        ]);
+
+        return redirect()
+            ->route('prompts.versions', $prompt)
+            ->with('success', "Restored {$version->label()} as the new version {$next}.");
+    }
+
+    /** @return list<string> */
+    private function extractVariables(string $body): array
+    {
+        preg_match_all('/\{\{\s*([a-zA-Z0-9_ -]+?)\s*\}\}/', $body, $matches);
+
+        return collect($matches[1])
+            ->map(fn (string $name) => trim($name))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** Create or reprice the sellable product; archive it for free listings. */

@@ -156,7 +156,10 @@ test('pv:update purges bootstrap caches and reloads config so view:cache succeed
 
         // D2 step 0 removed the poisoned file before migrate; D3 reloaded
         // host paths, so view:cache compiled from the REAL view directory.
-        expect(config('app.version'))->toBe('1.4.5', 'D3 reload must re-read the canonical cache');
+        // Compare against the canonical config FILE's value, not a hard-coded
+        // release string — the version bumps, the reload contract does not.
+        $canonical = require config_path('app.php');
+        expect(config('app.version'))->toBe($canonical['version'], 'D3 reload must re-read the canonical cache');
 
         // The failure record stays absent — nothing fatal happened.
         expect(File::exists(storage_path('logs/update-failed.json')))->toBeFalse();

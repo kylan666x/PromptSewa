@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'Prompt packs'" :description="'Curated bundles of premium AI prompts — one purchase, every license inside.'"/>
     <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <header class="text-center">
             <h1 class="text-4xl font-bold tracking-tight text-ink">Prompt packs</h1>

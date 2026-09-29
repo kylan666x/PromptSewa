@@ -20,6 +20,8 @@ class SearchController extends Controller
 
     public function preview(Request $request): JsonResponse
     {
+        // T9: JSON endpoints must never be indexed — header applied to every
+        // response below.
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:'.PromptSearchService::MAX_TERM_LENGTH],
         ]);
@@ -27,7 +29,7 @@ class SearchController extends Controller
         $term = trim($validated['q'] ?? '');
 
         if ($term === '') {
-            return response()->json(['prompts' => [], 'creators' => []]);
+            return response()->json(['prompts' => [], 'creators' => []])->header('X-Robots-Tag', 'noindex');
         }
 
         $prompts = $this->search->search($term, 3)
@@ -53,12 +55,15 @@ class SearchController extends Controller
                     ? Storage::disk('public')->url($creator->avatar_path)
                     : null,
                 'initial' => mb_substr($creator->name, 0, 1),
+                // T2 (v1.5.0): badge variant for the typeahead — official
+                // (blue house-account mark) wins over verified (saffron seal).
+                'badge' => $creator->is_official ? 'official' : ($creator->is_verified ? 'verified' : 'none'),
             ])
             ->values();
 
         return response()->json([
             'prompts' => $prompts,
             'creators' => $creators,
-        ]);
+        ])->header('X-Robots-Tag', 'noindex');
     }
 }

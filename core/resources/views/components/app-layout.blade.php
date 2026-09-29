@@ -24,8 +24,11 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
-<body class="flex min-h-screen flex-col bg-paper text-ink antialiased selection:bg-saffron/40 selection:text-ink">
-    <x-navbar :categories="$navCategories ?? collect()" :site-name="$siteName" :brand-logo-path="$brandLogoPath"/>
+{{-- T12: pb-24 (mobile) clears the fixed bottom dock; md:pb-0 restores --}}
+<body class="flex min-h-screen flex-col bg-paper pb-24 text-ink antialiased selection:bg-saffron/40 selection:text-ink md:pb-0">
+    {{-- T11 (v1.5.0): the mobile row renders the square brand mark — this
+         prop was never forwarded, so mobile showed neither mark nor logo. --}}
+    <x-navbar :categories="$navCategories ?? collect()" :site-name="$siteName" :brand-logo-path="$brandLogoPath" :brand-mark-path="$brandMarkPath"/>
 
     {{-- Flash toast (server redirects) --}}
     @if (session('success'))
@@ -44,5 +47,9 @@
     </main>
 
     <x-footer :site-name="$siteName" :contact-email="$contactEmail" :support-email="$supportEmail" :brand-logo-path="$brandLogoPath"/>
+
+    {{-- T12: bottom dock — renders on mobile in every app-layout world
+         (error/maintenance layouts are separate files and exempt). --}}
+    <x-mobile-dock :site-name="$siteName"/>
 </body>
 </html>

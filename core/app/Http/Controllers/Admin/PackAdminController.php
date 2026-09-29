@@ -79,6 +79,8 @@ class PackAdminController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:160'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'tagline' => ['nullable', 'string', 'max:200'],
+            'hero_copy' => ['nullable', 'string', 'max:4000'],
             'price_npr' => ['required', 'integer', 'min:0', 'max:100000'],
             'is_active' => ['nullable', 'boolean'],
             'position' => ['nullable', 'integer', 'min:0', 'max:9999'],
@@ -94,6 +96,8 @@ class PackAdminController extends Controller
             'name' => trim((string) $validated['name']),
             'slug' => Pack::uniqueSlug((string) $validated['name'], $ignoreId),
             'description' => trim((string) ($validated['description'] ?? '')) ?: null,
+            'tagline' => trim((string) ($validated['tagline'] ?? '')) ?: null,
+            'hero_copy' => trim((string) ($validated['hero_copy'] ?? '')) ?: null,
             'price_paisa' => max(0, (int) $validated['price_npr']) * 100,
             'currency' => 'NPR',
             'is_active' => (bool) ($validated['is_active'] ?? false),

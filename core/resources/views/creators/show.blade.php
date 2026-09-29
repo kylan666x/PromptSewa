@@ -1,4 +1,18 @@
 <x-app-layout>
+    <x-seo
+        :title="$creator->name"
+        :description="$creator->bio ?? ('AI prompts by '.$creator->name.' on PromptSewa.')"
+        :jsonLd="[
+            '@context' => 'https://schema.org',
+            '@type' => 'ProfilePage',
+            'mainEntity' => [
+                '@type' => 'Person',
+                'name' => $creator->name,
+                'description' => $creator->bio,
+                'url' => url()->current(),
+            ],
+        ]"
+    />
     @php
         /** @var \App\Models\User $creator */
         /** @var \Illuminate\Pagination\LengthAwarePaginator $prompts */

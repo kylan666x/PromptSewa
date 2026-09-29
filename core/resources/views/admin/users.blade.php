@@ -26,6 +26,7 @@
                     <th class="px-5 py-3 font-semibold">Role</th>
                     <th class="px-5 py-3 font-semibold">Verified</th>
                     <th class="px-5 py-3 font-semibold">Status</th>
+                    <th class="px-5 py-3 font-semibold">Act as</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-ink/10 bg-white">
@@ -91,13 +92,51 @@
                                 <span class="text-xs text-ink0">—</span>
                             @endif
                         </td>
+                        <td class="px-5 py-3.5">
+                            {{-- T3: switch into this account (admin only, never self). --}}
+                            @if (auth()->user()->isAdmin() && $user->id !== auth()->id())
+                                <form method="POST" action="{{ route('admin.users.impersonate', $user) }}">
+                                    @csrf
+                                    <button type="submit" class="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-ink/70 transition hover:border-[#1d9bf0] hover:text-[#1d9bf0]" title="Act as this account (audited in impersonations)">
+                                        Switch
+                                    </button>
+                                </form>
+                            @else
+                                <span class="text-xs text-ink0">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
+                    <tr><td colspan="7" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
     <div class="mt-6">{{ $users->links() }}</div>
+
+    {{-- T10 (v1.5.0): demo purge panel — dry-run preview + force. Shells
+         pv:purge-demo so the runbook logic and this UI never drift. --}}
+    <div class="mt-10 rounded-2xl border border-rose-700/20 bg-rose-50/60 p-6">
+        <h3 class="text-sm font-semibold text-rose-800">Demo purge</h3>
+        <p class="mt-1 text-xs text-rose-700/80">
+            Removes seeded demo identities (hard delete when unused, ban+rename when
+            financially linked). Money rows are never deleted. Runbook:
+            docs/RUNBOOK-DEMO-PURGE.md.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+            <form method="POST" action="{{ route('admin.users.purge.preview') }}">
+                @csrf
+                <button class="rounded-xl border border-rose-700/30 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">Preview plan (dry run)</button>
+            </form>
+            <form method="POST" action="{{ route('admin.users.purge.run') }}"
+                  onsubmit="return confirm('APPLY demo purge now? Unused demo accounts are deleted and linked ones banned. This follows the dry-run plan exactly.')">
+                @csrf
+                <button class="rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-800">Apply purge</button>
+            </form>
+        </div>
+        @if (session('purge_preview'))
+            <pre class="mt-4 max-h-72 overflow-auto rounded-xl bg-ink p-4 font-mono text-[11px] leading-relaxed text-emerald-200">{{ session('purge_preview') }}</pre>
+        @endif
+    </div>
 </x-admin-layout>

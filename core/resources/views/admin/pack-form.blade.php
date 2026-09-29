@@ -31,6 +31,21 @@
                           placeholder="What's inside and who it's for.">{{ old('description', $pack->description) }}</textarea>
             </div>
 
+            {{-- T8 (v1.5.0): landing-page copy --}}
+            <div>
+                <label class="block text-xs font-medium text-ink/60">Tagline</label>
+                <input type="text" name="tagline" maxlength="200" value="{{ old('tagline', $pack->tagline) }}"
+                       placeholder="One punchy line under the pack title."
+                       class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
+                @error('tagline') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-ink/60">Hero copy</label>
+                <textarea name="hero_copy" rows="5" maxlength="4000"
+                          class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep"
+                          placeholder="Landing-page narrative: who this pack is for, what changes after buying it.">{{ old('hero_copy', $pack->hero_copy) }}</textarea>
+            </div>
+
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label class="block text-xs font-medium text-ink/60">Price (NPR) <span class="text-saffron-deep">*</span></label>

@@ -8,9 +8,24 @@
         'lg' => 'size-7',
         default => 'size-4',
     };
+
+    // T2 (v1.5.0) two-badge system: is_official wins over plain verified.
+    // Official = circular blue (#1d9bf0, DESIGN.md addendum — the single
+    // sanctioned new token) with a white check. Verified = the saffron
+    // seal, unchanged.
+    $isOfficial = (bool) ($user?->is_official ?? false);
+    $isVerified = (bool) ($user?->is_verified ?? false);
 @endphp
 
-@if ($user?->is_verified)
+@if ($isOfficial)
+    <span {{ $attributes->merge(['class' => 'inline-flex shrink-0 items-center']) }}
+          title="Official PromptSewa account" aria-label="Official PromptSewa account">
+        <svg class="{{ $sizeClass }} drop-shadow-sm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="11" fill="#1d9bf0"/>
+            <path d="M7.2 12.4l3.1 3.1 6.4-6.9" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </span>
+@elseif ($isVerified)
     <span {{ $attributes->merge(['class' => 'inline-flex shrink-0 items-center']) }}
           title="Verified" aria-label="Verified creator">
         {{-- Seal-style badge in PromptSewa saffron with ink check — brand answer to the blue tick. --}}

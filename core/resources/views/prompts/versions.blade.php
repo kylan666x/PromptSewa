@@ -5,6 +5,7 @@
 @endphp
 
 <x-app-layout>
+    <x-seo :title="$prompt->title.' — version history'" :description="$prompt->description" :canonical="route('prompts.show', $prompt)"/>
     <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         {{-- Breadcrumb: Home / Library / {category} / {prompt} / History --}}
         <nav aria-label="Breadcrumb" class="font-mono text-xs text-ink/50">
@@ -50,6 +51,29 @@
                         </p>
                         <p class="font-mono text-xs text-ink/50">{{ $version['created_at']->format('M j, Y') }} · {{ $version['author'] }}</p>
                     </div>
+
+                    {{-- T7 (v1.5.0): snapshot honesty + full-snapshot rendering --}}
+                    @if (! $version['has_snapshot'])
+                        <p class="mt-3 rounded-lg bg-paper-deep px-3 py-2 font-mono text-[11px] text-ink/50">Snapshot not captured before v1.5.0 — metadata only</p>
+                    @elseif ($version['body'] !== null)
+                        <pre class="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-paper-deep p-3 font-mono text-xs text-ink/80">{{ $version['body'] }}</pre>
+                        @if ($version['variables'] !== [])
+                            <p class="mt-2 flex flex-wrap gap-1">
+                                @foreach ($version['variables'] as $variable)
+                                    <span class="rounded-full border border-ink/10 px-2 py-0.5 font-mono text-[10px] text-ink/60">&#123;&#123; {{ $variable }} &#125;&#125;</span>
+                                @endforeach
+                            </p>
+                        @endif
+                        @if ($version['tools'] !== [])
+                            <p class="mt-1.5 font-mono text-[10px] text-ink/50">Tools: {{ implode(', ', $version['tools']) }}</p>
+                        @endif
+                        @if ($version['can_restore'])
+                            <form method="POST" action="{{ route('prompts.versions.restore', [$prompt, $version['label']]) }}" class="mt-3">
+                                @csrf
+                                <button class="rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:border-saffron-deep hover:text-saffron-deep">Restore this version</button>
+                            </form>
+                        @endif
+                    @endif
                 </li>
             @empty
                 <li class="rounded-2xl border border-ink/10 bg-white p-8 text-center text-sm text-ink/60">No versions recorded yet.</li>

@@ -11,7 +11,18 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ToolLogo extends Model
 {
-    protected $fillable = ['name', 'logo_path', 'position', 'is_active'];
+    /** Modality: which prompt types this tool serves. 'any' fits all. */
+    final public const MODALITIES = ['text', 'image', 'video', 'agentic', 'skill', 'any'];
+
+    final public const MODALITY_ANY = 'any';
+
+    /** True when this tool can back a prompt of the given type. */
+    public function serves(string $type): bool
+    {
+        return $this->modality === self::MODALITY_ANY || $this->modality === $type;
+    }
+
+    protected $fillable = ['name', 'logo_path', 'position', 'is_active', 'modality'];
 
     protected function casts(): array
     {

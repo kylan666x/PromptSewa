@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="''" :description="$siteTagline ?? null"/>
     {{-- Hero — warm paper, saffron pill CTAs, mono eyebrow chips --}}
     <section class="relative overflow-hidden">
         <div class="absolute inset-0 -z-10 bg-[radial-gradient(60rem_30rem_at_50%_-10rem,rgba(245,197,24,0.18),transparent)]"></div>

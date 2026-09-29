@@ -41,7 +41,18 @@ class PromptFormRequest extends FormRequest
             'body' => ['required', 'string', 'min:30', 'max:4000'],
             'tags' => ['required', 'string', 'min:2', 'max:200'],
             'recommended_tools' => ['required', 'array', 'min:1', 'max:4'],
-            'recommended_tools.*' => ['required', 'string', 'max:40'],
+            // T6 (v1.5.0): tools must be active registry entries whose
+            // modality fits the chosen prompt type ('any' fits everything).
+            // This was previously a bare string check — arbitrary tool names
+            // slipped through and later broke logo rendering.
+            'recommended_tools.*' => [
+                'required',
+                'string',
+                'max:40',
+                Rule::exists('tool_logos', 'name')->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereIn('modality', [$this->input('type'), 'any'])),
+            ],
             'audience' => ['nullable', 'string', 'max:120'],
             'tips' => ['nullable', 'string', 'max:1500'],
             'changelog' => ['nullable', 'string', 'max:500'],

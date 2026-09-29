@@ -21,6 +21,10 @@ class DatabaseSeeder extends Seeder
 
         // Default AI-tool registry (ChatGPT, Gemini, …) for logo management.
         $this->call(ToolLogoSeeder::class);
+
+        // T5/T6 (v1.5.0): agentic/skill categories + modality-scoped tools.
+        $this->call(TaxonomySeeder::class);
+
         $this->call(BulkCatalogSeeder::class);
 
         // A secondary test user for auth flows (kept from the skeleton).

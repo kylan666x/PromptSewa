@@ -63,18 +63,41 @@ function purge_bootstrap_caches(string $corePath): array
 function detect_stray_sqlite(string $corePath): array
 {
     $found = [];
-    $dbDir = $corePath.DIRECTORY_SEPARATOR.'database';
 
+    // T10 (v1.5.0): scan core/ top level and the docroot too — a stray
+    // sqlite dropped next to artisan (or beside index.php) is just as
+    // dangerous as one in core/database. Warn-only, never delete.
+    $scanDirs = [
+        $corePath,
+        dirname($corePath), // repo/install root holding core/ and public_html/
+    ];
+
+    foreach ($scanDirs as $dir) {
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $dir.DIRECTORY_SEPARATOR.$entry;
+            if (is_file($path)
+                && str_ends_with(strtolower($entry), '.sqlite')
+                && ! str_ends_with(strtolower($entry), '.bak')) {
+                $found[] = str_replace($corePath, 'core', $path);
+            }
+        }
+    }
+
+    // Original v1.4.5 behavior: everything directly under core/database.
+    $dbDir = $corePath.DIRECTORY_SEPARATOR.'database';
     foreach (scandir($dbDir) ?: [] as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
         if (str_ends_with(strtolower($entry), '.sqlite') && ! str_ends_with(strtolower($entry), '.bak')) {
-            $found[] = $entry;
+            $found[] = 'core/database/'.$entry;
         }
     }
 
-    return $found;
+    return array_values(array_unique($found));
 }
 
 error_reporting(E_ALL);

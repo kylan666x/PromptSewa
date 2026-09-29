@@ -111,6 +111,29 @@ test('navbar shows the uploaded logo without a duplicate wordmark at desktop', f
         ->toContain('md:hidden');
 });
 
+// T11 (v1.5.0): the founder's screenshot bug — mobile showed NEITHER mark
+// nor logo because app-layout never forwarded brand-mark-path. These
+// assertions lock both rows of the responsive treatment.
+test('mobile navbar renders the square brand mark, desktop the full logo (T11)', function () {
+    app(\App\Services\SettingsService::class)->set('brand_logo_path', 'brand/wordmark.png');
+    app(\App\Services\SettingsService::class)->set('brand_mark_path', 'brand/mark.png');
+
+    $html = $this->get(route('home'))->getContent();
+
+    // Mobile row: the square mark exists, hidden ≥md, object-contain.
+    expect(preg_match('/<img[^>]*storage\/brand\/mark\.png[^>]*md:hidden[^>]*>/', $html) === 1)
+        ->toBeTrue('Mobile brand mark <img> with md:hidden is missing from the navbar.')
+        // Desktop row: the landscape logo is hidden below md.
+        ->and(preg_match('/<img[^>]*storage\/brand\/wordmark\.png[^>]*hidden[^>]*md:block[^>]*>/', $html) === 1)
+        ->toBeTrue('Desktop logo <img> with hidden md:block is missing from the navbar.');
+});
+
+test('mobile navbar shows the saffron badge fallback when no mark is uploaded (T11)', function () {
+    $html = $this->get(route('home'))->getContent();
+
+    expect($html)->toContain('bg-saffron');
+});
+
 test('navbar falls back to badge + wordmark when no logo is uploaded', function () {
     $admin = brandLogoAdmin();
 

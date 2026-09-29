@@ -25,6 +25,8 @@ The dark pill navbar and dark footer sit on both worlds and stitch them together
 - `paper` `#f4f2ec` — page ground (light world). Deep variant `paper-deep` `#eae7dd`.
 - `ink` `#17150f` — near-black: dark cards, navbar/footer ground, light-world text. Soft variant `ink-soft` `#211e15` for raised dark panels.
 - `saffron` `#ffd43b` — THE accent. Primary CTA fill only (`text-ink` on top). Hover `saffron-deep` `#f0b429`. Never body text, never decoration.
+- `official` `#1d9bf0` — the official-account badge circle (white check on top). Founder-sanctioned as the single new token addition (v1.5.0): **official blue circle badge is founder-sanctioned; saffron seal remains the verified badge.** Used ONLY inside the badge SVG — never as a UI accent.
+- **Bottom dock (v1.5.0, T12)**: `x-mobile-dock` — ink ground (`ink`), exactly five slots, and the CENTER CTA carries the only saffron fill; tab states use text color only (saffron text = active). ≥44px targets, aria-labels, visible focus rings, safe-area padding. Mobile navigation is the dock — never reintroduce a burger drawer. Error/maintenance layouts are exempt.
 - Semantic: emerald = owned/free/success, rose = destructive, sky = informational/manual payment. Keep zinc-* utilities inside the dark world.
 - Legacy amber-500 gradients are retired for new UI; saffron replaces them.
 

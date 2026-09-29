@@ -20,6 +20,26 @@
 @endphp
 
 <x-app-layout>
+    <x-seo
+        :title="$prompt->title"
+        :description="$prompt->description"
+        :robots="$prompt->isViewableBy(auth()->user()) && $prompt->status === \App\Models\Prompt::STATUS_PUBLISHED && $prompt->visibility === \App\Models\Prompt::VISIBILITY_PUBLIC ? null : 'noindex, nofollow'"
+        :ogType="'product'"
+        :jsonLd="[
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $prompt->title,
+            'description' => $prompt->description,
+            'category' => $prompt->category?->name,
+            'offers' => [
+                '@type' => 'Offer',
+                'price' => number_format($prompt->price_cents / 100, 2, '.', ''),
+                'priceCurrency' => 'NPR',
+                'availability' => 'https://schema.org/InStock',
+                'url' => url()->current(),
+            ],
+        ]"
+    />
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         @if ($previewMode)
             <div class="mb-6 flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-100 px-5 py-3" role="status">
@@ -361,6 +381,21 @@
                         </div>
                     </div>
                 @endif
+
+                {{-- T13 (v1.5.0): bookmark heart on the detail page --}}
+                @auth
+                    <button type="button"
+                            x-data="bookmarkHeart({{ Js::from(['url' => route('bookmarks.toggle', $prompt), 'saved' => \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id)]) }})"
+                            @click="toggle()"
+                            :aria-pressed="saved"
+                            class="flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition {{ \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id) ? 'border-rose-500 text-rose-600' : 'border-ink/15 text-ink/70 hover:border-rose-500 hover:text-rose-600' }}">
+                        <svg class="size-4 transition" :class="saved ? 'text-rose-600' : 'text-current'" :fill="saved ? 'currentColor' : 'none'"
+                             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                        </svg>
+                        <span x-text="saved ? 'Saved' : 'Save for later'"></span>
+                    </button>
+                @endauth
 
                 <a href="{{ route('prompts.report.create', $prompt) }}"
                    class="block text-center font-mono text-xs text-ink/40 transition hover:text-rose-700">

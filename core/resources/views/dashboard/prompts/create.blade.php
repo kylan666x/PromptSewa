@@ -9,6 +9,7 @@
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data="promptForm({
         contexts: {{ Js::from($typeContexts) }},
         categories: {{ Js::from($categories->values()) }},
+        tools: {{ Js::from($tools->map(fn ($t) => ['name' => $t->name, 'modality' => $t->modality, 'is_active' => $t->is_active])->values()) }},
         initialType: {{ Js::from($oldType) }},
         initialCategoryId: {{ Js::from((string) old("category_id", "")) }},
         initialTools: {{ Js::from(array_values((array) old("recommended_tools", []))) }}

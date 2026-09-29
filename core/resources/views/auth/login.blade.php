@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'Sign in'" robots="noindex, follow"/>
     <div class="mx-auto flex max-w-md flex-col px-4 py-16 sm:px-6">
         <h1 class="text-2xl font-bold tracking-tight text-ink">Welcome back</h1>
         <p class="mt-1 text-sm text-ink/60">Log in to access your library and dashboard.</p>

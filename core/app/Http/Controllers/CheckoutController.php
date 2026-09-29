@@ -161,27 +161,65 @@ class CheckoutController extends Controller
             ->with('success', 'Payment reference received — an admin will verify it shortly.');
     }
 
-    /** The buyer's library: purchased prompts + owned packs. */
+    /**
+     * T13 (v1.5.0): the buyer's library — every order → items → license
+     * state chip, pack rows expand to their granted prompts. Pure reads of
+     * existing grants/orders; no money writes.
+     */
     public function purchases(Request $request)
     {
         $user = $request->user();
 
         $grants = $user->licenseGrants()
-            ->with(['prompt.category', 'prompt.latestVersion', 'orderItem.order'])
-            ->where('status', 'active')
+            ->with(['prompt.category', 'prompt.latestVersion', 'orderItem.order', 'orderItem.pack'])
             ->latest()
-            ->paginate(12, pageName: 'prompts_page');
+            ->get();
 
         $orders = Order::query()
             ->where('buyer_id', $user->id)
-            ->with('items.pack')
+            ->with(['items.pack', 'items.product.prompt', 'items.licenseGrant'])
             ->latest()
-            ->paginate(8, pageName: 'orders_page');
+            ->get();
 
         return view('purchases.index', [
             'grants' => $grants,
             'orders' => $orders,
         ]);
+    }
+
+    /**
+     * T13 (v1.5.0): re-download the full prompt body for an owned listing.
+     * Gated by the same entitlement check as the full-body view: an ACTIVE
+     * grant (owner-level access) or staff moderation preview — never a raw
+     * paywall bypass.
+     */
+    public function redownload(Request $request, Prompt $prompt)
+    {
+        $user = $request->user();
+
+        $hasActiveGrant = \App\Models\LicenseGrant::query()
+            ->where('user_id', $user->id)
+            ->where('prompt_id', $prompt->id)
+            ->where('status', \App\Models\LicenseGrant::STATUS_ACTIVE)
+            ->exists();
+
+        $isOwner = $prompt->user_id === $user->id;
+
+        abort_unless($hasActiveGrant || $isOwner, 403, 'No active license for this prompt.');
+
+        $latest = $prompt->latestVersion;
+
+        $filename = 'promptsewa-'.$prompt->slug.'-v'.($latest?->version_number ?? 1).'.txt';
+
+        return response()->streamDownload(function () use ($latest, $prompt): void {
+            echo "# {$prompt->title}\n";
+            echo "# License: personal/commercial per purchase — do not resell.\n\n";
+            echo (string) $latest?->body;
+            echo "\n\n## Variables\n";
+            foreach ($latest?->variableNames() ?? [] as $variable) {
+                echo "- {{$variable}}\n";
+            }
+        }, $filename, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
     /**

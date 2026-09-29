@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PaymentMethodAdminController;
 use App\Http\Controllers\Admin\PromptAdminController;
 use App\Http\Controllers\Admin\BrandSettingsAdminController;
 use App\Http\Controllers\Admin\ToolLogoAdminController;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutController;
@@ -40,6 +41,13 @@ Route::get('/prompts/{prompt:slug}/versions', [PromptController::class, 'version
     ->middleware('throttle:60,1')
     ->name('prompts.versions');
 
+// T7 (v1.5.0): restore an old snapshot as a new append-only version.
+// Owner/moderator only (policy gate inside). Route-model binds by the
+// version's numeric PK; controller re-verifies the version belongs.
+Route::post('/prompts/{prompt:slug}/versions/{version}/restore', [\App\Http\Controllers\Dashboard\PromptEditController::class, 'restore'])
+    ->middleware('auth')
+    ->name('prompts.versions.restore');
+
 // "Report this prompt" — public form, guests allowed, submission throttled.
 Route::get('/prompts/{prompt:slug}/report', [PromptReportController::class, 'create'])
     ->name('prompts.report.create')
@@ -68,6 +76,7 @@ Route::get('/prompts', [LibraryController::class, 'index'])
 
 // JSON typeahead for the navbar search preview (TASK 2) — same throttle
 // class as the full search since it hits the same underlying queries.
+// T9: JSON endpoint — header-level noindex guard.
 Route::get('/search/preview', [SearchController::class, 'preview'])
     ->name('search.preview')
     ->middleware('throttle:60,1');
@@ -76,6 +85,11 @@ Route::get('/categories/{category:slug}', [LibraryController::class, 'category']
     ->name('library.category');
 
 // --- Static-ish pages + packs -------------------------------------------
+
+// T9 (v1.5.0): dynamic sitemap + robots. deploy/public_html has no physical
+// robots.txt; the .htaccess catch-all forwards both here.
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [\App\Http\Controllers\SitemapController::class, 'robots'])->name('robots');
 
 Route::get('/about', [PageController::class, 'about'])->name('pages.about');
 
@@ -137,6 +151,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/prompts/{prompt:slug}', [CheckoutController::class, 'buyPrompt'])->name('checkout.prompts.buy');
     Route::post('/checkout/packs/{pack:slug}', [CheckoutController::class, 'buyPack'])->name('checkout.packs.buy');
 
+    // T13 (v1.5.0): re-download an owned prompt's full body. Active grant
+    // (or ownership) required — same entitlement gate as full-body viewing.
+    Route::get('/purchases/prompts/{prompt:slug}/download', [CheckoutController::class, 'redownload'])
+        ->name('purchases.download');
+
+    // T13: bookmarks — toggle save state on a prompt. Owner-only, throttled.
+    Route::post('/bookmarks/{prompt:slug}', [\App\Http\Controllers\BookmarkController::class, 'toggle'])
+        ->middleware('throttle:30,1')
+        ->name('bookmarks.toggle');
+
     Route::get('/checkout/{order}/esewa', [CheckoutController::class, 'esewaPay'])->name('checkout.esewa.pay');
     // eSewa POSTs the signed payload here — never CSRF-protected (gateway
     // has no Laravel session) and must stay reachable after redirects.
@@ -178,6 +202,18 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/users/{user:id}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
     Route::patch('/users/{user:id}/verified', [UserAdminController::class, 'toggleVerified'])->name('users.verified');
     Route::patch('/users/{user:id}/banned', [UserAdminController::class, 'toggleBanned'])->name('users.banned');
+
+    // T3 (v1.5.0): admin account switching. start is admin-only (enforced
+    // in the controller — the staff group lets moderators in, the 403 comes
+    // from ImpersonationController); stop is reachable by the impersonated
+    // session itself (the chrome bar links here), so it lives outside the
+    // admin prefix.
+    Route::post('/users/{user:id}/impersonate', [ImpersonationController::class, 'start'])->name('users.impersonate');
+
+    // T10 (v1.5.0): demo purge panel (dry-run preview + force). Admin-only
+    // in the controller; the panel shells pv:purge-demo so logic can't drift.
+    Route::post('/users/purge-demo/preview', [\App\Http\Controllers\Admin\UserPurgeController::class, 'preview'])->name('users.purge.preview');
+    Route::post('/users/purge-demo/run', [\App\Http\Controllers\Admin\UserPurgeController::class, 'run'])->name('users.purge.run');
 
     // A5: complimentary grants (press copies, make-goods) — admin only.
     Route::get('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'create'])->name('comp-grants.create');
@@ -224,6 +260,14 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/update', [ReleaseUpdateController::class, 'form'])->name('update');
     Route::post('/update', [ReleaseUpdateController::class, 'update'])->name('update.run');
 });
+
+// T3 (v1.5.0): end an impersonation session. Outside the staff-gated admin
+// prefix on purpose — the impersonated session may belong to a plain member,
+// and the chrome bar must let the admin driving it return. The controller
+// re-verifies the impersonator is still an admin.
+Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])
+    ->middleware('auth')
+    ->name('impersonation.stop');
 
 // Legacy path kept working for bookmarks from the previous dashboard card.
 Route::get('/dashboard/update', fn () => redirect()->route('admin.update'))

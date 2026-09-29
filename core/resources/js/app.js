@@ -246,6 +246,42 @@ Alpine.data('promptViewer', (rawBody, names) => ({
     },
 }));
 
+/**
+ * T13 (v1.5.0): bookmark heart — optimistic flip, POST toggle, no reload.
+ * Server response confirms the final state (and repairs races).
+ */
+Alpine.data('bookmarkHeart', (config) => ({
+    url: config.url,
+    saved: config.saved ?? false,
+    busy: false,
+
+    toggle() {
+        if (this.busy) {
+            return;
+        }
+        this.busy = true;
+        this.saved = !this.saved; // optimistic
+
+        fetch(this.url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                this.saved = data.saved;
+            })
+            .catch(() => {
+                this.saved = !this.saved; // revert on failure
+            })
+            .finally(() => {
+                this.busy = false;
+            });
+    },
+}));
+
 Alpine.data('promptForm', (config) => ({
     type: config.initialType || 'text',
     categoryId: config.initialCategoryId || '',
@@ -282,14 +318,29 @@ Alpine.data('promptForm', (config) => ({
         );
     },
 
-    /** Chips to render: type defaults plus anything already selected. */
+    /** Chips to render: type defaults, the modality-fit registry, plus anything already selected. */
     get toolChips() {
         const names = [
             ...(this.context.example_tools || []),
+            ...(this.registryTools || []).map((tool) => tool.name),
             ...this.selectedTools,
         ];
 
         return [...new Set(names)];
+    },
+
+    /**
+     * T6 (v1.5.0): registry tools offered for the current type — only
+     * active tools whose modality matches (or is 'any'). Selected tools
+     * always stay listed even when the type changes, so a creator sees
+     * (and can remove) a now-invalid chip instead of it vanishing.
+     */
+    get registryTools() {
+        return (config.tools || []).filter(
+            (tool) => tool.is_active
+                && (tool.modality === 'any' || tool.modality === this.type
+                    || this.selectedTools.includes(tool.name)),
+        );
     },
 
     switchType(type) {
@@ -305,8 +356,14 @@ Alpine.data('promptForm', (config) => ({
             this.categoryId = '';
         }
 
-        // Reset tool chips to the new type's first suggested tool.
-        this.selectedTools = (this.context.example_tools || []).slice(0, 1);
+        // T6: drop selected tools whose modality excludes the new type.
+        const usable = (config.tools || [])
+            .filter((tool) => tool.modality === 'any' || tool.modality === type)
+            .map((tool) => tool.name);
+        const kept = this.selectedTools.filter((name) => usable.includes(name));
+        this.selectedTools = kept.length > 0
+            ? kept
+            : (this.context.example_tools || []).slice(0, 1);
     },
 
     toggleTool(tool) {

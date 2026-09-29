@@ -14,16 +14,21 @@ class ToolLogoSeeder extends Seeder
     public function run(): void
     {
         $tools = [
-            'ChatGPT', 'Claude', 'Gemini', 'Midjourney',
-            'DALL·E 3', 'Stable Diffusion', 'Ideogram', 'Flux',
-            'Runway Gen-3', 'Sora', 'Kling', 'Luma',
+            // T6 (v1.5.0): each name ships a default modality. The dash
+            // spelling 'DALL-E' is added for back-compat with seeded/factory
+            // data that references it; TaxonomySeeder owns the full registry.
+            'ChatGPT' => 'text', 'Claude' => 'text', 'Gemini' => 'text',
+            'Midjourney' => 'image',
+            'DALL-E' => 'image', 'DALL·E 3' => 'image',
+            'Stable Diffusion' => 'image', 'Ideogram' => 'image', 'Flux' => 'image',
+            'Runway Gen-3' => 'video', 'Sora' => 'video', 'Kling' => 'video', 'Luma' => 'video',
         ];
 
         $position = 0;
-        foreach ($tools as $name) {
+        foreach ($tools as $name => $modality) {
             ToolLogo::query()->firstOrCreate(
                 ['name' => $name],
-                ['position' => ++$position, 'is_active' => true],
+                ['modality' => $modality, 'position' => ++$position, 'is_active' => true],
             );
         }
     }

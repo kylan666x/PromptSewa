@@ -21,6 +21,24 @@
         ['#F59E0B', '#1C1917'], // gold &rarr; ink
         ['#FACC15', '#7C2D12'], // lemon &rarr; clay
     ];
+
+    // T5 (v1.5.0): agentic/skill listings get their own deterministic
+    // palette family — teal (workflows) and violet (skills) — so the two
+    // new modalities are visually distinct on cards at a glance.
+    if ($prompt->type === \App\Models\Prompt::TYPE_AGENTIC) {
+        $palettes = [
+            ['#5EEAD4', '#0F766E'],
+            ['#2DD4BF', '#134E4A'],
+            ['#99F6E4', '#115E59'],
+        ];
+    } elseif ($prompt->type === \App\Models\Prompt::TYPE_SKILL) {
+        $palettes = [
+            ['#C4B5FD', '#5B21B6'],
+            ['#A78BFA', '#4C1D95'],
+            ['#DDD6FE', '#6D28D9'],
+        ];
+    }
+
     [$c1, $c2] = $palettes[$prompt->id % count($palettes)];
 
     $W = 400;

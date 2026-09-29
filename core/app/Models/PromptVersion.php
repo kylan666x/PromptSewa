@@ -25,6 +25,7 @@ class PromptVersion extends Model
         'body',
         'changelog',
         'variables',
+        'tools',
         'tags',
         'recommended_tools',
         'audience',
@@ -37,10 +38,17 @@ class PromptVersion extends Model
     {
         return [
             'variables' => 'array',
+            'tools' => 'array',
             'tags' => 'array',
             'recommended_tools' => 'array',
             'tips' => 'array',
         ];
+    }
+
+    /** T7 (v1.5.0): true when this row predates snapshot capture. */
+    public function hasSnapshot(): bool
+    {
+        return $this->body !== null;
     }
 
     public function prompt(): BelongsTo

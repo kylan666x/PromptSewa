@@ -216,3 +216,38 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Money formatting (integer paisa, no float math) | ✅ | `PromptMoneyFormatTest::price labels render integer NPR without float math`, `zero price renders the free label`, `large prices group thousands without decimals` |
 | Blade verb guard (arch test) | ✅ | `Arch\BladeFormVerbTest::every blade form verb matches its target route` |
 | Zip build + SHA-256 report + D1 content assertion | ✅ | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` + builder self-audit (`hygiene audit: CLEAN`) — see handoff §7 post-check rows |
+
+## v1.5.0 T-series (Official Identity, Taxonomy & Version Truth + T11–T13 mobile)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| T1 official house account (idempotent command) | ✅ | `OfficialIdentityTest::pv:official-account creates the house account idempotently` |
+| T1 official-account profile edit guard (admins only) | ✅ | `OfficialIdentityTest::the official account profile can only be edited by admins` |
+| T2 official badge wins over verified seal (every surface) | ✅ | `OfficialIdentityTest::the official badge wins over the verified seal on every surface` |
+| T2 typeahead badge field (official/verified/none) | ✅ | `OfficialIdentityTest::typeahead carries the badge field with official winning` |
+| T3 impersonation start/stop + session restore | ✅ | `ImpersonationTest::admin can switch into an account and return` |
+| T3 member/moderator 403; self-switch no-op row; nesting refused; stale self-heal | ✅ | `ImpersonationTest::members and moderators cannot start…`, `self-switch writes a closed no-op row…`, `nested impersonation is refused`, `a stale impersonation entry self-heals` |
+| T4 catalog adoption (dry-run writes nothing; force moves; idempotent) | ✅ | `CatalogAndVersionTruthTest::pv:adopt-catalog dry-run writes nothing and force moves prompts` |
+| T5/T6 tool registry modality validation (founder-error repro) | ✅ | `CatalogAndVersionTruthTest::tool registry validates modality against prompt type` |
+| T6 TaxonomySeeder idempotent + production-shaped | ✅ | `CatalogAndVersionTruthTest::taxonomy seeder is idempotent and production-shaped` |
+| T7 edit appends snapshotted version; published stays published | ✅ | `CatalogAndVersionTruthTest::editing a published prompt appends a snapshotted version and keeps it published` |
+| T7 open report → pending on live edit | ✅ | `CatalogAndVersionTruthTest::an open report flips to pending after a live edit` |
+| T7 restore = append-only copy ("Restored from vN") | ✅ | `CatalogAndVersionTruthTest::restore appends a copy as the newest version without mutating history` |
+| T7 honesty chip; snapshots never leak past the paywall | ✅ | `CatalogAndVersionTruthTest::versions page shows snapshots to the owner and honesty chips for pre-v1.5.0 rows` |
+| T7 backfill writes variables/tools, NEVER fabricates bodies | ✅ | `CatalogAndVersionTruthTest::backfill writes variables/tools onto latest rows and never fabricates bodies` |
+| T8 pack landing (tagline/hero/JSON-LD) | ✅ | `PackLandingAndSeoTest::pack landing renders tagline, hero copy and Product JSON-LD` |
+| T8 admin pack form persists tagline/hero | ✅ | `PackLandingAndSeoTest::admin pack form persists tagline and hero copy` |
+| T8 fix: pack contents query (ambiguous created_at 500) | ✅ | Same two tests — any populated pack page renders (was a 500 before v1.5.0) |
+| T9 SEO head on public pages + JSON-LD | ✅ | `PackLandingAndSeoTest::public pages carry canonical, OG tags and JSON-LD` |
+| T9 auth noindex; versions canonical → prompt detail | ✅ | `PackLandingAndSeoTest::auth pages are noindex and versions canonical points at the prompt` |
+| T9 sitemap (public surfaces only) + robots Sitemap line | ✅ | `PackLandingAndSeoTest::sitemap and robots respond with public surfaces only` |
+| T10 demo purge panel (dry-run preview + force, admin-only) | ✅ | Panel shells `pv:purge-demo` (D5 runbook logic — no drift); controller 403s non-admins |
+| T11 mobile brand mark + desktop logo rows | ✅ | `BrandLogoTest::mobile navbar renders the square brand mark, desktop the full logo (T11)`, `mobile navbar shows the saffron badge fallback…` |
+| T12 bottom dock (5 slots, hrefs per audience) | ✅ | `MobileDockTest::the dock renders exactly five slots with correct hrefs for a guest`, `…for an authed member` |
+| T12 saffron ONLY on center CTA; aria-current; no burger anywhere | ✅ | `MobileDockTest::saffron fill appears only on the center CTA…`, `the active tab carries aria-current`, `no burger button survives anywhere…` |
+| T12 category chips row; profile "You" menu (server-gated Admin) | ✅ | `MobileDockTest::category chips render on the library page`, `the profile page hosts the You menu with server-gated admin row and logout` |
+| T13 purchases library (license chips, pack expansion) | ✅ | `PurchasesTest::buyer sees own grants including pack member prompts`, `revoked grants show the revoked chip and block re-download` |
+| T13 re-download gated by active grant; cross-user isolation | ✅ | `PurchasesTest::re-download serves the body with an active grant`, `re-download 403s without an active grant`, `other buyers orders are absent from the library` |
+| T13 bookmarks (toggle idempotent, invisible-prompt 404) | ✅ | `BookmarkTest::bookmark toggle saves and unsaves idempotently`, `a user can never touch another user bookmark state — 404 on invisible prompts` |
+| T13 Saved tab + card heart pre-flip + detail save button | ✅ | `BookmarkTest::the saved tab lists bookmarked prompts`, `the prompt card heart is pre-flipped…`, `the detail page shows the save button with the correct state` |
+| Suite | ✅ | 276 passed / 1198 assertions |

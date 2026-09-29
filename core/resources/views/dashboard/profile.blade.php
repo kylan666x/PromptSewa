@@ -107,5 +107,24 @@
                 <a href="{{ route('creators.show', $user) }}" class="text-sm font-medium text-ink/60 transition hover:text-ink">View public profile &rarr;</a>
             </div>
         </form>
+
+        {{-- T12 (v1.5.0): the "You" menu — the burger drawer is retired, so
+             Packs/About/Dashboard/Admin/Logout live here. The Admin row is
+             gated server-side (never CSS-hidden). The dock's You tab lands here. --}}
+        <section aria-label="Account menu" class="mt-10 rounded-2xl border border-ink/10 bg-white p-5">
+            <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Account</h2>
+            <div class="mt-3 grid gap-1.5 sm:grid-cols-2">
+                <a href="{{ route('packs.index') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">Packs</a>
+                <a href="{{ route('pages.about') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">About PromptSewa</a>
+                <a href="{{ route('dashboard') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">Dashboard</a>
+                @if ($user->isModerator())
+                    <a href="{{ route('admin.dashboard') }}" class="rounded-xl border border-saffron-deep/40 bg-saffron/15 px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-saffron/30">Admin panel</a>
+                @endif
+            </div>
+            <form method="POST" action="{{ route('logout') }}" class="mt-3">
+                @csrf
+                <button type="submit" class="w-full rounded-xl border border-ink/15 px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-rose-500 hover:text-rose-700">Log out</button>
+            </form>
+        </section>
     </div>
 </x-app-layout>

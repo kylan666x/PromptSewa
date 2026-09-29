@@ -23,7 +23,7 @@ class LibraryController extends Controller
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:'.PromptSearchService::MAX_TERM_LENGTH],
-            'type' => ['nullable', 'in:text,image,video'],
+            'type' => ['nullable', 'in:'.implode(',', Prompt::TYPES)],
         ]);
 
         $term = trim($validated['q'] ?? '');

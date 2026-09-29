@@ -35,6 +35,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_verified',
+        'is_official',
         'banned_at',
         'xp',
         'banner_path',
@@ -65,6 +66,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'xp' => 'integer',
             'is_verified' => 'boolean',
+            'is_official' => 'boolean',
             'banned_at' => 'datetime',
         ];
     }

@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="'Create an account'" robots="noindex, follow"/>
     <div class="mx-auto flex max-w-md flex-col px-4 py-16 sm:px-6"
          x-data="signupForm()">
         <h1 class="text-2xl font-bold tracking-tight text-ink">Create your account</h1>

@@ -50,6 +50,18 @@ class PromptController extends Controller
 
         $prompt->load(['category', 'creator', 'versions.author']);
 
+        $viewer = $request->user();
+        $isOwner = $viewer !== null && $viewer->id === $prompt->user_id;
+        $isStaff = $viewer !== null && ($viewer->isAdmin() || $viewer->isModerator());
+        $canRestore = $viewer !== null && Gate::forUser($viewer)->allows('update', $prompt);
+
+        // T7 (v1.5.0): full snapshots (body + variables + tools) render on
+        // the history page only for the owner, staff, and active license
+        // holders — the paywall contract is inherited from the detail page.
+        // Everyone else keeps metadata-only rows; pre-v1.5.0 rows show an
+        // honest "snapshot not captured" chip instead of a fabricated body.
+        $fullBodyAllowed = $this->canViewFullBody($viewer, $prompt, $isOwner) || $isStaff;
+
         $versions = $prompt->versions
             ->sortBy('version_number')
             ->values()
@@ -58,12 +70,18 @@ class PromptController extends Controller
                 'changelog' => (string) ($version->changelog ?? ''),
                 'author' => $version->author?->name ?? 'Unknown',
                 'created_at' => $version->created_at,
+                'has_snapshot' => $version->hasSnapshot(),
+                'body' => $fullBodyAllowed && $version->hasSnapshot() ? (string) $version->body : null,
+                'variables' => $fullBodyAllowed && $version->hasSnapshot() ? $version->variableNames() : [],
+                'tools' => $fullBodyAllowed && $version->hasSnapshot() ? $version->toolList() : [],
+                'can_restore' => $canRestore && $version->hasSnapshot(),
             ]);
 
         return view('prompts.versions', [
             'prompt' => $prompt,
             'versions' => $versions,
             'isPaid' => $prompt->price_cents > 0,
+            'fullBodyAllowed' => $fullBodyAllowed,
         ]);
     }
 

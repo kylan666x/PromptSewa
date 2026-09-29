@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="$category?->name ?? 'Prompt library'" :description="$category?->name ? 'Browse '.$category->name.' AI prompts on PromptSewa.' : 'Browse premium AI prompts — text, image, video, agentic and skill listings.'"/>
     @php
         $heading = $category ? $category->name : ($q !== '' ? 'Search results' : 'Prompt Library');
         $subheading = $category
@@ -11,6 +12,19 @@
             <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $heading }}</h1>
             <p class="text-sm text-ink/60">{{ $subheading }}</p>
         </header>
+
+        {{-- T12 (v1.5.0): horizontal category chip row — all breakpoints. The
+             burger drawer is retired; this row is the mobile category nav. --}}
+        <nav aria-label="Category shortcuts" class="mt-5 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div class="flex w-max gap-1.5 pb-1">
+                <a href="{{ route('library.index', $q !== '' ? ['q' => $q] : []) }}"
+                   class="shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition {{ $category === null ? 'border-saffron-deep bg-saffron/25 text-ink' : 'border-ink/10 bg-white text-ink/80 hover:border-saffron-deep hover:text-ink' }}">All</a>
+                @foreach ($categories as $chip)
+                    <a href="{{ route('library.category', $chip) }}"
+                       class="shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition {{ $category?->id === $chip->id ? 'border-saffron-deep bg-saffron/25 text-ink' : 'border-ink/10 bg-white text-ink/80 hover:border-saffron-deep hover:text-ink' }}">{{ $chip->name }}</a>
+                @endforeach
+            </div>
+        </nav>
 
         <div class="mt-8 flex flex-col gap-8 lg:flex-row">
             {{-- Category sidebar --}}
@@ -73,7 +87,7 @@
                 @else
                     <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach ($prompts as $prompt)
-                            <x-prompt-card :prompt="$prompt"/>
+                            <x-prompt-card :prompt="$prompt" :saved="auth()->check() && \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id)"/>
                         @endforeach
                     </div>
 

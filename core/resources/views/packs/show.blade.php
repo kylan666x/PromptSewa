@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-seo :title="$pack->name" :description="$pack->tagline ?? $pack->description ?? ('The '.$pack->name.' prompt pack.')"/>
     @php
         /** @var \App\Models\Pack $pack */
         $totalValuePaisa = $pack->publishedPrompts->sum('price_cents');
@@ -12,9 +13,32 @@
             <article>
                 <span class="rounded-md bg-ink px-2.5 py-1 font-mono text-xs font-bold text-saffron">PACK · {{ $pack->publishedPrompts->count() }} prompts</span>
                 <h1 class="mt-3 text-4xl font-bold tracking-tight text-ink">{{ $pack->name }}</h1>
+                {{-- T8 (v1.5.0): landing-page tagline + hero copy --}}
+                @if ($pack->tagline)
+                    <p class="mt-2 text-lg font-medium text-saffron-deep">{{ $pack->tagline }}</p>
+                @endif
                 @if ($pack->description)
                     <p class="mt-4 max-w-2xl text-base leading-relaxed text-ink/70">{{ $pack->description }}</p>
                 @endif
+                @if ($pack->hero_copy)
+                    <div class="prose-sm mt-6 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-ink/80">{{ $pack->hero_copy }}</div>
+                @endif
+
+                {{-- T8: Product/Offer JSON-LD for the pack landing page --}}
+                <script type="application/ld+json">{!! json_encode([
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Product',
+                    'name' => $pack->name,
+                    'description' => $pack->tagline ?? $pack->description ?? $pack->name,
+                    'brand' => ['@type' => 'Brand', 'name' => ($siteName ?? 'PromptSewa')],
+                    'offers' => [
+                        '@type' => 'Offer',
+                        'price' => number_format($pack->price_paisa / 100, 2, '.', ''),
+                        'priceCurrency' => $pack->currency,
+                        'availability' => 'https://schema.org/InStock',
+                        'url' => url()->current(),
+                    ],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
                 <section class="mt-8" aria-label="Prompts in this pack">
                     <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">What's inside</h2>
