@@ -110,8 +110,9 @@ test('the built update zip carries no host-local artifacts and keeps docroot + b
         ->and($audit['build'])->toBeTrue('compiled public/build missing from zip — run npm run build')
         ->and($audit['entries'])->toBeGreaterThan(100);
 
-    // Clean up the artifact the test built so dist/ stays release-managed.
-    @unlink($zipPath);
+    // The artifact STAYS in dist/ — it is the release deliverable. (An
+    // earlier revision unlinked it here and silently deleted the release
+    // zip after every full-suite run. Never delete the deliverable.)
 });
 
 test('the v1.4.4 zip is confirmed in violation of the D1 rule (incident lock)', function () {
