@@ -32,24 +32,29 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.4.4';
+const APP_VERSION = '1.4.5';
 
 $repoRoot = dirname(__DIR__);
 $zipPath = $repoRoot.DIRECTORY_SEPARATOR.'dist'
     .DIRECTORY_SEPARATOR.'promptsewa-'.APP_VERSION.'-update.zip';
 
 // Paths (relative to core/) that are never shipped in an update zip.
+// D1 (v1.4.5): bootstrap/cache/* is HOST-LOCAL — a dev config.php shipped
+// in the v1.4.4 zip poisoned the host boot (dev view.paths + dev SQLite
+// connection). Storage/** runtime contents and .env* are host-local too.
+// Only the .gitignore placeholders inside those trees may ride along.
 $excludedDirs = [
     'node_modules',
     'vendor',
+    'bootstrap/cache',
     'storage/framework/cache',
     'storage/framework/sessions',
     'storage/framework/views',
     'storage/framework/testing',
     'storage/logs',
-    'storage/app/private',
-    'storage/app/public',
+    'storage/app',
     'storage/pail',
+    'public/storage',
     '.phpunit.cache',
     '.git',
 ];
@@ -58,9 +63,26 @@ $excludedFiles = [
     '.env',
     '.env.backup',
     '.env.production',
+    '.env.example',  // update installs merge over a live .env — shipping the example risks an editor "updating" it (D1)
     '.phpunit.result.cache',
     'database/database.sqlite',
     'public/hot',
+];
+
+/** gitkeep-style placeholders that ARE allowed inside excluded trees. */
+$excludedTreeExceptions = [
+    'bootstrap/cache/.gitignore',
+    'storage/framework/.gitignore',
+    'storage/framework/cache/.gitignore',
+    'storage/framework/sessions/.gitignore',
+    'storage/framework/views/.gitignore',
+    'storage/framework/testing/.gitignore',
+    'storage/logs/.gitignore',
+    'storage/app/.gitignore',
+    'storage/app/private/.gitignore',
+    'storage/app/public/.gitignore',
+    'storage/pail/.gitignore',
+    'public/storage/.gitignore',
 ];
 
 // Dependencies must be unchanged since 1.0.0 for a code-only zip to be safe.
@@ -155,6 +177,13 @@ foreach ($iterator as $item) {
         continue;
     }
 
+    // Placeholders (.gitignore) inside excluded trees still ship so fresh
+    // extracts keep the directory structure Laravel expects.
+    if (in_array($relative, $excludedTreeExceptions, true)) {
+        $files[] = $relative;
+        continue;
+    }
+
     $files[] = $relative;
 }
 
@@ -188,11 +217,67 @@ foreach ($publicHtmlFiles as $name) {
 
 $zip->close();
 
+// --- D1 self-audit: verify the finished zip against the hygiene rule -------
+// A violation here is a build failure, not a warning — the v1.4.4 incident
+// (dev config.php shipped to prod) must be structurally impossible.
+$forbiddenPatterns = [
+    'bootstrap/cache/',
+    'storage/',
+    'public/storage',
+    '.env',          // .env AND .env.* — .env.example ships in the FULL release, never the update
+    '.sqlite',
+];
+$audit = new ZipArchive();
+if ($audit->open($zipPath) !== true) {
+    $fail('Built zip could not be re-opened for the hygiene audit.');
+}
+$violations = [];
+$entryCount = $audit->numFiles;
+for ($i = 0; $i < $entryCount; $i++) {
+    $name = (string) $audit->getNameIndex($i);
+
+    // Exact .gitignore placeholders inside those trees are allowed.
+    $stripped = preg_replace('/^(core|public_html)\//', '', $name);
+    if (in_array($stripped, $excludedTreeExceptions, true)) {
+        continue;
+    }
+
+    foreach ($forbiddenPatterns as $pattern) {
+        if (str_contains($name, $pattern)) {
+            $violations[] = $name;
+            break;
+        }
+    }
+}
+$hasDocrootAllowlist = true;
+foreach ($publicHtmlAllowlist as $name) {
+    if ($audit->locateName('public_html/'.$name) === false) {
+        $hasDocrootAllowlist = false;
+    }
+}
+$hasCompiledAssets = $audit->locateName('core/public/build/manifest.json') !== false;
+$audit->close();
+
+if ($violations !== [] || ! $hasDocrootAllowlist || ! $hasCompiledAssets) {
+    out('ZIP HYGIENE AUDIT FAILED:');
+    foreach ($violations as $v) {
+        out("  FORBIDDEN ENTRY: {$v}");
+    }
+    if (! $hasDocrootAllowlist) {
+        out('  MISSING: public_html/ docroot allow-list');
+    }
+    if (! $hasCompiledAssets) {
+        out('  MISSING: core/public/build (run npm run build first)');
+    }
+    $fail('Update zip violates the release hygiene rule — fix the builder, never the audit.');
+}
+
 $sizeMb = round((float) filesize($zipPath) / 1048576, 2);
 $sha = hash_file('sha256', $zipPath) ?: 'n/a';
 
 out("dist/promptsewa-".APP_VERSION."-update.zip built: ".count($files)." core files + "
     .count($publicHtmlFiles)." docroot files, {$sizeMb} MB");
+out("entries: {$entryCount} | hygiene audit: CLEAN (0 forbidden entries)");
 out("SHA-256: {$sha}");
 out('');
 out('Deploy steps (live site already installed — core-only update):');
