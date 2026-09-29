@@ -92,12 +92,19 @@ class UpdateFromRelease extends Command
 
     private function runPipeline(string $core, string $docroot): void
     {
+        // D2 (v1.4.5) step 0: purge bootstrap caches before anything runs.
+        // The admin-panel path boots from the host's own cache, but a cache
+        // that rode in on a zip must never survive the pipeline either.
+        $purged = $this->purgeBootstrapCaches($core);
+        $this->line('  bootstrap caches purged ('.($purged === [] ? 'nothing to purge' : implode(', ', $purged)).')');
+
         Artisan::call('migrate', ['--force' => true]);
         $this->line('  migrate ✓ '.trim(Artisan::output()));
 
         // Idempotent seeders: DemoContent/BulkCatalog/JustShipIt all guard
         // on existing rows, so this is a no-op for installs that already
-        // have the catalog and fills in new content on upgrades.
+        // have the catalog and fills in new content on upgrades. Demo/
+        // bulk seeders additionally HARD-REFUSE in production (D4).
         try {
             Artisan::call('db:seed', ['--force' => true]);
             $this->line('  seed ✓ '.trim(Artisan::output()));
@@ -117,6 +124,15 @@ class UpdateFromRelease extends Command
             }
         }
 
+        // D3 (v1.4.5): reload the in-memory repository from the freshly
+        // written bootstrap/cache/config.php. config:cache writes the
+        // FILE but the running process keeps its boot-time values — on a
+        // host whose boot cache was poisoned (or after a purge), later
+        // in-process steps (route:cache, view:cache, seeds) would otherwise
+        // keep acting on dev paths. Re-reading the canonical cache makes
+        // the rest of the pipeline see host config.
+        $this->reloadConfigFromCache($core);
+
         try {
             Artisan::call('view:clear');
             Artisan::call('view:cache');
@@ -131,6 +147,54 @@ class UpdateFromRelease extends Command
             Artisan::call('storage:link');
         } catch (Throwable) {
             // cosmetic only
+        }
+    }
+
+    /**
+     * D2: delete host-local bootstrap cache artifacts (plain unlink). The
+     * docroot update.php does the same pre-boot; this covers the
+     * admin-panel path post-boot.
+     *
+     * @return list<string>
+     */
+    private function purgeBootstrapCaches(string $core): array
+    {
+        $purged = [];
+        $cacheDir = $core.DIRECTORY_SEPARATOR.'bootstrap'.DIRECTORY_SEPARATOR.'cache';
+
+        foreach (['config.php', 'routes.php', 'routes-v7.php', 'packages.php', 'services.php'] as $candidate) {
+            $path = $cacheDir.DIRECTORY_SEPARATOR.$candidate;
+            if (is_file($path) && @unlink($path)) {
+                $purged[] = $candidate;
+            }
+        }
+
+        return $purged;
+    }
+
+    /**
+     * D3: reload the in-memory config repository from the freshly written
+     * bootstrap/cache/config.php so later in-process steps see host paths.
+     */
+    private function reloadConfigFromCache(string $core): void
+    {
+        $cached = $core.DIRECTORY_SEPARATOR.'bootstrap'.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR.'config.php';
+
+        if (! is_file($cached)) {
+            $this->warn('  config reload skipped — bootstrap/cache/config.php not found');
+
+            return;
+        }
+
+        try {
+            $items = require $cached;
+
+            if (is_array($items)) {
+                config()->set($items);
+                $this->line('  in-memory config reloaded from cache (host paths)');
+            }
+        } catch (Throwable $e) {
+            $this->warn('  config reload failed: '.$e->getMessage());
         }
     }
 

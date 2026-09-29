@@ -24,6 +24,59 @@
 
 declare(strict_types=1);
 
+/*
+|--------------------------------------------------------------------------
+| D2 (v1.4.5) — pre-boot bootstrap-cache purge
+|--------------------------------------------------------------------------
+| Bootstrap caches are HOST-LOCAL artifacts. A dev config.php that rides
+| in on a release zip poisons the boot with dev paths and a dev DB
+| connection (the v1.4.4 incident). This runs in plain PHP, before the
+| autoloader, so a poisoned cache can never survive an upload —
+| regardless of what the zip contains. .env, .update-token and storage
+| are NEVER touched.
+*/
+function purge_bootstrap_caches(string $corePath): array
+{
+    $purged = [];
+    $cacheDir = $corePath.DIRECTORY_SEPARATOR.'bootstrap'.DIRECTORY_SEPARATOR.'cache';
+
+    foreach (['config.php', 'routes.php', 'routes-v7.php', 'packages.php', 'services.php'] as $candidate) {
+        $path = $cacheDir.DIRECTORY_SEPARATOR.$candidate;
+        if (is_file($path)) {
+            if (@unlink($path)) {
+                $purged[] = $candidate;
+            }
+        }
+    }
+
+    return $purged;
+}
+
+/**
+ * D9 (v1.4.5) — stray SQLite detector. The v1.4.4 accident ran migrations
+ * against a stray SQLite on the host. If any *.sqlite (not .bak) appears
+ * under core/database after an extract, warn loudly in the summary —
+ * never delete (it may be evidence).
+ *
+ * @return list<string>
+ */
+function detect_stray_sqlite(string $corePath): array
+{
+    $found = [];
+    $dbDir = $corePath.DIRECTORY_SEPARATOR.'database';
+
+    foreach (scandir($dbDir) ?: [] as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+        if (str_ends_with(strtolower($entry), '.sqlite') && ! str_ends_with(strtolower($entry), '.bak')) {
+            $found[] = $entry;
+        }
+    }
+
+    return $found;
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', '1'); // updater surface only
 
@@ -362,6 +415,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach (extract_release_zip($upload['tmp_name'], $core, __DIR__) as [$level, $line]) {
                 echo '<li><span class="'.e($level).'">'.e($line).'</span></li>';
             }
+        }
+
+        // D2 (v1.4.5): purge bootstrap caches AFTER extract, BEFORE boot —
+        // plain PHP, unconditional. A poisoned cache can never survive.
+        $purged = purge_bootstrap_caches($core);
+        echo '<li><span class="ok">Bootstrap caches purged pre-boot ('.e(implode(', ', $purged ?: ['nothing to purge'])).')</span></li>';
+
+        // D9 (v1.4.5): stray-SQLite detector (post-extract, pre-boot).
+        $stray = detect_stray_sqlite($core);
+        if ($stray !== []) {
+            echo '<li><span class="warn">Stray SQLite present ('.e(implode(', ', $stray)).') — migrations must report MySQL; investigate. Nothing deleted.</span></li>';
         }
 
         $log = run_update($core);
