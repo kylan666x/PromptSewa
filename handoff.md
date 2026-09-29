@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28 · **Current version:** v1.4.2
+**Prepared:** 2026-09-28 · **Current version:** v1.4.3
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -130,6 +130,7 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 15. **Blade `@{{ }}` renders literal text — banned repo-wide; NoBladeLeakTest enforces.** The v1.4.1 handle rollup shipped six `@{{ }}` escapes that Blade never compiles, and prod rendered raw `{{ $prompt->creator->username ?? ... }}` on every card. Alpine interpolation must use `x-text`/`:attr`; literal `@` is `'@'.$handle` echoed inside a plain `{{ }}`. The arch test also bans raw U+2192 arrows (use `&rarr;`).
 16. **Views must render standalone (no ambient shared vars); StaffViewStandaloneRenderTest enforces.** The v1.4.1 prod 500 was `Undefined variable $errors` in dashboard/update — the `@error` directive compiles to `$errors->getBag()` and explodes when the view renders outside the web middleware group (release log pages, artisan contexts, error paths). Never use `@error`/`$errors` in a view without an `isset($errors)` guard, and never rely on `view()->composer` data in a view that can render outside HTTP. The update pipeline now runs `view:clear` immediately before `view:cache` — stale compiled views must never survive an upgrade.
 17. **Public history page = metadata only; Edit link is owner-only.** `/prompts/{slug}/versions` exposes labels, changelogs, authors, timestamps — never bodies or variable lists for paid prompts. The detail page's Edit link renders only for the owner; moderators use the admin preview route. Never link `dashboard.prompts.edit` from admin surfaces (the admin dashboard review queue links the preview route).
+18. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
 
 ## 7. Deploying the current update
 
@@ -152,6 +153,18 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
 
 SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
+
+### Post-check (v1.4.3) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Run `php artisan migrate:status` | `2026_09_28_120999_repair_license_grants_preconditions` and `2026_09_28_121100_drop_license_grants_order_item_unique` show Ran; 121000 shows Ran from the earlier interrupted run or now | `MigrationReplayRepairTest` (4 tests) |
+| 2 | Site is online after the pipeline | maintenance OFF on success; if it FAILED, site intentionally stays down + `core/storage/logs/update-failed.json` exists with the 4-step checklist | `UpdaterFailureRecordTest::a fatal during pv:update keeps maintenance ON and writes update-failed.json` |
+| 3 | Manual pack order with a 3-prompt pack → approve | THREE grants issued (one per prompt), order paid — proves the unique index is gone on MySQL too | `CheckoutFlowTest::approving a manual pack order grants every published prompt inside` |
+| 4 | `SHOW INDEX FROM license_grants` (prod) | NO unique index on `order_item_id`; `order_item_id` nullable with `issued_by`/`issue_reason` columns present | `MigrationDropGuardTest` + `MigrationReplayRepairTest` |
+| 5 | Admin → Overview shows version chip | `v1.4.3` chip matches the deployed release | `config('app.version')` single source |
+| 6 | Admin → update failure surface (optional drill) | failure panel lists "STILL IN MAINTENANCE MODE" + recovery steps; update.php page shows the same ops copy (no vendor/ ghost-hunt text) | `UpdaterFailureRecordTest::update failure screen shows the ops maintenance panel` |
+| 7 | `cd core && php artisan test` | 203 passed, 877 assertions | whole suite |
 
 ### Post-check (v1.4.2) — run in order after the update.php pipeline finishes
 
@@ -210,5 +223,6 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.2 era | `update.php` "Cannot use string as array on line 362" | `extract_release_zip()` returned strings, caller destructured pairs; zip was core-only so the fix never reached the docroot | repo v1.2.0; delivered live by v1.3.0 zip |
 | v1.2 era | 405 Method Not Allowed on `/dashboard/profile` upload | form missing `@method('PUT')` | v1.3.0 |
 | v1.2 era | name overlapping cover photo on creator profiles | `-mt` overlap without top padding on the name block | v1.3.0 |
+| v1.4.2 (2026-09-28) | SQLSTATE 1091 replaying `121000_make_license_grants_comp_capable` on prod | interrupted 121000 left partial DDL (unique index dropped, migrations row unwritten) — MySQL DDL autocommits, so the replay dropped an already-dropped index; SQLite never dropped the index at all, which later broke pack fulfillment (UNIQUE constraint on `order_item_id`) | v1.4.3 (120999 repair + 121100 guarded drop + SchemaInspector + drop-guard arch test + fatal-path maintenance lock) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

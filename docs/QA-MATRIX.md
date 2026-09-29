@@ -1,7 +1,7 @@
-# PromptSewa QA Matrix — v1.4.2 "Leak Extermination & Admin Hardening"
+# PromptSewa QA Matrix — v1.4.3 "Migration Replay Repair"
 
 Every admin + user flow, its status, and the Pest test that locks it.
-Suite: `cd core && php artisan test` → **194 passed, 844 assertions** (2026-09-28).
+Suite: `cd core && php artisan test` → **203 passed, 877 assertions** (2026-09-29).
 
 Run the matrix: `php artisan test` — every row below is covered by at least one
 named test; if a test regresses, the row goes red and the release blocks.
@@ -134,6 +134,20 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Empty/blank search states | ✅ | `SearchTest::empty search shows the polished empty state`, `blank search lists prompts newest first` |
 | Storefront + category pages | ✅ | `StorefrontTest::homepage shows storefront copy and stats`, `homepage shows prompt cards for seeded public prompts`, `CategoryPageTest::category page shows only prompts in that category`, `category pages render via route model binding with slug key`, `unknown category slug returns 404`, `inactive categories are not browsable` |
 | Creator profile privacy + bylines | ✅ | `CreatorProfileTest::guests can view a public creator profile with their published prompts`, `creator profile does not leak drafts or private prompts`, `PromptVisibilityTest` card/byline tests |
+
+## v1.4.3 R-series (migration replay repair block)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| R1 repair replay is a strict no-op on a healthy recorded schema | ✅ | `MigrationReplayRepairTest::fresh DB: repair no-ops and 121000 stands applied`, `recorded post-state: repair is a strict no-op (schema hash unchanged)` |
+| R1 repair normalizes a simulated interrupted-121000 half-state | ✅ | `MigrationReplayRepairTest::simulated partial state: repair normalizes so 121000 can complete` |
+| R1 repair fails LOUD on duplicate order_item_id (never silently corrupts) | ✅ | `MigrationReplayRepairTest::repair fails loud when duplicate order_item_id blocks the unique index` |
+| R1 unique index on order_item_id dropped on BOTH engines (pack fulfillment safe) | ✅ | `CheckoutFlowTest::approving a manual pack order grants every published prompt inside` + migration `2026_09_28_121100_drop_license_grants_order_item_unique` (SchemaInspector-guarded) |
+| R2 destructive DDL requires an existence guard (arch test, mutation-checked) | ✅ | `Arch\MigrationDropGuardTest::every destructive migration operation is guarded by an existence check` |
+| R3 fatal during pv:update keeps maintenance ON + writes update-failed.json | ✅ | `UpdaterFailureRecordTest::a fatal during pv:update keeps maintenance ON and writes update-failed.json` |
+| R3 successful update writes no failure record | ✅ | `UpdaterFailureRecordTest::a successful pv:update does not write update-failed.json` |
+| R3 failure screen carries the ops panel (maintenance notice + 4 recovery steps + SQL-state hint) | ✅ | `UpdaterFailureRecordTest::update failure screen shows the ops maintenance panel`, `successful update screen shows no ops panel` |
+| R3 update.php ops copy replaces the vendor/ ghost-hunt text | ✅ | manual — `deploy/public_html/update.php` failure card now lists the recovery checklist |
 
 ## v1.4.2 B-series (stability block)
 
