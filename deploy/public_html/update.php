@@ -376,7 +376,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo '</ul></div>';
 
     echo $failed
-        ? '<div class="card"><p>Check <code>core/storage/logs/laravel.log</code> for details, and confirm you uploaded the full release (including <code>vendor/</code>).</p></div>'
+        ? '<div class="card"><p><span class="bad">The site is STILL IN MAINTENANCE MODE.</span> Recovery checklist:</p>'
+            .'<ol style="margin:8px 0 0 20px;padding:0">'
+            .'<li>Inspect the schema first — the failing migration may have partially applied (MySQL DDL autocommits). Verify with SHOW INDEX / SHOW COLUMNS before doing anything.</li>'
+            .'<li>Do NOT simply re-run the update: re-running against a half-state can fail differently or corrupt data.</li>'
+            .'<li>When the schema is verified consistent, bring the site back: delete <code>core/storage/framework/down</code> (or run <code>php artisan up</code>).</li>'
+            .'<li>Details: <code>core/storage/logs/update-failed.json</code> and <code>core/storage/logs/laravel.log</code>. Update zips NEVER ship <code>vendor/</code> — the failure is schema or code, not a missing vendor directory.</li>'
+            .'</ol></div>'
         : '<div class="card"><p><span class="ok">Update complete.</span> Now delete <code>update.php</code> (or keep it — it is token-protected).</p>'
         .'</div>';
 

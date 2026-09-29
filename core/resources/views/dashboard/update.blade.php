@@ -5,6 +5,8 @@
         $log = $log ?? null;
         $tokenHint = $tokenHint ?? null;
         $failed = $failed ?? false;
+        /** @var array{failed_at?: string, exception_class?: string, message?: string, sql_state_hint?: ?string, maintenance?: string, recovery_steps?: list<string>}|null $failureRecord */
+        $failureRecord = $failureRecord ?? null;
     @endphp
 
     <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -35,6 +37,21 @@
                 </ul>
                 @if ($failed)
                     <p class="mt-4 rounded-xl border border-rose-500/20 bg-rose-100 px-4 py-3 text-sm font-medium text-rose-700">Update failed — check <code>core/storage/logs/laravel.log</code> and the direct <code>update.php</code> page for details.</p>
+
+                    @if ($failureRecord !== null)
+                        <div class="mt-4 rounded-xl border border-rose-500/30 bg-rose-50 p-4 text-sm text-rose-900">
+                            <p class="font-semibold uppercase tracking-wide">Ops: the site is STILL IN MAINTENANCE MODE</p>
+                            <ol class="mt-2 list-decimal space-y-1 pl-5">
+                                @foreach ($failureRecord['recovery_steps'] ?? [] as $step)
+                                    <li>{{ $step }}</li>
+                                @endforeach
+                            </ol>
+                            @if (! empty($failureRecord['sql_state_hint']))
+                                <p class="mt-3 font-medium">{{ $failureRecord['sql_state_hint'] }}</p>
+                            @endif
+                            <p class="mt-3 text-xs text-rose-700/80">Failed at {{ $failureRecord['failed_at'] ?? 'unknown time' }} ({{ $failureRecord['exception_class'] ?? 'unknown exception' }}).</p>
+                        </div>
+                    @endif
                 @else
                     <p class="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-800">Update complete — the site is live with the new release.</p>
                 @endif

@@ -80,11 +80,39 @@ class ReleaseUpdateController extends Controller
             $failed = true;
         }
 
+        $failed = $failed ?? false;
+        $failureRecord = $failed ? $this->readFailureRecord() : null;
+
         return view('dashboard.update', [
             'zipLimit' => min($this->iniBytes('upload_max_filesize'), $this->iniBytes('post_max_size')),
             'log' => collect($log),
             'failed' => $failed,
+            'failureRecord' => $failureRecord,
         ]);
+    }
+
+    /**
+     * R3: read the ops-facing failure record written by pv:update on a
+     * fatal (update-failed.json). Null when the last update succeeded or
+     * the file is absent/corrupt.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function readFailureRecord(): ?array
+    {
+        $path = storage_path('logs/update-failed.json');
+
+        if (! is_file($path)) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /** Convert an ini byte-shorthand (e.g. "128M") to raw bytes. */

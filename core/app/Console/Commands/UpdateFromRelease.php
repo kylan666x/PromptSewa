@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use RuntimeException;
+use Throwable;
 use ZipArchive;
 
 /**
@@ -67,53 +68,112 @@ class UpdateFromRelease extends Command
         $this->line('  maintenance mode ON');
 
         try {
-            Artisan::call('migrate', ['--force' => true]);
-            $this->line('  migrate ✓ '.trim(Artisan::output()));
+            $this->runPipeline($core, $docroot);
+        } catch (Throwable $e) {
+            // R3: on a fatal, the site STAYS in maintenance mode. MySQL DDL
+            // autocommits, so the schema may be half-migrated — serving
+            // traffic on a half-state is worse than a deliberate outage.
+            // Ops copy in the failure screen + update-failed.json tell the
+            // admin exactly how to recover.
+            $this->writeFailureRecord($e, $core);
+            $this->error('FATAL: '.$e->getMessage());
+            $this->line('  maintenance mode LEFT ON — see '.str_replace($core.DIRECTORY_SEPARATOR, '', $core).'/storage/logs/update-failed.json for the recovery checklist.');
 
-            // Idempotent seeders: DemoContent/BulkCatalog/JustShipIt all guard
-            // on existing rows, so this is a no-op for installs that already
-            // have the catalog and fills in new content on upgrades.
-            try {
-                Artisan::call('db:seed', ['--force' => true]);
-                $this->line('  seed ✓ '.trim(Artisan::output()));
-            } catch (Throwable $e) {
-                $this->warn('  seed failed: '.$e->getMessage());
-            }
-
-            // view:clear first: stale compiled views from the previous
-            // release must never survive into the new view:cache (the
-            // v1.4.1 prod 500 came from a drifted compiled view).
-            foreach (['config:cache', 'route:cache'] as $cmd) {
-                try {
-                    Artisan::call($cmd);
-                    $this->line("  $cmd ✓");
-                } catch (Throwable $e) {
-                    $this->warn("  $cmd failed: ".$e->getMessage());
-                }
-            }
-            try {
-                Artisan::call('view:clear');
-                Artisan::call('view:cache');
-                $this->line('  view:clear + view:cache ✓');
-            } catch (Throwable $e) {
-                $this->warn('  view cache failed: '.$e->getMessage());
-            }
-
-            $this->syncAssets($core, $docroot);
-
-            try {
-                Artisan::call('storage:link');
-            } catch (Throwable) {
-                // cosmetic only
-            }
-        } finally {
-            Artisan::call('up');
-            $this->line('  maintenance mode OFF — site is live');
+            throw $e;
         }
+
+        Artisan::call('up');
+        $this->line('  maintenance mode OFF — site is live');
 
         $this->info('Update complete.');
 
         return self::SUCCESS;
+    }
+
+    private function runPipeline(string $core, string $docroot): void
+    {
+        Artisan::call('migrate', ['--force' => true]);
+        $this->line('  migrate ✓ '.trim(Artisan::output()));
+
+        // Idempotent seeders: DemoContent/BulkCatalog/JustShipIt all guard
+        // on existing rows, so this is a no-op for installs that already
+        // have the catalog and fills in new content on upgrades.
+        try {
+            Artisan::call('db:seed', ['--force' => true]);
+            $this->line('  seed ✓ '.trim(Artisan::output()));
+        } catch (Throwable $e) {
+            $this->warn('  seed failed: '.$e->getMessage());
+        }
+
+        // view:clear first: stale compiled views from the previous
+        // release must never survive into the new view:cache (the
+        // v1.4.1 prod 500 came from a drifted compiled view).
+        foreach (['config:cache', 'route:cache'] as $cmd) {
+            try {
+                Artisan::call($cmd);
+                $this->line("  $cmd ✓");
+            } catch (Throwable $e) {
+                $this->warn("  $cmd failed: ".$e->getMessage());
+            }
+        }
+
+        try {
+            Artisan::call('view:clear');
+            Artisan::call('view:cache');
+            $this->line('  view:clear + view:cache ✓');
+        } catch (Throwable $e) {
+            $this->warn('  view cache failed: '.$e->getMessage());
+        }
+
+        $this->syncAssets($core, $docroot);
+
+        try {
+            Artisan::call('storage:link');
+        } catch (Throwable) {
+            // cosmetic only
+        }
+    }
+
+    /**
+     * Persist an ops-facing failure record next to laravel.log. The admin
+     * failure screen (and update.php) read this — it survives the request
+     * that crashed and names the exact recovery steps.
+     */
+    private function writeFailureRecord(Throwable $e, string $core): void
+    {
+        $record = [
+            'failed_at' => now()->toIso8601String(),
+            'exception_class' => $e::class,
+            'message' => $e->getMessage(),
+            'sql_state_hint' => $this->sqlStateHint($e->getMessage()),
+            'maintenance' => 'ON — the site is intentionally still down until an operator completes recovery',
+            'recovery_steps' => [
+                'Inspect the schema: the failing migration may have partially applied (MySQL DDL autocommits) — verify what actually exists before doing anything.',
+                'Do NOT simply re-run the update: if the schema is in a half-state, re-running can fail differently or corrupt data.',
+                'When the schema is verified consistent, bring the site back: delete core/storage/framework/down (or run `php artisan up`).',
+                'Update zips NEVER ship vendor/ — do not hunt for a missing vendor directory; the failure is schema or code, not the upload.',
+            ],
+        ];
+
+        try {
+            @file_put_contents(
+                $core.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'update-failed.json',
+                json_encode($record, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            );
+        } catch (Throwable) {
+            // never mask the original failure with a logging failure
+        }
+    }
+
+    /** Map the common SQLSTATE codes an interrupted migration produces to an ops hint. */
+    private function sqlStateHint(string $message): ?string
+    {
+        return match (true) {
+            str_contains($message, '1091') => 'SQLSTATE 1091: a DROP targeted an object that does not exist — the schema is likely already (half-)migrated; verify with SHOW INDEX / SHOW COLUMNS before re-running.',
+            str_contains($message, '1062') => 'SQLSTATE 1062: duplicate entry — data violates a constraint the migration expects unique; inspect the offending rows before re-running.',
+            str_contains($message, '42S21') => 'SQLSTATE 42S21: duplicate column name — the column already exists; the migration partially applied earlier.',
+            default => null,
+        };
     }
 
     /** Extract the release zip over core/ + docroot, preserving live dotfiles. */
