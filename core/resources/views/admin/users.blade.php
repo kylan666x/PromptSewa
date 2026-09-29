@@ -33,6 +33,7 @@
                     <tr class="transition hover:bg-paper-deep">
                         <td class="px-5 py-3.5">
                             <p class="flex items-center gap-1.5 font-medium text-ink">
+                                <x-user-avatar :user="$user" size="sm"/>
                                 {{ $user->name }}
                                 <x-verified-badge :user="$user" size="xs"/>
                             </p>

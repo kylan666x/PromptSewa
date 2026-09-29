@@ -1,9 +1,10 @@
-<x-app-layout>
-    @php
+<x-app-layout>        @php
         /** @var \App\Models\Order $order */
         /** @var bool $esewaEnabled */
         /** @var bool $manualEnabled */
         /** @var string $manualInstructions */
+        /** @var \Illuminate\Support\Collection<int, \App\Models\ManualPaymentMethod> $manualMethods */
+        $manualMethods = $manualMethods ?? collect();
         $isPaid = $order->isPaid();
     @endphp
 
@@ -46,8 +47,20 @@
             <div class="mt-6 rounded-2xl border border-saffron-deep/30 bg-saffron/15 p-6 text-center">
                 <p class="text-sm font-semibold text-ink">Payment reference received — an admin will verify it shortly.</p>
                 <p class="mt-1 font-mono text-xs text-ink/60">Reference: {{ $order->payment_reference }}</p>
+                @if ($order->manual_txn_id)
+                    <p class="mt-1 font-mono text-xs text-ink/60">TXN: {{ $order->manual_txn_id }} · proof submitted {{ $order->manual_submitted_at?->format('M j, Y H:i') }}</p>
+                @endif
+                @if ($order->manual_proof_path)
+                    <a href="{{ route('orders.proof.show', $order) }}" target="_blank" class="mt-3 inline-block">
+                        <img src="{{ route('orders.proof.show', $order) }}" alt="Your payment proof" class="mx-auto max-h-40 rounded-xl border border-ink/10 object-contain">
+                    </a>
+                @else
+                    {{-- Proof not yet uploaded — the pending-order page offers the form. --}}
+                @endif
                 <a href="{{ route('purchases.index') }}" class="mt-3 inline-block font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Go to my library &rarr;</a>
             </div>
+        @elseif ($order->payment_method === 'manual' && $order->isPending())
+            @include('dashboard._payment-proof-form', ['order' => $order])
         @else
             <div class="mt-6 space-y-5">
                 @if ($esewaEnabled)
@@ -64,7 +77,62 @@
                     </div>
                 @endif
 
-                @if ($manualEnabled)
+                @if ($manualEnabled && $manualMethods->isNotEmpty())
+                    <div class="rounded-2xl border border-ink/10 bg-ink p-6 shadow-sm">
+                        <h3 class="flex items-center gap-2 text-sm font-semibold text-paper">
+                            <span class="rounded-md bg-sky-400/20 px-2 py-0.5 font-mono text-xs font-bold text-sky-300">Manual</span>
+                            Bank / wallet transfer
+                        </h3>
+
+                        @foreach ($manualMethods as $method)
+                            <div class="mt-4 rounded-xl border border-paper/10 bg-ink-soft/60 p-4"
+                                 x-data="{ qrOpen: false }">
+                                <p class="flex items-center gap-2 text-sm font-semibold text-paper">
+                                    {{ $method->name }}
+                                </p>
+
+                                @if ($method->instructions)
+                                    <p class="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-paper/60">{{ $method->instructions }}</p>
+                                @endif
+
+                                @if ($method->qr_path)
+                                    <button type="button" @click="qrOpen = true" class="mt-3 block" aria-label="Enlarge QR code for {{ $method->name }}">
+                                        <img src="{{ Storage::disk('public')->url($method->qr_path) }}" alt="QR code — {{ $method->name }}"
+                                             class="size-28 rounded-lg bg-white p-1.5 object-contain transition hover:ring-2 hover:ring-saffron">
+                                    </button>
+                                    {{-- Click-to-enlarge modal (Alpine, no new deps) --}}
+                                    <div x-show="qrOpen" x-cloak @keydown.escape.window="qrOpen = false"
+                                         class="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4"
+                                         @click.self="qrOpen = false">
+                                        <div class="rounded-2xl bg-white p-4 shadow-card-hover">
+                                            <img src="{{ Storage::disk('public')->url($method->qr_path) }}" alt="QR code — {{ $method->name }}"
+                                                 class="max-h-[70vh] max-w-full object-contain">
+                                            <p class="mt-2 text-center font-mono text-xs text-ink/60">{{ $method->name }} — click outside to close</p>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <form method="POST" action="{{ route('checkout.manual.submit', $order) }}" class="mt-3 space-y-3">
+                                    @csrf
+                                    <input type="hidden" name="method_name" value="{{ $method->name }}">
+                                    <div>
+                                        <label for="payment_reference-{{ $loop->index }}" class="block text-xs font-medium text-paper/70">Transaction ID / reference <span class="text-saffron">*</span></label>
+                                        <input id="payment_reference-{{ $loop->index }}" type="text" name="payment_reference" required minlength="4" maxlength="180"
+                                               placeholder="e.g. 9F3K2L8Q or bank slip number"
+                                               class="mt-1.5 block w-full rounded-xl border border-paper/15 bg-ink px-3.5 py-2.5 text-sm text-paper placeholder-paper/30 outline-none transition focus:border-saffron focus:ring-2 focus:ring-saffron/40">
+                                    </div>
+                                    <button class="w-full rounded-full border border-saffron/40 bg-saffron/15 px-4 py-3 text-sm font-bold text-saffron transition hover:bg-saffron/30">
+                                        I sent it via {{ $method->name }}
+                                    </button>
+                                </form>
+                            </div>
+                        @endforeach
+
+                        <p class="mt-4 text-center text-xs text-paper/40">An admin verifies it manually — usually within a few hours.</p>
+                    </div>
+                @elseif ($manualEnabled)
+                    {{-- Legacy fallback: no methods configured yet, keep the old
+                         global-instructions panel so manual checkout still works. --}}
                     <div class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
                         <h3 class="flex items-center gap-2 text-sm font-semibold text-ink">
                             <span class="rounded-md bg-sky-100 px-2 py-0.5 font-mono text-xs font-bold text-sky-800">Manual</span>

@@ -50,6 +50,20 @@
                             @if ($order->payment_reference)
                                 <p class="max-w-[200px] truncate text-xs text-ink0" title="{{ $order->payment_reference }}">{{ $order->payment_reference }}</p>
                             @endif
+                            {{-- C3 (v1.4.4): TXN id + submitted-at + proof preview
+                                 (staff-only private route — never a raw storage URL). --}}
+                            @if ($order->manual_txn_id)
+                                <p class="mt-1 font-mono text-[11px] text-ink/70">TXN: {{ $order->manual_txn_id }}</p>
+                            @endif
+                            @if ($order->manual_submitted_at)
+                                <p class="font-mono text-[10px] text-ink0">proof {{ $order->manual_submitted_at->format('M j, H:i') }}</p>
+                            @endif
+                            @if ($order->manual_proof_path)
+                                <a href="{{ route('orders.proof.show', $order) }}" target="_blank" class="mt-1 inline-block" title="Open proof (staff only)">
+                                    <img src="{{ route('orders.proof.show', $order) }}" alt="Payment proof for order #{{ $order->id }}"
+                                         class="max-h-24 rounded-lg border border-ink/10 object-contain">
+                                </a>
+                            @endif
                         </td>
                         <td class="px-5 py-3.5">
                             <span class="rounded-md px-2 py-0.5 text-xs font-medium

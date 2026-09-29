@@ -29,7 +29,8 @@
             <p class="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink/60">
                 <span>{{ $versions->count() }} {{ \Illuminate\Support\Str::plural('version', $versions->count()) }}</span>
                 <span aria-hidden="true">&middot;</span>
-                <a href="{{ route('creators.show', $prompt->creator) }}" class="transition hover:text-saffron-deep">
+                <a href="{{ route('creators.show', $prompt->creator) }}" class="flex items-center gap-1.5 transition hover:text-saffron-deep">
+                    <x-user-avatar :user="$prompt->creator" size="xs"/>
                     <x-user-handle :user="$prompt->creator" size="text-sm"/>
                 </a>
                 @if ($isPaid)

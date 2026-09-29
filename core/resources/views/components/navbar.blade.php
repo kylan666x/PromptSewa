@@ -80,9 +80,19 @@
                                    class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
                                    :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"
                                    @mouseenter="activeIndex = prompts.length + index">
-                                    <span class="min-w-0 truncate">
-                                        <span x-text="creator.name"></span>
-                                        <span class="font-mono text-xs text-ink/40" x-text="creator.username ? '@'+creator.username : ''"></span>
+                                    <span class="flex min-w-0 items-center gap-2">
+                                        <span class="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-saffron">
+                                            <template x-if="creator.avatar_url">
+                                                <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full object-cover" loading="lazy">
+                                            </template>
+                                            <template x-if="! creator.avatar_url">
+                                                <span class="text-[10px]" x-text="creator.initial"></span>
+                                            </template>
+                                        </span>
+                                        <span class="min-w-0 truncate">
+                                            <span x-text="creator.name"></span>
+                                            <span class="font-mono text-xs text-ink/40" x-text="creator.username ? '@'+creator.username : ''"></span>
+                                        </span>
                                     </span>
                                     <span class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink/40"
                                           x-text="creator.prompts_count + (creator.prompts_count === 1 ? ' prompt' : ' prompts')"></span>
@@ -127,11 +137,7 @@
                 <div x-data="{ open: false }" class="relative">
                     <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-ink/5" aria-label="Account menu" :aria-expanded="open">
                         <span class="flex size-8 items-center justify-center overflow-hidden rounded-full bg-ink text-xs font-bold text-saffron">
-                            @if (auth()->user()->avatar_path)
-                                <img src="{{ Storage::url(auth()->user()->avatar_path) }}" alt="" class="size-full object-cover">
-                            @else
-                                {{ mb_substr(auth()->user()->name, 0, 1) }}
-                            @endif
+                            <x-user-avatar :user="auth()->user()" size="md"/>
                         </span>
                         <svg class="size-4 text-creak" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
@@ -140,6 +146,7 @@
                     <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-ink/10 bg-white py-1.5 shadow-card-hover">
                         <div class="border-b border-ink/10 px-4 py-2.5">
                             <p class="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
+                                <x-user-avatar :user="auth()->user()" size="sm"/>
                                 {{ auth()->user()->name }}
                                 <x-verified-badge :user="auth()->user()" size="xs"/>
                             </p>

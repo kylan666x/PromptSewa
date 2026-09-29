@@ -45,7 +45,7 @@
                         @foreach ($creators as $creator)
                             <a href="{{ route('creators.show', $creator) }}"
                                class="group flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
-                                <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-saffron">{{ mb_substr($creator->name, 0, 1) }}</span>
+                                <x-user-avatar :user="$creator" size="lg" class="rounded-2xl"/>
                                 <span class="min-w-0 flex-1">
                                     <span class="flex items-center gap-1.5 font-semibold text-ink transition group-hover:text-saffron-deep">
                                         {{ $creator->name }} <x-user-handle :user="$creator" size="text-xs" class="font-normal opacity-70"/>

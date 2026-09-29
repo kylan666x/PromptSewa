@@ -80,6 +80,11 @@
                                 </td>
                                 <td class="px-5 py-3.5 text-right">
                                     <a href="{{ route('checkout.show', $order) }}" class="font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Details &rarr;</a>
+                                    @if ($order->isPending() && $order->payment_method === 'manual')
+                                        <p class="mt-1 font-mono text-[10px] text-ink/40">
+                                            {{ $order->manual_proof_path ? 'proof submitted' : 'proof needed' }}
+                                        </p>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

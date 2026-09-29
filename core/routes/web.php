@@ -145,6 +145,18 @@ Route::middleware('auth')->group(function () {
         ->name('checkout.esewa.verify');
 
     Route::post('/checkout/{order}/manual', [CheckoutController::class, 'manualSubmit'])->name('checkout.manual.submit');
+
+    // C3 (v1.4.4): buyer submits/refreshes the TXN id + screenshot proof on
+    // their own pending manual order. Throttled like other public writes.
+    Route::post('/orders/{order}/proof', [\App\Http\Controllers\Dashboard\PaymentProofController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('orders.proof.store');
+
+    // C3: payment-proof images are PRIVATE — served through this controller
+    // (owner or staff only), never a raw storage URL. QR codes (public
+    // disk) are fine as plain storage URLs; proofs are not.
+    Route::get('/orders/{order}/proof', [\App\Http\Controllers\Dashboard\PaymentProofController::class, 'show'])
+        ->name('orders.proof.show');
 });
 
 // --- Admin panel (staff only) --------------------------------------------
@@ -178,6 +190,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     // Payment methods (eSewa credentials encrypted at rest).
     Route::get('/payments', [PaymentMethodAdminController::class, 'edit'])->name('payments.edit');
     Route::put('/payments', [PaymentMethodAdminController::class, 'update'])->name('payments.update');
+
+    // C3 (v1.4.4): manual payment methods CRUD (QR + instructions).
+    Route::get('/manual-methods', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'index'])->name('manual-methods.index');
+    Route::post('/manual-methods', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'store'])->name('manual-methods.store');
+    Route::put('/manual-methods/{manualMethod}', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'update'])->name('manual-methods.update');
+    Route::delete('/manual-methods/{manualMethod}', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'destroy'])->name('manual-methods.destroy');
 
     // Packs CRUD.
     Route::get('/packs', [PackAdminController::class, 'index'])->name('packs.index');
