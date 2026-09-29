@@ -31,6 +31,9 @@ class Order extends Model
         'idempotency_key',
         'payment_method',
         'payment_reference',
+        'manual_txn_id',
+        'manual_proof_path',
+        'manual_submitted_at',
         'paid_at',
     ];
 
@@ -41,6 +44,7 @@ class Order extends Model
             'tax_paisa' => 'integer',
             'total_paisa' => 'integer',
             'paid_at' => 'datetime',
+            'manual_submitted_at' => 'datetime',
         ];
     }
 

@@ -31,6 +31,11 @@ class ImageUploadService
         'avatar' => ['max' => 512, 'dir' => 'avatars', 'quality' => 85, 'alpha' => false],
         'logo' => ['max' => 768, 'dir' => 'logos', 'quality' => 90, 'alpha' => true],
         'mark' => ['max' => 768, 'dir' => 'marks', 'quality' => 90, 'alpha' => true],
+        // C3 (v1.4.4): QR codes MUST keep alpha and stay PNG — JPEG blocks
+        // flatten the quiet zone and kill scannability. Proofs are photos
+        // (JPEG fine) but land on the PRIVATE proofs disk, not public.
+        'qr' => ['max' => 1024, 'dir' => 'qr', 'quality' => 90, 'alpha' => true],
+        'proof' => ['max' => 1600, 'dir' => 'proofs', 'quality' => 82, 'alpha' => false, 'disk' => 'proofs'],
     ];
 
     public const MAX_INPUT_KB = 8192; // 8 MB hard ceiling before compression
@@ -99,7 +104,10 @@ class ImageUploadService
             $name = Str::random(40).'.'.$extension;
             $path = $cfg['dir'].'/'.$name;
 
-            Storage::disk('public')->put($path, $binary);
+            // Proof variant targets the private proofs disk (C3): never
+            // web-reachable by path — served through the owner/staff route.
+            $disk = $cfg['disk'] ?? 'public';
+            Storage::disk($disk)->put($path, $binary);
 
             return $path;
         } finally {
@@ -140,11 +148,18 @@ class ImageUploadService
         return $dst;
     }
 
-    /** Delete a previous image (best-effort) when replacing it. */
+    /** Delete a previous image (best-effort) when replacing it. Uses the
+     *  private proofs disk for proof paths. */
     public function delete(?string $path): void
     {
-        if ($path !== null && $path !== '' && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if ($path === null || $path === '') {
+            return;
+        }
+
+        $disk = str_starts_with($path, 'proofs/') ? 'proofs' : 'public';
+
+        if (Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
         }
     }
 }

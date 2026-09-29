@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\PromptSearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * TASK 2 — AJAX predictive search for the navbar typeahead.
@@ -46,6 +47,12 @@ class SearchController extends Controller
                 'username' => $creator->username,
                 'prompts_count' => $creator->prompts_count,
                 'url' => route('creators.show', $creator),
+                // C1: real avatar in the typeahead — null → client renders
+                // the deterministic initials fallback.
+                'avatar_url' => $creator->avatar_path
+                    ? Storage::disk('public')->url($creator->avatar_path)
+                    : null,
+                'initial' => mb_substr($creator->name, 0, 1),
             ])
             ->values();
 

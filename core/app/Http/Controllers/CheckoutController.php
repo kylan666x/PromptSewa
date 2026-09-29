@@ -46,6 +46,11 @@ class CheckoutController extends Controller
             'esewaEnabled' => $this->settings->isOn('esewa_enabled'),
             'manualEnabled' => $this->settings->isOn('manual_payment_enabled'),
             'manualInstructions' => (string) $this->settings->get('manual_payment_instructions', ''),
+            // C3 (v1.4.4): admin-configured methods with per-method QR +
+            // instructions, position-ordered, active only.
+            'manualMethods' => \App\Models\ManualPaymentMethod::query()
+                ->orderedForCheckout()
+                ->get(),
         ]);
     }
 
@@ -129,22 +134,26 @@ class CheckoutController extends Controller
             ->with('success', 'Payment confirmed — your prompts are unlocked.');
     }
 
-    /** Buyer submits a manual payment proof; admin approves later. */
+    /** Buyer submits a manual payment reference; admin approves later. */
     public function manualSubmit(Request $request, Order $order)
     {
-        abort_unless($request->user()?->id === $order->buyer_id, 403);
-        abort_unless($order->isPending(), 400, 'This order is no longer payable.');
         abort_unless($request->user()?->id === $order->buyer_id, 403);
         abort_unless($order->isPending(), 400, 'This order is no longer payable.');
         abort_unless($this->settings->isOn('manual_payment_enabled'), 403, 'Manual payments are not enabled.');
 
         $validated = $request->validate([
             'payment_reference' => ['required', 'string', 'min:4', 'max:180'],
+            'method_name' => ['nullable', 'string', 'max:100'],
         ]);
+
+        // C3 (v1.4.4): snapshot the chosen method NAME as a plain string —
+        // editing/deactivating the method later never rewrites this.
+        $methodName = trim((string) ($validated['method_name'] ?? ''));
+        $reference = trim($validated['payment_reference']);
 
         $order->fill([
             'payment_method' => 'manual',
-            'payment_reference' => trim($validated['payment_reference']),
+            'payment_reference' => $methodName !== '' ? $methodName.' · '.$reference : $reference,
         ])->save();
 
         return redirect()

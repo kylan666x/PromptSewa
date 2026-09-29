@@ -36,6 +36,11 @@ class SettingsService
         'esewa_merchant_code' => '',
         'esewa_base_url' => 'https://rc.esewa.com.np',
         'manual_payment_enabled' => '0',
+        // v1.4.4: the admin form's checkbox field is named manual_enabled,
+        // but the canonical runtime key is manual_payment_enabled — the C2
+        // bug was the controller persisting under the form-field name.
+        // (A legacy manual_enabled row may exist in old installs; nothing
+        // reads it anymore.)
         'manual_payment_instructions' => '',
     ];
 

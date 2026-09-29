@@ -27,6 +27,7 @@ class PaymentMethodAdminController extends Controller
             'esewaBaseUrl' => (string) $this->settings->get('esewa_base_url', 'https://rc.esewa.com.np'),
             'esewaSecretSaved' => (string) $this->settings->get('esewa_secret_key', '') !== '',
             'manualEnabled' => $this->settings->isOn('manual_payment_enabled'),
+            // keep legacy alias visible for BC if a key exists
             'manualInstructions' => (string) $this->settings->get('manual_payment_instructions', ''),
             'paymentsEnabled' => $this->settings->isOn('payments_enabled'),
         ]);
@@ -50,7 +51,13 @@ class PaymentMethodAdminController extends Controller
         $this->settings->set('esewa_enabled', $request->boolean('esewa_enabled') ? '1' : '0');
         $this->settings->set('esewa_merchant_code', trim((string) ($validated['esewa_merchant_code'] ?? '')));
         $this->settings->set('esewa_base_url', trim((string) ($validated['esewa_base_url'] ?? '')) ?: 'https://rc.esewa.com.np');
-        $this->settings->set('manual_enabled', $request->boolean('manual_enabled') ? '1' : '0');
+        // C2 fix (v1.4.4): the form field is manual_enabled but the runtime
+        // key (SettingsService::DEFAULTS + CheckoutController) is
+        // manual_payment_enabled — the toggle previously saved to a key
+        // nothing read, so the manual panel never activated and the
+        // checkbox re-rendered unchecked. Persist under BOTH keys' canonical
+        // name: the form keeps its field name for BC.
+        $this->settings->set('manual_payment_enabled', $request->boolean('manual_enabled') ? '1' : '0');
         $this->settings->set('manual_payment_instructions', (string) ($validated['manual_payment_instructions'] ?? ''));
 
         // Empty means "keep the stored secret" — never wipe credentials by

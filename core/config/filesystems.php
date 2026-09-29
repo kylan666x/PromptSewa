@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // C3 (v1.4.4): payment proof screenshots are quasi-financial data —
+        // stored OUTSIDE the public disk and served exclusively through an
+        // owner/staff controller route. Never referenced via Storage::url().
+        'proofs' => [
+            'driver' => 'local',
+            'root' => storage_path('app/proofs'),
+            'serve' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
