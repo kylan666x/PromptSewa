@@ -25,6 +25,14 @@ class JustShipItAISeeder extends Seeder
 
     public function run(): void
     {
+        // D4 (v1.4.5): the flagship account is demo content too — hard
+        // refuse in production (from-zero runs defeat idempotency markers).
+        if (app()->environment('production')) {
+            $this->command?->warn('JustShipItAISeeder REFUSED — demo identities are never seeded in production (D4).');
+
+            return;
+        }
+
         $user = User::firstOrCreate(
             ['email' => 'justshipitai@gmail.com'],
             [

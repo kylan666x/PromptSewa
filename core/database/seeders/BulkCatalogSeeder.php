@@ -24,6 +24,14 @@ class BulkCatalogSeeder extends Seeder
 
     public function run(): void
     {
+        // D4 (v1.4.5): HARD refuse in production — same rationale as
+        // DemoContentSeeder (from-zero runs defeat idempotency markers).
+        if (app()->environment('production')) {
+            $this->command?->warn('BulkCatalogSeeder REFUSED — bulk demo catalog is never seeded in production (D4).');
+
+            return;
+        }
+
         // Marker prompt title unique to this seeder.
         if (Prompt::where('title', 'Product Launch Announcement Writer')->exists()) {
             $this->command?->warn('BulkCatalogSeeder skipped - bulk catalog already present.');

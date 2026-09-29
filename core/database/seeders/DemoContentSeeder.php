@@ -30,6 +30,17 @@ class DemoContentSeeder extends Seeder
 
     public function run(): void
     {
+        // D4 (v1.4.5): HARD refuse in production. Idempotency markers only
+        // protect against re-runs — the v1.4.4 incident proved a from-zero
+        // run against a stray database sails straight past them. Demo
+        // identities must be impossible to create on prod, not merely
+        // unlikely.
+        if (app()->environment('production')) {
+            $this->command?->warn('DemoContentSeeder REFUSED — demo content is never seeded in production (D4).');
+
+            return;
+        }
+
         if (Prompt::query()->exists()) {
             $this->command?->warn('DemoContentSeeder skipped — prompts already exist.');
 
