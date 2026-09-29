@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-28 · **Current version:** v1.4.3
+**Prepared:** 2026-09-29 · **Current version:** v1.4.4
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -35,7 +35,19 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.4.0 — search & profile UX overhaul (this release)
+### v1.4.4 — avatar fidelity & manual payment proof (this release)
+
+- **x-user-avatar component** (`components/user-avatar.blade.php`, sizes xs/sm/md/lg): real `avatar_path` photo on every creator-identity surface — prompt cards (both card variants), prompt detail byline, library creators grid, versions page author row, admin users table, navbar dropdown (desktop + mobile), search typeahead JSON (`avatar_url` + `initial`), creator profile hero. Initials badge is the FALLBACK only. Alt always carries the @handle; the verified tick stays a sibling element. Locked by `AvatarFidelityTest` (10 tests).
+- **C2 root cause ("can't update manual payment methods")**: the admin form field is `manual_enabled` but the runtime settings key is `manual_payment_enabled` — the save path persisted under the form name, so the toggle and instructions never took effect and the manual panel never activated. `PaymentMethodAdminController::update` now persists under the canonical key. Locked by rendered-form submission tests.
+- **Manual payment methods v2**: `manual_payment_methods` table (name, instructions, qr PNG ≤1024px alpha-preserved, position, active) with admin CRUD at `/admin/manual-methods`. Delete = deactivate once any order references the name (snapshot-prefix aware: orders store `NAME · reference`); hard delete only before first use. Checkout renders active methods position-ordered on the dark panel with per-method instructions (escaped + pre-line) and click-to-enlarge QR (Alpine modal, no new deps). Orders snapshot the method NAME — editing a method never rewrites order history.
+- **Buyer TXN proof**: `orders.manual_txn_id/manual_proof_path/manual_submitted_at`; pending manual orders get a submit/replace form (txn ≤100 + screenshot ≤8 MB + optional note, `throttle:10,1`). Re-submission deletes the orphaned old file. Submission NEVER grants — approval remains the only grant path. Proofs live on the PRIVATE `proofs` disk (`storage/app/proofs`, outside public/storage) and stream only through `orders.proof.show` (owner or staff). Admin orders desk shows TXN id, submitted-at, and the proof preview before the unchanged approve/reject buttons.
+- **Tests**: 23 new (AvatarFidelityTest 10, ManualPaymentMethodsTest 13). Suite: 226 passed / 987 assertions.
+
+### v1.4.3 — migration replay repair
+
+- R1 back-dated `120999` repair normalizes the license_grants preconditions so an interrupted `121000` (MySQL DDL autocommits; migrations row unwritten) replays cleanly instead of dying on SQLSTATE 1091; append-only `121100` drops the leftover unique index on `order_item_id` on BOTH engines (SQLite never dropped it, which silently broke pack fulfillment). R2 `App\Support\SchemaInspector` (SHOW INDEX / PRAGMA) + `Arch\MigrationDropGuardTest` enforce existence-guarded destructive DDL repo-wide. R3 a fatal in `pv:update` keeps maintenance mode ON, writes `core/storage/logs/update-failed.json` with a 4-step recovery checklist + SQLSTATE hints, and the admin/update.php failure screens render the same ops copy. See §6.18.
+
+### v1.4.0 — search & profile UX overhaul
 
 - **Username handles**: nullable unique `users.username` (30 chars, `alpha_dash`). Creator URLs are now `/creators/{username}` — binding is scoped to the `{creator}` parameter in `AppServiceProvider::boot` (username OR name fallback; soft-deleted excluded), so admin `{user:id}` routes are untouched. `User::getRouteKey()` returns handle-or-name, which makes `route('creators.show', $user)` emit the handle URL automatically. Profile edit form gains an @username input (`Rule::unique()->ignore()`, lowercased, clearable → falls back to name URL).
 - **AJAX typeahead**: `GET /search/preview` (throttled 60,1) returns 3 prompt + 3 creator hits as JSON. `x-search-preview` Alpine component in the navbar: 300 ms debounced, abortable fetch, Prompts/Creators sections, arrow-key navigation (`bg-saffron/10` active row), Escape closes, Enter falls through to the full-page search.
@@ -130,7 +142,10 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 15. **Blade `@{{ }}` renders literal text — banned repo-wide; NoBladeLeakTest enforces.** The v1.4.1 handle rollup shipped six `@{{ }}` escapes that Blade never compiles, and prod rendered raw `{{ $prompt->creator->username ?? ... }}` on every card. Alpine interpolation must use `x-text`/`:attr`; literal `@` is `'@'.$handle` echoed inside a plain `{{ }}`. The arch test also bans raw U+2192 arrows (use `&rarr;`).
 16. **Views must render standalone (no ambient shared vars); StaffViewStandaloneRenderTest enforces.** The v1.4.1 prod 500 was `Undefined variable $errors` in dashboard/update — the `@error` directive compiles to `$errors->getBag()` and explodes when the view renders outside the web middleware group (release log pages, artisan contexts, error paths). Never use `@error`/`$errors` in a view without an `isset($errors)` guard, and never rely on `view()->composer` data in a view that can render outside HTTP. The update pipeline now runs `view:clear` immediately before `view:cache` — stale compiled views must never survive an upgrade.
 17. **Public history page = metadata only; Edit link is owner-only.** `/prompts/{slug}/versions` exposes labels, changelogs, authors, timestamps — never bodies or variable lists for paid prompts. The detail page's Edit link renders only for the owner; moderators use the admin preview route. Never link `dashboard.prompts.edit` from admin surfaces (the admin dashboard review queue links the preview route).
-18. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
+18. **Creator surfaces render avatars via `x-user-avatar` — initials are a fallback, never the default (v1.4.4).** Any new identity surface (cards, tables, rows, JSON payloads) must use the component (sizes xs/sm/md/lg; extra classes merge through `$attributes`). Alt text always carries `@handle`; the verified tick stays OUTSIDE the img. Typeahead JSON must carry `avatar_url` (null when unset) so the client can fall back — `searchCreators` only returns users with a published prompt, so a bare-user test fixture shows an empty typeahead.
+19. **Payment proofs are private — served via owner/staff route, never raw storage URLs (v1.4.4).** Proof screenshots land on the `proofs` disk (`storage/app/proofs`, outside the public/storage symlink) and stream only through `GET /orders/{order}/proof` (`orders.proof.show`, owner or moderator). Never echo a proof path into `Storage::disk('public')->url()`; QR codes (public disk) are fine as plain URLs. Proof submission is throttled (10,1), never grants entitlement, and replaces the file server-side (old file deleted — files are not financial records; the order row keeps one current proof).
+20. **Order-history snapshots are write-once strings (v1.4.4).** Checkout stores the payment method NAME as `NAME · reference` on the order. Editing/deactivating a `manual_payment_methods` row must never rewrite it; `isUsedByOrders()` therefore matches the snapshot PREFIX (`name · %`), not bare equality — an exact match would miss every real order and let a referenced method hard-delete, orphaning history.
+21. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
 
 ## 7. Deploying the current update
 
@@ -153,6 +168,19 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
 
 SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
+
+### Post-check (v1.4.4) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Run `php artisan migrate:status` | `2026_09_29_130000_create_manual_payment_methods_table` and `2026_09_29_130100_add_manual_proof_to_orders_table` show Ran; all v1.4.3 rows (120999/121000/121100) still Ran | `MigrationReplayRepairTest`, `ManualPaymentMethodsTest` |
+| 2 | View a prompt card whose creator has a profile picture | real photo in the round badge (NOT initials), alt = @handle, verified tick adjacent | `AvatarFidelityTest` (10 tests) |
+| 3 | Admin → Payments: save manual toggle + instructions → reload | checkbox stays checked, instructions persist; legacy instructions panel renders at checkout when no methods are configured | `ManualPaymentMethodsTest::admin updates manual payment instructions…` |
+| 4 | Admin → Manual methods: create a method with a QR (PNG), position 0 | listed, active, QR visible; upload survives as `.png` even from a JPEG source | `ManualPaymentMethodsTest::QR uploads stay PNG…` |
+| 5 | Buyer checkout (manual enabled, methods exist) | dark panel lists only ACTIVE methods in position order, per-method instructions + QR with click-to-enlarge | `ManualPaymentMethodsTest::checkout renders only active methods…` |
+| 6 | Buyer submits TXN + screenshot on a pending manual order; then admin → Orders | TXN id, submitted-at, and proof preview visible on the order desk before unchanged approve/reject; approve grants; proof URL 403s for other buyers and redirects guests to login | `ManualPaymentMethodsTest::admin approves after proof…`, `only the owner can submit or view a proof` |
+| 7 | Admin → Overview shows version chip | `v1.4.4` chip matches the deployed release | `config('app.version')` single source |
+| 8 | `cd core && php artisan test` | 226 passed, 987 assertions | whole suite |
 
 ### Post-check (v1.4.3) — run in order after the update.php pipeline finishes
 
@@ -224,5 +252,7 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.2 era | 405 Method Not Allowed on `/dashboard/profile` upload | form missing `@method('PUT')` | v1.3.0 |
 | v1.2 era | name overlapping cover photo on creator profiles | `-mt` overlap without top padding on the name block | v1.3.0 |
 | v1.4.2 (2026-09-28) | SQLSTATE 1091 replaying `121000_make_license_grants_comp_capable` on prod | interrupted 121000 left partial DDL (unique index dropped, migrations row unwritten) — MySQL DDL autocommits, so the replay dropped an already-dropped index; SQLite never dropped the index at all, which later broke pack fulfillment (UNIQUE constraint on `order_item_id`) | v1.4.3 (120999 repair + 121100 guarded drop + SchemaInspector + drop-guard arch test + fatal-path maintenance lock) |
+| v1.4.3 (2026-09-29) | Creator avatars never rendered — initials everywhere despite uploads working | identity surfaces hand-rolled initials markup; no shared avatar component existed (the "trivial bug") | v1.4.4 (x-user-avatar on every surface, AvatarFidelityTest) |
+| v1.4.3 (2026-09-29) | Founder: "I cannot update manual payment methods" | key mismatch: form field `manual_enabled` vs runtime key `manual_payment_enabled` — saves landed on a key nothing read (C2) | v1.4.4 (canonical-key persistence + rendered-form tests + manual methods v2) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

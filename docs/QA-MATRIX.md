@@ -1,7 +1,7 @@
-# PromptSewa QA Matrix — v1.4.3 "Migration Replay Repair"
+# PromptSewa QA Matrix — v1.4.4 "Avatar Fidelity & Manual Payment Proof"
 
 Every admin + user flow, its status, and the Pest test that locks it.
-Suite: `cd core && php artisan test` → **203 passed, 877 assertions** (2026-09-29).
+Suite: `cd core && php artisan test` → **226 passed, 987 assertions** (2026-09-29).
 
 Run the matrix: `php artisan test` — every row below is covered by at least one
 named test; if a test regresses, the row goes red and the release blocks.
@@ -134,6 +134,24 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Empty/blank search states | ✅ | `SearchTest::empty search shows the polished empty state`, `blank search lists prompts newest first` |
 | Storefront + category pages | ✅ | `StorefrontTest::homepage shows storefront copy and stats`, `homepage shows prompt cards for seeded public prompts`, `CategoryPageTest::category page shows only prompts in that category`, `category pages render via route model binding with slug key`, `unknown category slug returns 404`, `inactive categories are not browsable` |
 | Creator profile privacy + bylines | ✅ | `CreatorProfileTest::guests can view a public creator profile with their published prompts`, `creator profile does not leak drafts or private prompts`, `PromptVisibilityTest` card/byline tests |
+
+## v1.4.4 C-series (avatar fidelity + manual payment proof block)
+
+| Flow | Status | Locking test(s) |
+|---|---|---|
+| C1 real avatar renders on every creator surface (cards, byline, library grid, versions, admin users, navbar, typeahead JSON, creator hero) | ✅ | `AvatarFidelityTest::prompt card shows the real photo…`, `prompt detail byline renders the avatar image`, `library creators grid…`, `versions page author row…`, `admin users table…`, `navbar dropdown header…`, `typeahead JSON carries the avatar url…`, `creator profile hero uses the shared component` |
+| C1 initials fallback when avatar_path is null; alt always carries the @handle; no empty src ever | ✅ | `AvatarFidelityTest::prompt card falls back to the initials badge…` + shared `assertAvatarSurface` helper |
+| C2 admin payment settings save persists (manual_enabled → manual_payment_enabled key mismatch fixed) | ✅ | `ManualPaymentMethodsTest::admin updates manual payment instructions and they persist and render at checkout`, `rendered admin payments form submission persists the manual toggle` |
+| C3 manual method CRUD + validation + admin-only | ✅ | `ManualPaymentMethodsTest::admin can create, edit and list manual payment methods`, `method create validates the name and only admins may manage methods` |
+| C3 used method deactivates, unused hard-deletes (snapshot-prefix aware) | ✅ | `ManualPaymentMethodsTest::deleting a used method deactivates it; an unused one is hard-deleted` |
+| C3 QR uploads stay PNG (alpha preserved, scannable) | ✅ | `ManualPaymentMethodsTest::QR uploads stay PNG on disk even from a JPEG source` |
+| C3 checkout renders only active methods in position order; name snapshotted; later edits never rewrite history | ✅ | `ManualPaymentMethodsTest::checkout renders only active methods in position order and snapshots the name` |
+| C3 buyer proof submission (TXN ≤100 + screenshot ≤8 MB + note), throttled | ✅ | `ManualPaymentMethodsTest::buyer submits TXN id + proof screenshot on their pending manual order`, `proof form enforces required fields and length limits` |
+| C3 owner-only submit + owner/staff-only proof viewing; guests → login | ✅ | `ManualPaymentMethodsTest::only the owner can submit or view a proof` |
+| C3 proofs are PRIVATE — private `proofs` disk, controller-served, never on the public disk | ✅ | `ManualPaymentMethodsTest::only the owner can submit or view a proof` (public-disk existence assertion) |
+| C3 submission refused once paid; grants nothing (money invariant) | ✅ | `ManualPaymentMethodsTest::proof submission is refused once the order is paid or failed`, `buyer submits…` (zero grants assertion) |
+| C3 re-submission replaces proof + deletes the orphan file | ✅ | `ManualPaymentMethodsTest::re-submission replaces the proof file and deletes the orphan` |
+| C3 approve-after-proof grants atomically; admin desk shows TXN + proof preview | ✅ | `ManualPaymentMethodsTest::admin approves after proof and grants issue atomically; admin desk shows the proof` |
 
 ## v1.4.3 R-series (migration replay repair block)
 
