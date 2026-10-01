@@ -86,10 +86,22 @@
                             Bank / wallet transfer
                         </h3>
 
+                        {{-- P3 (v1.7.1): per-method card — kind icon (bank /
+                             eSewa / generic mono glyph) + name + instructions
+                             + a bordered "Scan to pay" QR block when a QR
+                             exists. Order snapshots stay NAME-only (invariant). --}}
                         @foreach ($manualMethods as $method)
+                            @php
+                                $kindIcon = match ($method->kind ?? 'other') {
+                                    \App\Models\ManualPaymentMethod::KIND_BANK => '<svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V9M3.75 21h16.5M3 9l1.5 12m15-12-1.5 12"/></svg>',
+                                    \App\Models\ManualPaymentMethod::KIND_ESEWA => '<span class="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white" aria-hidden="true">eSewa</span>',
+                                    default => '<span class="font-mono text-[10px] font-bold text-paper/60" aria-hidden="true">Rs</span>',
+                                };
+                            @endphp
                             <div class="mt-4 rounded-xl border border-paper/10 bg-ink-soft/60 p-4"
                                  x-data="{ qrOpen: false }">
-                                <p class="flex items-center gap-2 text-sm font-semibold text-paper">
+                                <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-paper">
+                                    <span class="inline-flex shrink-0 items-center text-paper/70">{!! $kindIcon !!}</span>
                                     {{ $method->name }}
                                 </p>
 
@@ -98,18 +110,21 @@
                                 @endif
 
                                 @if ($method->qr_path)
-                                    <button type="button" @click="qrOpen = true" class="mt-3 block" aria-label="Enlarge QR code for {{ $method->name }}">
-                                        <img src="{{ Storage::disk('public')->url($method->qr_path) }}" alt="QR code — {{ $method->name }}"
-                                             class="size-28 rounded-lg bg-white p-1.5 object-contain transition hover:ring-2 hover:ring-saffron">
-                                    </button>
-                                    {{-- Click-to-enlarge modal (Alpine, no new deps) --}}
-                                    <div x-show="qrOpen" x-cloak @keydown.escape.window="qrOpen = false"
-                                         class="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4"
-                                         @click.self="qrOpen = false">
-                                        <div class="rounded-2xl bg-white p-4 shadow-card-hover">
+                                    <div class="mt-3 rounded-xl border border-paper/15 bg-ink-soft p-3">
+                                        <p class="font-mono text-[11px] font-semibold uppercase tracking-widest text-paper/60">Scan to pay</p>
+                                        <button type="button" @click="qrOpen = true" class="mt-2 block" aria-label="Enlarge QR code for {{ $method->name }}">
                                             <img src="{{ Storage::disk('public')->url($method->qr_path) }}" alt="QR code — {{ $method->name }}"
-                                                 class="max-h-[70vh] max-w-full object-contain">
-                                            <p class="mt-2 text-center font-mono text-xs text-ink/60">{{ $method->name }} — click outside to close</p>
+                                                 class="size-28 rounded-lg bg-white p-1.5 object-contain transition hover:ring-2 hover:ring-saffron">
+                                        </button>
+                                        {{-- Click-to-enlarge modal (Alpine, no new deps) --}}
+                                        <div x-show="qrOpen" x-cloak @keydown.escape.window="qrOpen = false"
+                                             class="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4"
+                                             @click.self="qrOpen = false">
+                                            <div class="rounded-2xl bg-white p-4 shadow-card-hover">
+                                                <img src="{{ Storage::disk('public')->url($method->qr_path) }}" alt="QR code — {{ $method->name }}"
+                                                     class="max-h-[70vh] max-w-full object-contain">
+                                                <p class="mt-2 text-center font-mono text-xs text-ink/60">{{ $method->name }} — click outside to close</p>
+                                            </div>
                                         </div>
                                     </div>
                                 @endif

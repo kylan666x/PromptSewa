@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Observers;
+
+use App\Models\FeedEvent;
+use App\Models\Order;
+use App\Models\Prompt;
+use App\Services\GamificationService;
+
+/**
+ * G2/G4 (v1.7.0) — sale-side gamification, fired from the paid transition
+ * inside settleOrder's transaction. Milestones: first_sale, sales_10,
+ * sales_50 — evaluated from the REAL sales_count column (no fabricated
+ * copy; feed text comes from the actual numbers).
+ */
+class OrderObserver
+{
+    public function updated(Order $order): void
+    {
+        if ($order->status !== Order::STATUS_PAID) {
+            return;
+        }
+
+        if ($order->getOriginal('status') === Order::STATUS_PAID) {
+            return; // idempotent replay of the same settlement
+        }
+
+        // Per-line creators (pack lines credit nobody — WalletService ruling).
+        $order->items()->with(['product.prompt', 'prompt'])->get()->each(function ($item) {
+            $prompt = $item->product?->prompt ?? $item->prompt;
+
+            if ($prompt === null) {
+                return;
+            }
+
+            $creator = $prompt->creator;
+            if ($creator === null) {
+                return;
+            }
+
+            $gamification = app(GamificationService::class);
+
+            // Fresh sales count AFTER this sale.
+            $salesCount = (int) $prompt->fresh()->sales_count;
+
+            $gamification->grantXp($creator, 'sale');
+            $gamification->evaluateCriteria($creator, 'first_sale');
+
+            if ($salesCount >= 10) {
+                $gamification->evaluateCriteria($creator, 'sales_10');
+            }
+
+            if ($salesCount >= 50) {
+                $gamification->evaluateCriteria($creator, 'sales_50');
+            }
+
+            $this->emitSaleMilestone($prompt, $creator->id, $salesCount);
+        });
+    }
+
+    /** Sale milestones at the real thresholds only (10, 50). */
+    private function emitSaleMilestone(Prompt $prompt, int $actorId, int $salesCount): void
+    {
+        if (! in_array($salesCount, [10, 50], true)) {
+            return; // milestones only — no per-sale feed spam
+        }
+
+        $dedupeKey = "sale_milestone:{$prompt->id}:{$salesCount}";
+
+        if (FeedEvent::query()->where('dedupe_key', $dedupeKey)->exists()) {
+            return;
+        }
+
+        FeedEvent::query()->create([
+            'type' => FeedEvent::TYPE_SALE_MILESTONE,
+            'actor_id' => $actorId,
+            'subject_type' => $prompt::class,
+            'subject_id' => $prompt->id,
+            'meta' => [
+                'title' => $prompt->title,
+                'slug' => $prompt->slug,
+                'sales_count' => $salesCount, // real number, never a superlative
+            ],
+            'dedupe_key' => $dedupeKey,
+            'created_at' => now(),
+        ]);
+    }
+}

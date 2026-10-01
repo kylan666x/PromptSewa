@@ -1,6 +1,6 @@
 # PromptSewa — Engineering Handoff
 
-**Prepared:** 2026-09-29 · **Current version:** v1.4.5
+**Prepared:** 2026-09-30 · **Current version:** v1.5.2
 **Live site:** https://promptsewa.techadda.com.np
 **Repo:** https://github.com/kylan666x/PromptSewa (branch `main`)
 **Stack:** Laravel 12 · PHP 8.2+ · Blade + Alpine.js 3 · Tailwind CSS (Vite build) · SQLite (dev) / MySQL (prod, cPanel)
@@ -34,6 +34,154 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 **Warning:** `deploy/public_html/.update-token` is committed to the public GitHub repo. Regenerate it on the server after install (random hex in `public_html/.update-token`, web-invisible dotfile).
 
 ## 4. Release history highlights
+
+### v1.7.2 — The Type Selector, For Real (this release)
+
+- **A1 server-rendered type cards**: create + edit Section 1 renders FIVE REAL radio inputs (`name="type"`: text · image · video · agentic · skill) from `$typeContexts` — mono label + one-line description per card, card visual on a `peer-checked:` chain. Create defaults to text; edit pre-selects the STORED type, `checked` in the served HTML, not JS. No JavaScript required for the radios to be visible and submittable. The old `name="type_radio"` template-looped radios and the hidden `:value="type"` mirror are GONE.
+- **A2 type-driven adaptive regions (Alpine enhancement, server truth)**: guidance box ships the TYPE_CONTEXTS copy server-side and Alpine swaps it (`x-text="guidance"`); category `<select>` options are server-rendered real `<option>` nodes — each scoped option carries its own `x-show="type === '…'"` re-scope gate (delivered in double-quoted attributes per the v1.0 truncation rule); section-3 chip label ships server-side + swaps; cover-upload block appears for image (zero-JS truth: `form:has(input[name=type][value=image]:checked)` show/hide rule on `data-cover-only` in app.css + the x-show enhancement; edit shows the current-cover preview + remove toggle); tool-wall chips keep the `data-modality` gate (`modality === type || 'any'`). Server-side validation remains the source of truth: category must belong to the chosen type (or be universal) — new `PromptFormRequest` rule; tools modality ∈ {type, any}; cover prohibited on non-image types.
+- **A2/A3 cover-on-switch (founder decision)**: switching an EXISTING prompt to image type now REQUIRES a cover (`Rule::when($this->isImageTypeSwitch(), ['required'])`). Create with image stays optional. The two existing PromptCreateEditTest edit-flow fixtures were re-typed to image so they are not type switches.
+- **A3 rendered-route tests**: `AuthoringTypeSelectorTest` (11 tests) — create serves five radios + text checked; edit of a stored type serves it checked; tool chips carry `data-modality` + the gate expression; cover block served + hidden without JS (asserted through the BUILT stylesheet resolved via the Vite manifest, since the `:has()` rule lives in the compiled asset the route serves); edit of an image prompt serves cover preview + remove toggle; POST create with type=image + a PNG cover → stored prompt has type image and a cover path on the public disk; POST create with an image-modality tool on type=text → validation error; PUT edit text→image without cover → error; with cover → switch persists; mismatched category rejected. **No assertion in this file touches a component file's contents.** The v1.7.1 P2 battery in `SavedHeartAndTypeSelectorTest` was retired to a supersession note (its radio assertions targeted the old template contract).
+- **A4 sweep of the unverified v1.7.1 items** — each stated: (a) saved heart = filled rose on cards/detail/Saved tab, outline unsaved — LANDED in v1.7.1, re-verified green this release (`SavedHeartAndTypeSelectorTest` + `BookmarkTest`); (b) manual-method kind select in admin, kind icon + "Scan to pay" QR at checkout, Admin→Payments "Manual methods" card link — LANDED in v1.7.1, re-verified green (`MethodKindsAndLabelsTest` + `ManualPaymentMethodsTest`); (c) hero avatar geometry ANSWERED IN WRITING — DESIGN.md v1.7.2 addendum sanctions the SQUIRCLE + FRAME RING for large hero surfaces (circular stays for small identity badges).
+- **Release facts**: suite **379 passed / 13,698 assertions**. `dist/promptsewa-1.7.2-update.zip` — **405 entries** (401 core + 4 docroot), hygiene audit **CLEAN**, 0.72 MB. **SHA-256:** `cd158b694fd53ac73ed10079a47656199c93cabc618395a13ec2338f45b7530a`.
+
+### Post-check (v1.7.2) — after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview version chip | `v1.7.2` | `config('app.version')` |
+| 2 | Open `/dashboard/prompts/create` with JS DISABLED | five type radio cards visible, text pre-checked, all fields submittable; cover block hidden | `AuthoringTypeSelectorTest::create serves five real type radios…` |
+| 3 | Select the Image radio (JS on) | guidance copy, category options, section-3 chip and tool wall all re-scope; cover block appears | same file (gate expression + Alpine contract) |
+| 4 | Open `/dashboard/prompts/{image-prompt}/edit` | image radio checked in served HTML; current-cover preview + remove toggle present | `AuthoringTypeSelectorTest::edit serves the stored type checked…`, `…::editing an image prompt serves the cover block…` |
+| 5 | Edit a TEXT prompt → switch type to Image, no cover → Save | validation error on cover_image; with a cover attached the switch persists | `…::editing text to image without a cover is a validation error`, `…::editing text to image with a cover passes…` |
+| 6 | Submit a text prompt with an image-only tool (e.g. Midjourney) | server validation error (tool modality) | `…::posting create with an image-modality tool on type text…` |
+| 7 | `cd core && php artisan test` | 379 passed, 13,698 assertions | whole suite |
+
+### v1.7.1 — Saved Heart, Type Picker, Method Kinds + Gamification Doors, SEO Crawl, Identity Links
+
+- **P1 saved hearts**: prompt-card + detail hearts render saved state as filled rose (`text-rose-600 fill-current`) vs unsaved outline — `bookmarkHeart.heartClass` Alpine getter keeps view and state in sync; DESIGN.md addendum documents the rose semantic token.
+- **P2 type selector**: create + edit prompt forms get radio cards (`type_radio`) that gate the tool chips by modality — `toolEntries` Alpine getter (name→modality map), chips with `:data-modality` show when the modality matches the selected type, the tool is `any`, or already selected (selection never silently vanishes on type switch).
+- **P3 method kinds**: `manual_payment_methods.kind` (`2026_09_30_190000`, default `other` backfill; KINDS = bank / esewa / other), validated via `Rule::in`, kind select + QR helper ("PNG/WebP, transparency preserved, ≤4 MB") on the admin form, kind chip in the admin list, per-method kind icon + bordered "Scan to pay" QR block at checkout.
+- **P4 labels**: Admin Overview revenue sublabel "paid orders · incl. pre-ledger"; Finance desk chip "ledger gross · post-cutover" — kills the founder's double-count confusion between the two desks.
+- **P5 avatar fix**: `x-user-avatar` rewritten — size lives on the OUTER wrapper, inner badge is `size-full rounded-[inherit]`, and a caller-supplied `size-*` class drops the default preset. Fixes the saffron-block hero bug (a hard-coded size colliding with the caller's).
+- **P1b gamification doors**: Badges/Frames nav pills in `admin-layout` for admins. **Real gap found and fixed: `BadgeAdminController::index` + `FrameAdminController::index` had NO staff gate — moderators got 200 on an admin-only surface.** Both now `abort_unless($request->user()?->isAdmin(), 403)`; locked by a moderator-403 test.
+- **P2b achievements surfaces**: creator profile gains an Achievements section (badge grid + Lv chip + "No badges yet — publish your first prompt to earn one." empty state) between stats and prompts; dashboard gains an Achievements tab with real progress bars (first_publish / first_sale / sales_10 / sales_50 / verified; top_rated is staff-judged, shown as such).
+- **P3b SEO crawl**: `SeoRouteCoverageTest` — a full guest/member/owner/admin crawl asserting EXACTLY ONE `<title>` per named GET route with the expected subject, PLUS a permanent route-list sync test (any new named GET route fails the suite until it's mapped in `seoExpectedSubjects()` or added to the exempt list). The crawl itself found and fixed 3 headless pages: prompt create ("Add a new prompt", noindex), prompt edit ("Edit: title"), software update.
+- **P4b identity links**: mobile-dock You slot → public profile (`creators.show`); navbar dropdown entries carry `data-testid="nav-view-profile"` / `nav-edit-profile`; profile You-menu gains a "View profile" row.
+- **P6 packs parity (evidence)**: the founder's "packs page is the same" complaint does NOT hold for SEO structure — the packs index had a full `x-seo` head ("Prompt packs") and the pack landing carried Product/Offer JSON-LD (from v1.5.0 T8) all along; the full crawl walked both and passed. Both facts are now LOCKED by `AvatarFrameCompositionTest` so they can't regress silently. If the complaint meant visual sameness between packs index and library, that's a design follow-up, not a defect.
+- **Test collateral fixed during the full-suite run**: `SeoRouteCoverageTest` global helpers renamed (`seoMember()`/`seoAdmin()`) to stop colliding with `AdminReviewTest::member()`; `DeployParityAcceptanceTest` pending-list extended with `190000` (ships in the same pv:update batch as 130000+130100 — batch count 2→3) plus a `kind` column assertion.
+- **Release facts**: suite **372 passed / 13,663 assertions**. `dist/promptsewa-1.7.1-update.zip` — **404 entries** (400 core + 4 docroot), hygiene audit **CLEAN**, 0.71 MB. **SHA-256:** `0a10b5a436d82d64efdcc82cb7cbbc7eefaa69e95b425fdf7625349518591a18`.
+
+### Post-check (v1.7.1) — after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview version chip | `v1.7.1` | `config('app.version')` |
+| 2 | `php artisan migrate:status` on prod | `2026_09_30_190000_add_kind_to_manual_payment_methods` newly Ran (alongside 130000+130100) | `DeployParityAcceptanceTest` |
+| 3 | Save a prompt, revisit the card + detail | heart renders filled rose; clicking toggles outline | `SavedHeartAndTypeSelectorTest`, `BookmarkTest` |
+| 4 | Create-prompt form: switch type radio | tool chips re-gate by modality; selected tools never disappear | `SavedHeartAndTypeSelectorTest` |
+| 5 | Admin → Manual methods: set kind on a method; open checkout | kind chip in admin list; per-method kind icon + "Scan to pay" QR block at checkout | `MethodKindsAndLabelsTest`, `ManualPaymentMethodsTest` |
+| 6 | Log in as a MODERATOR, hit `/admin/badges` and `/admin/frames` | 403 both | `MethodKindsAndLabelsTest::moderators are 403 on badges and frames management` |
+| 7 | Log in as an ADMIN → sidebar | Badges + Frames pills visible after Comp grants | `MethodKindsAndLabelsTest::the admin nav carries Badges and Frames pills` |
+| 8 | Creator profile + dashboard Achievements tab | badge grid / earned wall + progress bars render | `AchievementsAndIdentityLinksTest` |
+| 9 | Mobile dock → You slot | navigates to the public profile, not the edit form | `MobileDockTest`, `AchievementsAndIdentityLinksTest` |
+| 10 | Page `<title>` spot-check: /dashboard/prompts/create, /dashboard/prompts/edit | "Add a new prompt" / "Edit: …" (no more blank titles) | `SeoRouteCoverageTest` (full crawl) |
+| 11 | `cd core && php artisan test` | 372 passed, 13,663 assertions | whole suite |
+
+### v1.7.0 — Community & Gamification
+
+- **G1 PNG-for-everything**: `ImageUploadService` gains `badge` (512px) and `frame` (512px) alpha-preserving variants — PNG/WebP only, **JPEG sources rejected outright** (these variants exist to carry transparency; flattening a JPEG onto a black box is worse than a clear rejection) — plus `pack_hero` (1600px q82). Same alpha logic as the QR variant.
+- **G2 achievements**: `badges` (slug unique, criterion enum: first_publish / first_sale / sales_10 / sales_50 / verified / top_rated) + `user_badges` (UNIQUE(user,badge) IS the idempotency gate). `GamificationService::awardBadge` is the single award choke point — double-fire insert hits the unique constraint and is caught+ignored. XP: +50 publish, +100 sale, +25 rating received, +200 badge earned (granted by the UserBadgeObserver so manual and auto awards pay identically — the service must NOT also grant, or a double-count ships). `levelForXp()` is a pure threshold fn; "Lv N" mono chip on profiles and the feed. Admin badge CRUD + manual award with mandatory reason (audited).
+- **G3 frames**: `frames` + `users.active_frame_id` (nullOnDelete). `x-user-avatar` renders the ring via an absolute, pointer-events-none, aria-hidden overlay. Ruled surfaces: profile hero, navbar dropdown (desktop + mobile rows), feed actor avatars — **prompt cards stay clean by ruling** (asserted by occurrence count in FramesTest). Frame picker in profile edit; admin CRUD.
+- **G4 feed**: `feed_events` (type enum, actor, morph subject, meta, dedupe_key). Written ONLY by the G2 observers inside the triggering transaction — never from controllers. Stable dedupe keys (prompt_published is once per prompt LIFETIME; milestones once per threshold). Public `/feed` (paper world): paginated 20/page, page-1 file-cached 5 min, banned actors excluded at query level, noindex. Dashboard Feed tab: own events + global milestones.
+- **G5 analytics**: `prompts.views_count` + `prompt_daily_stats` (UNIQUE(prompt,day) — upserts allowed here; views are stats, never money). View counting on public detail: non-owner/non-staff, once per session-hour per prompt. `paid_at` set inside `settleOrder`. Creator Stats tab: SVG sparklines (Blade, zero deps) for 30-day views/sales/rating + top-5 table; Admin Overview: revenue/orders/users/reports series. Series file-cached 10 min; EMPTY SERIES IS FIRST-CLASS — dense 30-point arrays of zeros, never sparse/null.
+- **G6 tests**: GamificationTest (6), FeedTest (5), FramesTest (5), AnalyticsTest (8) — 24 new. Suite: **343 passed / 13,444 assertions**.
+- **Release facts**: `dist/promptsewa-1.7.0-update.zip` — **398 entries** (394 core + 4 docroot), hygiene audit **CLEAN**, 0.7 MB. **SHA-256:** `451d4098ea44f456cdaf5e1a535482dfb36fbafc5f89707ebb6edad378d091ea`.
+
+### Post-check (v1.7.0) — after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview version chip | `v1.7.0` | `config('app.version')` |
+| 2 | Fresh sale → creator's badge wall + XP chip | first_sale/first_publish badges awarded; Lv chip advances | `GamificationTest` |
+| 3 | Creator profile with a frame equipped | ring overlay on the hero avatar; NOT on prompt cards | `FramesTest` |
+| 4 | `/feed` as a guest | 200, noindex, actor avatars + badges + Lv chips, real-number milestones | `FeedTest` |
+| 5 | Creator Stats tab with zero data | 200; sparklines render flat baselines; "No published prompts yet" | `AnalyticsTest` |
+| 6 | Admin Overview with zero orders | 200; all four 30-day series render Rs. 0.00 | `AnalyticsTest` |
+| 7 | Admin → Badges: manual award with reason | audited row (awarded_by + reason); duplicate refused | `GamificationTest` |
+| 8 | Upload a JPEG as a badge/frame | rejected with a clear message | `FramesTest` |
+| 9 | `cd core && php artisan test` | 343 passed, 13,444 assertions | whole suite |
+
+### v1.6.1 — Empty-Ledger Hardening (P0 hotfix)
+
+- **Root cause of the prod /earnings 500 (K1, confirmed by repro + log + zip forensics): NOT sum-null.** A fresh creator with zero wallet rows rendered 200 on local SQLite before any change. The actual failure: v1.6.0 added `autoload.files` to composer.json for `app/Support/money.php`, but the update zip is code-only (no vendor/) and the cPanel host cannot run `composer dump-autoload` — prod's `vendor/composer/autoload_files.php` predates the helper, so **`money_npr()` was undefined at runtime** and the first money-rendering page died. The zip builder's composer.lock guard is dead code in this checkout (baseline zip `promptsewa-main-1-0-0.zip` absent from dist/), so nothing warned.
+- **K2 boundary hardening**: every money aggregate crosses the service edge as `(int)` (SUM over zero rows is NULL — the class remains a 500 until cast); all 14 money echoes in earnings/finance views now render through the crash-proof `<x-money>` component (`function_exists('money_npr')` guard + identical inline fallback), so money renders correctly even on a vendor/ that never learned the helper.
+- **K3 settings fallbacks in code**: `commission_bps` absent → 2000; `payout_min_paisa` absent → 50000; `ledger_started_at` absent → 2026-09-30. A migration/seeder gap is now cosmetic, never fatal.
+- **K4 tests (7 new)**: `EarningsEmptyLedgerTest` — guest redirect; zero-rows 200 with Rs. 0.00 + "No ledger rows yet"; finance desk 200 in the same state; payout form renders the Rs. 500 min label with the settings row present AND deleted; the autoload-gap simulation; and the standalone sweep of both money surfaces with empty fixtures — the sweep that would have caught the prod 500.
+- **K5 MySQL parity**: `EmptyLedgerMysqlParityTest` — migrated a throwaway MySQL DB, verified balance/available = 0, commission fallback = 2000, and both surfaces render 200 with Rs. 0.00 on MySQL SUM semantics. Ran (not skipped) locally.
+- **K6 release**: version chip `v1.6.1`; QA-MATRIX K-block; suite **319 passed / 13,336 assertions**; `npm run build` before zip.
+- **Release facts**: `dist/promptsewa-1.6.1-update.zip` — **373 entries** (369 core + 4 docroot), hygiene audit **CLEAN**, 0.66 MB. **SHA-256:** `6820c5bb9963714aecf7483a695869be79ed5ce7d40fa61e6531d09311228b03`.
+
+### Post-check (v1.6.1) — after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview version chip | `v1.6.1` | `config('app.version')` |
+| 2 | **`/dashboard/earnings` as a user with ZERO wallet rows (the prod-500 state)** | **200, Rs. 0.00 cards, payout form with Minimum Rs. 500.00, "No ledger rows yet"** | `EarningsEmptyLedgerTest` |
+| 3 | Admin → Finance desk on the empty ledger | 200, Rs. 0.00 totals, pre-ledger banner intact | same |
+| 4 | A priced purchase → approve → Earnings | credit renders via `<x-money>` regardless of vendor state | full suite |
+| 5 | `cd core && php artisan test` | 319 passed, 13,336 assertions (parity runs when MySQL reachable) | whole suite |
+
+### v1.6.0 — Money Core
+
+**H-series (v1.5 loose ends, shipped in this zip):**
+- **H1 count semantics**: public profile stat = PUBLISHED listings only (relabeled "published prompts"); admin Users column = "All prompts" (total). Locked by `CreatorProfileCountTest` (3). Reconciliation recorded, not "fixed": 270 published pre-adoption vs 268+1 after — the delta is a single non-published (draft/pending/rejected) listing among the 276 adopted rows; comment lives in `CreatorProfileController` + the test.
+- **H2 version authorship resilience**: `prompt_versions.user_id` FK was `cascadeOnDelete` — after adoption, a demo purge would have CASCADE-DELETED the entire version history of all 276 listings. Migration `2026_09_30_160000` rebuilds the table: user_id now NULLABLE with `nullOnDelete`. Deleted/missing authors render the honest "Former creator" mono chip — never a crash. Locked by `VersionAuthorshipResilienceTest` (3, including a full `pv:purge-demo` round-trip).
+
+**M-series (Money Core):**
+- **M1 schema**: `wallet_transactions` (insert-only: signed `amount_paisa` BIGINT, `idempotency_key` UNIQUE, meta json, created_at ONLY — no updated_at; FKs restrictOnDelete) + `payouts` (state machine requested→approved→settled / rejected|cancelled; `destination_encrypted` = Crypt::encryptString). Settings: `commission_bps` (2000, cap 5000), `payout_min_paisa` (50000), `ledger_started_at` cutover marker.
+- **M2 WalletService is THE choke point**: `balancePaisa` = SUM(ledger) with open holds added back; `availablePaisa` = plain SUM (the −hold row is already inside it — do NOT subtract again); `settleOrder(order, source)` = paid-guard + grants + per-line credits in ONE transaction, idempotency key `sale:{order_id}:{item_id}`. Exactly TWO controller call sites (OrderAdminController::approve + CheckoutController eSewa path), locked by arch test.
+- **M3 eSewa rail**: webhook `POST /payments/esewa/webhook` (CSRF-exempt via bootstrap, signature-verified, masked info log, last-webhook line in admin). Callback+webhook double-delivery credits once. Sandbox mode swaps merchant code + secret (`EPAYTEST`), NEVER skips signature verification. Admin → Payments gains the sandbox card + last-webhook info.
+- **M4 withdrawals**: creator Earnings tab (`/dashboard/earnings`): balance, available, lifetime credits, sales (comp-free by construction), payout history + request form (min-threshold, ≤ available → else 422). Request inserts withdrawal_hold (−X) + payout row in one transaction; cancel → cancelled + withdrawal_release (+X).
+- **M5 Finance desk** (Admin → Finance): gross paid / creator credits / platform net (derived, never stored) post-cutover; pre-ledger orders listed READ-ONLY with the honest banner (the Rs. 1,497 is visible, never backfilled); payout queue (approve = no ledger row, settle = no ledger row, reject = release row); ledger browser (user/type/date filters); destination decrypts ONLY in the staff-gated route, masked until "Reveal".
+- **M6 battery**: 20 new tests — double-webhook single credit; callback+webhook; manual approve atomic; hold/release/settle state machine; over/under 422; commission property across 1,200 random values × 6 bps settings (12,005 assertions); float-ban + raw-paisa-echo arch tests; ledger mutation boot-throw + repo-wide arch ban; comp-no-rows; earnings isolation; destination encrypted at rest; pre-ledger exclusion.
+- **M7**: `money_npr(paisa)` helper (`app/Support/money.php`, composer autoload files) is the single money renderer; QA-MATRIX M-block added; release facts below.
+
+- **Release facts**: `dist/promptsewa-1.6.0-update.zip` — **370 entries** (366 core + 4 docroot), hygiene audit **CLEAN**, 0.66 MB, built after `npm run build`. **SHA-256:** `7345cb637aa976b967c91df231dd4436bfce24cb81b300a6c4c42946f50a9901`. Suite: **312 passed / 13,300 assertions**.
+
+### Post-check (v1.6.0) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | `php artisan migrate:status` | `2026_09_30_160000_make_prompt_versions_user_id_nullable` + `2026_09_30_170000_create_wallet_transactions_and_payouts` Ran | migrations |
+| 2 | Admin → Overview version chip | `v1.6.0` | `config('app.version')` |
+| 3 | Manual approve a paid order → creator Earnings tab | grant issued AND `sale_credit` row visible; balance = gross × (10000−bps)/10000 | `WalletServiceTest::manual approval settles…` |
+| 4 | Creator requests payout → available drops | `withdrawal_hold` row (−X); available = balance − X | `WalletServiceTest::payout hold reduces…` |
+| 5 | Admin rejects the payout → available restored | `withdrawal_release` row (+X); NO row ever updated | same + immutability tests |
+| 6 | Admin settles an approved payout | zero new ledger rows (the hold was the debit) | `WalletServiceTest::settling a payout…` |
+| 7 | eSewa sandbox round-trip (creds present) or simulated-signature test | callback+webhook double-delivery credits ONCE | `WalletServiceTest::a double webhook…`, `callback and webhook…` |
+| 8 | H1: creator profile vs admin Users | profile shows published count; Users table shows total (276) | `CreatorProfileCountTest` |
+| 9 | H2: open `/prompts/{adopted-slug}/versions` | 200, authors render; after any author deletion: "Former creator" chip | `VersionAuthorshipResilienceTest` |
+| 10 | Comp grant → Finance desk ledger | zero new rows | `WalletServiceTest::comp grants…` |
+| 11 | Admin → Finance pre-ledger banner | pre-cutover orders listed read-only, "no wallet rows by design" | `WalletServiceTest::pre ledger orders…` |
+| 12 | `cd core && php artisan test` | 312 passed, 13,300 assertions | whole suite |
+
+### v1.5.2 — founder self-serve adoption panel (this release)
+
+- **F3 "Apply adoption" panel** — Admin → Users gains a second ops panel (below Demo purge, `AdoptionController`): Preview plan (dry run) + Apply adoption, shelling `pv:adopt-catalog` exactly like the purge panel shells `pv:purge-demo` — the runbook logic and the UI can never drift. Admin-only (moderators 403); force goes through a JS confirm. The founder can now run T4 on prod from the browser (no SSH on the cPanel host) and paste the Users-table screenshot showing `@promptsewa = 276`.
+- **Tests**: 3 new (`AdoptionPanelTest`: admin-only preview/run, dry-run writes nothing, force adopts + idempotent second run, panel renders both forms). Suite: **286 passed / 1237 assertions**.
+- **Release facts**: `dist/promptsewa-1.5.2-update.zip` — **355 entries** (351 core + 4 docroot allow-list), hygiene audit **CLEAN (0 forbidden entries)**, 0.63 MB. **SHA-256:** `f26e08b410f846a18b538c35e42bdfe2352fcabd0801e8c85de3ac9c007f2c84`.
+
+### Post-check (v1.5.2) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview version chip | `v1.5.2` matches the deployed release | `config('app.version')` single source |
+| 2 | Admin → Users → Apply catalog adoption → Preview plan (dry run) | ink terminal block lists candidate owners + total (e.g. `276 → @promptsewa`); Users table unchanged | `AdoptionPanelTest::adoption panel preview is admin-only and writes nothing` |
+| 3 | Apply adoption (confirm dialog) | success flash; every candidate prompt now owned by `@promptsewa`; packs/orders/grants untouched; version history keeps original authors | `AdoptionPanelTest::adoption panel run is admin-only and applies the adoption`, `CatalogAndVersionTruthTest` |
+| 4 | Apply adoption again | clean no-op success (idempotent) | same |
+| 5 | Users-table screenshot | `@promptsewa` shows 276 prompts (founder's Part-4 deliverable) | manual |
+| 6 | Moderators on the panel | 403 on both preview and run | same tests |
+| 7 | `cd core && php artisan test` | 286 passed, 1237 assertions | whole suite |
 
 ### v1.5.1 — SEO wiring & typeahead badges (this release)
 
@@ -185,6 +333,20 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 24. **Version snapshots: never fabricate history (v1.5.0).** Pre-v1.5.0 `prompt_versions` rows have NULL body — the history page shows the "Snapshot not captured before v1.5.0" chip and the backfill writes variables/tools ONLY. Do not backfill bodies from anywhere; do not render snapshot bodies past the paywall gate (owner/staff/active-license check inherited from the detail page). Restores are APPENDS ("Restored from vN") — never in-place copies.
 25. **Mobile nav is the bottom dock; the burger is retired (v1.5.0).** New mobile surfaces attach to dock slots (dock component `x-mobile-dock`) or to the profile "You" menu — never a drawer. The dock's saffron fill is reserved for the center CTA; keep tab states to text color. The Admin row in the "You" menu is gated server-side (`@if ($user->isModerator())`), never CSS-hidden. Error/maintenance layouts are exempt from the dock by design.
 26. **`recommended_tools` validates against the registry (v1.5.0).** The tool picker is modality-aware; the server rejects names absent from `tool_logos` (or whose modality excludes the prompt type). When seeding demo/test tools, give them `modality = any` or matching type — a text-only tool on an image prompt fails validation (this was the founder's live-edit 500-class bug).
+27. **The wallet ledger is INSERT-ONLY — enforced at model boot, not just convention (v1.6.0).** `WalletTransaction::updating()` and `::deleting()` throw RuntimeException; a repo-wide arch test bans ->update(/->delete( in any file touching the model. Balances are SUM(amount_paisa) under lockForUpdate() — there is NO cached balance column and none may be added. `availablePaisa` is the PLAIN SUM (the −hold row is already inside it); `balancePaisa` adds open holds back. Do not "simplify" either formula — the hold row being inside the SUM is the whole design.
+28. **`WalletService::settleOrder` is the ONLY credit path — exactly two controller call sites (v1.6.0).** OrderAdminController::approve (manual rail) and the CheckoutController eSewa path share it; the arch test fails on a third. Per-line idempotency key `sale:{order_id}:{item_id}` + the paid-state guard make callback+webhook double-delivery credit once. Pack lines credit NOBODY (packs have no owner — platform revenue by definition); changing that is a founder-level contract change.
+29. **Pre-ledger revenue is labeled, never backfilled (v1.6.0).** Paid orders before the `ledger_started_at` setting render read-only in the Finance desk with the "no wallet rows by design" banner. Never write wallet rows for them; never let them leak into balances.
+30. **eSewa secrets (live AND sandbox) are Crypt::encryptString'd at rest via SettingsService::SECRET_KEYS (v1.6.0).** Sandbox mode swaps merchant code + secret but NEVER skips signature verification. The webhook is CSRF-exempt — signature verification IS its guard; keep the exemption narrow in bootstrap/app.php. Payout destinations decrypt ONLY inside staff-gated controller code; views show masked text until the reveal fetch.
+31. **All money renders through `money_npr(paisa)` (v1.6.0).** Raw paisa echoes in views are banned by arch test. No float casts, no round(), no non-intdiv division in WalletService — the property test locks credit+platform == gross across random values.
+33. **Feed events emit from observers INSIDE the triggering transaction — never from controllers (v1.7.0).** Prompt/Order/UserBadge/Rating/Pack observers are the single emission point; the feed event commits or rolls back with the event. Dedupe keys are STABLE (prompt_published once per prompt lifetime; milestones once per threshold) — a key including updated_at re-emits on every save.
+34. **Frames/badges are content images: alpha-preserved variants only (v1.7.0).** JPEG sources are rejected outright for badge/frame uploads (G1) — never silently flattened. The frame overlay renders on exactly four surfaces (profile hero, navbar dropdown, feed actors, dock You); prompt cards stay clean — FramesTest asserts the occurrence count.
+36. **A feature without a nav entry is a missing feature (v1.7.1).** v1.7.0 shipped admin badge/frame CRUD with NO navigation path — the surfaces existed but no admin could reach them without typing URLs. New admin surfaces MUST ship their nav pill in the SAME commit (`admin-layout` pills, ordered after Comp grants), and staff-gated indexes MUST gate explicitly (`abort_unless($request->user()?->isAdmin(), 403)`) — the badge/frame indexes silently served 200 to moderators because a policy covered the write routes but nobody checked the read route. Both gaps are now locked by tests.
+37. **SEO coverage is self-enforcing (v1.7.1).** `SeoRouteCoverageTest` permanently syncs the route list: every named GET route must appear in `seoExpectedSubjects()` or the exempt list, or the suite fails. When you add a route, extend BOTH — the map for the crawl's expected `<title>` subject, or the exempt list (JSON, downloads, POST-only). Guest/member/owner/admin fixtures live in the crawl itself; don't duplicate world-building per test.
+38. **New migrations that touch a table created by a PENDING migration must join the parity pending-list (v1.7.1).** `DeployParityAcceptanceTest` builds the v1.4.3 schema by running every migration EXCEPT a hard-coded pending list — a later migration depending on a pending table explodes the build. When pv:update will ship several migrations in one batch, add each to `$pending` and bump the batch-count assertion. Version helpers in test files must be uniquely named repo-wide (global functions collide when the full suite loads) — prefix test helpers (e.g. `seoMember()`), don't reuse `member()`/`admin()`.
+39. **Adaptive authoring regions are asserted on the rendered create/edit routes — component-level assertions are banned for route-facing UI (fourth occurrence of the exists-but-not-included class).** v1.7.1's type-selector tests passed while asserting a Blade template's source; the served page could have drifted silently. v1.7.2's `AuthoringTypeSelectorTest` hits the routes themselves: served HTML for radio `checked` state, gate expressions and cover markup; real POST/PUT round-trips for validation. Built-asset contracts (the zero-JS `:has()` rule) are asserted through the Vite manifest, never by guessing the hash. When you add route-facing UI, the test asserts what the ROUTE serves — not what a file contains.
+
+35. **Views are stats, not money — upserts allowed there, never on the ledger/payouts (v1.7.0).** prompt_daily_stats upserts per (prompt, day); wallet_transactions stays insert-only with zero exceptions. View counting excludes owner/staff and dedupes per session-hour via session key. Series are file-cached 10 min (TTL honest); the database-cache store SURVIVES RefreshDatabase — tests must cache()->flush() before asserting empty-data states.
+32. **Empty ledger is a first-class prod state — every money aggregate must survive zero rows; SUM-null is a 500 until cast (v1.6.1).** Every SUM crosses the service/controller edge as `(int)`. AND: `autoload.files` helpers (app/Support/money.php) do NOT exist on the host after a code-only update zip — the no-composer host cannot refresh vendor/, so money-rendering views MUST use the `function_exists('money_npr')`-guarded `<x-money>` component (the v1.6.1 prod /earnings 500 root cause). If composer.json autoload changes again, the SAME trap applies to any new helper file: either define a guarded fallback or ship a full release zip. The zip builder's composer.lock guard is dead code unless `deploy/promptsewa-main-1-0-0.zip` exists — restore that baseline or add a content-hash check against composer.json.
 22. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
 
 ## 7. Deploying the current update
@@ -208,6 +370,22 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 8 | `cd core && php artisan test` | 159 passed, 607 assertions | whole suite |
 
 SHA-256 of `dist/promptsewa-1.4.1-update.zip`: `90dc27e1169331edbcec5892d57648588517c4596c8e488663350869a13f8a40` (295 entries; ships S1–S4 controllers, migrations, 405/401 error pages, compiled `public/build`).
+
+### Post-check (v1.7.1) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Zip contents (builder output) | `entries: 404 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | `php artisan migrate:status` on prod | exactly 130000 + 130100 + **190000** newly Ran | `DeployParityAcceptanceTest` (parity DB migrates all three in one batch) |
+| 3 | Manual methods: set a kind (bank/esewa/other), reload | kind persists, chip shows in the list; checkout shows the kind icon + "Scan to pay" QR block per method | `MethodKindsAndLabelsTest`, `ManualPaymentMethodsTest` |
+| 4 | Moderator hits `/admin/badges` + `/admin/frames` | 403 (was silently 200 before v1.7.1) | `AchievementsAndIdentityLinksTest::moderators are 403 on badges and frames management` |
+| 5 | Admin sidebar as admin | Badges + Frames pills visible | `AchievementsAndIdentityLinksTest::admin nav shows badges and frames pills` |
+| 6 | Page titles on prompt create/edit | "Add a new prompt" / "Edit: …" — never blank | `SeoRouteCoverageTest` (crawl + route-list sync) |
+| 7 | Saved-prompt heart on a card + detail | filled rose when saved, outline when not | `SavedHeartAndTypeSelectorTest`, `BookmarkTest` |
+| 8 | Admin → Overview shows version chip | `v1.7.1` chip matches the deployed release | `config('app.version')` single source |
+| 9 | `cd core && php artisan test` | 372 passed, 13,663 assertions | whole suite |
+
+SHA-256 of `dist/promptsewa-1.7.1-update.zip`: `0a10b5a436d82d64efdcc82cb7cbbc7eefaa69e95b425fdf7625349518591a18` (404 entries; ships P1–P5 + P1b–P4b, the kind migration, compiled `public/build`).
 
 ### Post-check (v1.4.5) — run in order after the update.php pipeline finishes
 
@@ -311,5 +489,7 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.4.5 (2026-09-29) | Mobile navbar showed neither brand mark nor logo (founder screenshot) | `app-layout` never forwarded `brand-mark-path` to `x-navbar` — the mobile mark branch was dead code; the existing test only asserted `md:hidden` somewhere in the page, which passed while mobile showed nothing | v1.5.0 (T11: prop forwarded + regex assertions on BOTH responsive rows) |
 | v1.4.5 (2026-09-29) | Any populated pack landing page 500'd | `latest()` inside the `publishedPrompts` eager load emitted a bare `order by created_at` — ambiguous between `prompts` and `pack_prompt` inside the belongsToMany window function | v1.5.0 (qualified `orderByDesc('prompts.created_at')`; landing test renders a populated pack) |
 | pre-1.5.0 | Founder live-edit error: prompt saves rejected / tools broke | `recommended_tools` validated as bare strings — arbitrary names slipped in and broke logo rendering; no modality/type coupling | v1.5.0 (T6: registry + modality validation, repro test first) |
+| v1.6.0 (2026-09-30) | — incident-free release | n/a | Money Core shipped with the full M6 gate green (312 passed / 13,300 assertions); zero live incidents recorded |
+| v1.7.1 (2026-09-30) | Admin badge/frame index pages served 200 to MODERATORS — an admin-only surface with no read gate (found pre-release by the P1b door work, never exploited) | indexes relied on the write-route policy only; no explicit admin gate on the read route | v1.7.1 (abort_unless isAdmin on both indexes + moderator-403 test + nav pills so admins can actually reach them) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

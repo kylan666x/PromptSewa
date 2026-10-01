@@ -1,4 +1,6 @@
 <x-app-layout>
+    {{-- P3 (v1.7.1): SEO coverage — this admin surface was headless. --}}
+    <x-seo :title="'Software update'" robots="noindex, nofollow"/>
     @php
         /** @var \Illuminate\Support\Collection<int, array{level: string, line: string}>|null $log */
         /** @var string|null $tokenHint */

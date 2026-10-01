@@ -16,7 +16,8 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $tab = $request->query('tab') === 'saved' ? 'saved' : 'prompts';
+        $tabParam = $request->query('tab');
+        $tab = in_array($tabParam, ['saved', 'stats', 'feed', 'achievements'], true) ? $tabParam : 'prompts';
 
         $prompts = $user->prompts()
             ->with(['category', 'latestVersion'])
@@ -42,11 +43,73 @@ class DashboardController extends Controller
             'draft' => $user->prompts()->where('status', Prompt::STATUS_DRAFT)->count(),
         ];
 
+        // G5 (v1.7.0): Stats tab series (30-day, file-cached 10 min).
+        // Empty series is a first-class state — 30 zeros, never sparse.
+        $analytics = $tab === 'stats' ? app(\App\Services\AnalyticsService::class) : null;
+
+        // G4 (v1.7.0): Feed tab — own events + global milestones.
+        $feedEvents = $tab === 'feed'
+            ? \App\Models\FeedEvent::query()
+                ->publicStream()
+                ->where(function ($q) use ($user) {
+                    $q->where('actor_id', $user->id)
+                        ->orWhere('type', \App\Models\FeedEvent::TYPE_SALE_MILESTONE);
+                })
+                ->paginate(20, pageName: 'feed_page')
+            : null;
+
+        // P2b (v1.7.1): Achievements tab — earned wall + REAL progress rows
+        // computed from actual counts. No fabricated thresholds, no hidden
+        // badges: every criterion with an active badge definition shows its
+        // true current number against its real trigger value.
+        $achievements = null;
+
+        if ($tab === 'achievements') {
+            $earned = $user->userBadges()->with('badge')->orderByDesc('awarded_at')->get();
+
+            $salesCount = (int) $user->prompts()->published()->sum('sales_count');
+            $publishedCount = $user->prompts()->where('status', Prompt::STATUS_PUBLISHED)->count();
+
+            // Real trigger values per criterion (OrderObserver semantics).
+            $progressMap = [
+                'first_publish' => ['label' => 'Publish your first prompt', 'current' => min($publishedCount, 1), 'goal' => 1],
+                'first_sale' => ['label' => 'Make your first sale', 'current' => min($salesCount, 1), 'goal' => 1],
+                'sales_10' => ['label' => 'Reach 10 sales', 'current' => min($salesCount, 10), 'goal' => 10],
+                'sales_50' => ['label' => 'Reach 50 sales', 'current' => min($salesCount, 50), 'goal' => 50],
+                'verified' => ['label' => 'Get verified', 'current' => $user->is_verified ? 1 : 0, 'goal' => 1],
+                'top_rated' => ['label' => 'Earn a top rating', 'current' => null, 'goal' => null], // staff-judged
+            ];
+
+            $earnedByCriterion = $earned->filter(fn ($b) => $b->badge !== null)
+                ->mapWithKeys(fn ($b) => [$b->badge->criterion => $b]);
+
+            $achievements = [
+                'earned' => $earned,
+                'progress' => collect(\App\Models\Badge::CRITERIA)
+                    ->map(fn (string $criterion) => [
+                        'criterion' => $criterion,
+                        'earned' => $earnedByCriterion->has($criterion),
+                        'label' => $progressMap[$criterion]['label'] ?? ucfirst(str_replace('_', ' ', $criterion)),
+                        'current' => $progressMap[$criterion]['current'] ?? null,
+                        'goal' => $progressMap[$criterion]['goal'] ?? null,
+                    ])
+                    ->values(),
+            ];
+        }
+
         return view('dashboard', [
             'prompts' => $prompts,
             'stats' => $stats,
             'tab' => $tab,
             'saved' => $saved,
+            'viewsSeries' => $analytics?->viewsSeries(),
+            'salesSeries' => $analytics?->salesSeries($user, countOnly: true),
+            'ratingSeries' => $analytics?->ratingSeries($user),
+            'topPrompts' => $analytics !== null
+                ? $user->prompts()->published()->orderByDesc('views_count')->limit(5)->get(['id', 'title', 'slug', 'views_count', 'sales_count'])
+                : null,
+            'feedEvents' => $feedEvents,
+            'achievements' => $achievements,
         ]);
     }
 }

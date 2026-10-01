@@ -139,4 +139,30 @@
             <pre class="mt-4 max-h-72 overflow-auto rounded-xl bg-ink p-4 font-mono text-[11px] leading-relaxed text-emerald-200">{{ session('purge_preview') }}</pre>
         @endif
     </div>
+
+    {{-- F3 (v1.5.2): "Apply adoption" panel — dry-run preview + force. Shells
+         pv:adopt-catalog so the runbook logic and this UI never drift. --}}
+    <div class="mt-6 rounded-2xl border border-[#1d9bf0]/25 bg-[#1d9bf0]/5 p-6">
+        <h3 class="text-sm font-semibold text-ink">Apply catalog adoption</h3>
+        <p class="mt-1 text-xs text-ink/70">
+            Reassigns every prompt owned by a seeded demo/bulk identity to the official
+            PromptSewa account. Packs, orders, and license grants are untouched; version
+            history keeps the original author. Preview first — Apply runs the exact
+            dry-run plan.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+            <form method="POST" action="{{ route('admin.users.adopt.preview') }}">
+                @csrf
+                <button class="rounded-xl border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-[#1d9bf0] hover:text-[#1d9bf0]">Preview plan (dry run)</button>
+            </form>
+            <form method="POST" action="{{ route('admin.users.adopt.run') }}"
+                  onsubmit="return confirm('APPLY catalog adoption now? Every candidate prompt moves to the official account. This follows the dry-run plan exactly.')">
+                @csrf
+                <button class="rounded-xl bg-[#1d9bf0] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110">Apply adoption</button>
+            </form>
+        </div>
+        @if (session('adoption_preview'))
+            <pre class="mt-4 max-h-72 overflow-auto rounded-xl bg-ink p-4 font-mono text-[11px] leading-relaxed text-sky-200">{{ session('adoption_preview') }}</pre>
+        @endif
+    </div>
 </x-admin-layout>

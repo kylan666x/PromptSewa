@@ -19,7 +19,11 @@ class ProfileController extends Controller
     {
         $this->abortIfOfficialAndNotAdmin($request->user());
 
-        return view('dashboard.profile', ['user' => $request->user()]);
+        // G3 (v1.7.0): the frame picker — active frames only, none = clear.
+        return view('dashboard.profile', [
+            'frames' => \App\Models\Frame::query()->where('is_active', true)->orderBy('name')->get(),
+            'user' => $request->user(),
+        ]);
     }
 
     /**
@@ -53,6 +57,8 @@ class ProfileController extends Controller
         $this->abortIfOfficialAndNotAdmin($user);
 
         $validated = $request->validate([
+            // G3 (v1.7.0): nullable frame id — an inactive/foreign id 404s via exists.
+            'active_frame_id' => ['nullable', 'exists:frames,id'],
             'name' => ['required', 'string', 'min:2', 'max:60'],
             'username' => [
                 'required',
@@ -107,6 +113,10 @@ class ProfileController extends Controller
 
         $bio = trim((string) ($validated['bio'] ?? ''));
         $user->bio = $bio !== '' ? $bio : null;
+
+        // G3 (v1.7.0): frame selection — a missing/empty checkbox clears it.
+        $user->active_frame_id = $validated['active_frame_id'] ?? null;
+
         $user->save();
 
         return back()->with('success', 'Profile updated.');

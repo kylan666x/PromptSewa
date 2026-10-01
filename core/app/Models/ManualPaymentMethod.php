@@ -16,8 +16,18 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ManualPaymentMethod extends Model
 {
+    /** P3 (v1.7.1): method kind — drives the checkout card's icon. */
+    final public const KINDS = ['bank', 'esewa', 'other'];
+
+    final public const KIND_BANK = 'bank';
+
+    final public const KIND_ESEWA = 'esewa';
+
+    final public const KIND_OTHER = 'other';
+
     protected $fillable = [
         'name',
+        'kind',
         'instructions',
         'qr_path',
         'position',

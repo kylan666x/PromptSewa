@@ -4,20 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Services\EntitlementService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Admin order desk: browse payment history, approve or reject manual
- * payments. Approval runs inside the same transaction that fulfills the
- * order — grants follow payment confirmation in one atomic step.
+ * payments. Approval runs through the WalletService::settleOrder choke
+ * point — grants AND creator credits follow payment confirmation in one
+ * atomic, idempotent step (M2, v1.6.0).
  */
 class OrderAdminController extends Controller
 {
-    public function __construct(
-        private readonly EntitlementService $entitlements,
-    ) {}
 
     public function index(Request $request)
     {
@@ -45,14 +41,10 @@ class OrderAdminController extends Controller
             return back()->withErrors(['order' => "Order #{$order->id} is already {$order->status}."]);
         }
 
-        DB::transaction(function () use ($order) {
-            $order->fill([
-                'status' => Order::STATUS_PAID,
-                'paid_at' => now(),
-            ])->save();
-
-            $this->entitlements->fulfill($order->refresh());
-        });
+        // M2 (v1.6.0): approval goes through the WalletService choke point —
+        // paid guard + grants + creator credits, one transaction, idempotent.
+        // No controller may duplicate this pipeline (M6 arch test).
+        app(\App\Services\WalletService::class)->settleOrder($order, 'manual');
 
         return back()->with('success', "Order #{$order->id} approved — licenses granted.");
     }

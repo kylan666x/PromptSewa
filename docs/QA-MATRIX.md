@@ -1,4 +1,130 @@
-# PromptSewa QA Matrix — v1.4.5 "Release Hygiene"
+# PromptSewa QA Matrix — v1.7.2 "The Type Selector, For Real"
+
+## A-block (v1.7.2)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| A1 create: five SERVER-RENDERED type radio cards (Text · Image · Video · Agentic · Skill), mono label + one-line description, text checked in served HTML, zero JS needed | ✅ | `AuthoringTypeSelectorTest::create serves five real type radios with the text one checked` |
+| A1 edit: stored type pre-selected — `checked` in the SERVED html, not JS | ✅ | `AuthoringTypeSelectorTest::edit serves the stored type checked in the HTML, not via JS` |
+| A2 guidance box: server-rendered TYPE_CONTEXTS copy + Alpine `x-text` swap on change | ✅ | `AuthoringTypeSelectorTest::create serves five real type radios…` (served guidance text), Alpine swap in `promptForm` |
+| A2 category re-scope: server-rendered `<option>` nodes, per-option `x-show` gate; server truth = category belongs to type (or universal) | ✅ | `AuthoringTypeSelectorTest::category options are server-rendered and scoped per type in the markup`, `…::a category scoped to another type is rejected server-side` |
+| A2 section-3 chip label: server-rendered + Alpine swap | ✅ | rendered-route contract in `AuthoringTypeSelectorTest` (chip ships with the served type label) |
+| A2 cover block: appears for image type; zero-JS `:has()` show/hide in the built CSS + `x-show` enhancement; current-cover preview + remove toggle on edit | ✅ | `AuthoringTypeSelectorTest::cover block is served inside the form and hidden for non-image types without JS`, `…::editing an image prompt serves the cover block, preview and remove toggle` |
+| A2 tool wall: chips carry `data-modality` + the gate expression (modality ∈ {type, any}); server truth mirrors | ✅ | `AuthoringTypeSelectorTest::tool chips carry data-modality and the modality gate expression`, `…::posting create with an image-modality tool on type text is a validation error` |
+| A3 create POST: type=image + PNG cover → stored type image + cover on the PUBLIC disk (GD re-encoded) | ✅ | `AuthoringTypeSelectorTest::posting create with type image and a png cover stores both` |
+| A3 edit POST: text→image WITHOUT cover → validation error on `cover_image` (founder decision: cover required on the switch) | ✅ | `AuthoringTypeSelectorTest::editing text to image without a cover is a validation error` |
+| A3 edit POST: text→image WITH cover → passes, switch persists | ✅ | `AuthoringTypeSelectorTest::editing text to image with a cover passes and persists the switch` |
+| A3 discipline: NO component-file assertions in the battery — every assertion hits the served route HTML/POST round-trip | ✅ | whole `AuthoringTypeSelectorTest` file (grep: no `view(…)`,`File::get` on blades) |
+| A4(a) saved heart = filled rose (cards/detail/Saved tab), outline when unsaved — LANDED in v1.7.1, re-verified green this release | ✅ | `SavedHeartAndTypeSelectorTest` (3 heart tests), `BookmarkTest` |
+| A4(b) manual methods kind (bank/esewa/other): admin select, kind icon + "Scan to pay" QR at checkout, Admin→Payments "Manual methods" card link — LANDED in v1.7.1, re-verified green | ✅ | `MethodKindsAndLabelsTest`, `ManualPaymentMethodsTest` |
+| A4(c) hero avatar geometry answered IN WRITING: squircle + ring sanctioned by DESIGN.md addendum (v1.7.2); circular stays for small badges | ✅ (docs) | DESIGN.md "Hero avatar geometry (v1.7.2 addendum)" + `AvatarFrameCompositionTest` (composition rules unchanged) |
+| A5 version chip v1.7.2 (config single source + builder APP_VERSION); suite 379 passed / 13,698 assertions | ✅ | `config('app.version')`; `ReleaseHygieneTest` builds the real zip |
+
+---
+
+# PromptSewa QA Matrix — v1.7.1 "Saved Heart, Type Picker, Method Kinds" + "Gamification Doors, SEO Crawl, Identity Links"
+
+## P-block (v1.7.1)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| Hearts: saved state renders filled rose on card + detail; unsaved outline | ✅ | `SavedHeartAndTypeSelectorTest::a pre-flipped saved heart carries the filled-rose class and aria-pressed on cards`, `…::an unsaved heart ships the outline state`, `…::the detail page heart ships filled-rose when saved and outline when not`, `BookmarkTest` |
+| Type selector: radio cards gate tool chips by modality (any always visible; selected tools never vanish) | ✅ | `SavedHeartAndTypeSelectorTest::create form renders all five type radio cards`, `…::image-modality tool chips carry the gate attribute and x-show expression`, `…::edit form pre-selects the stored type`, `…::category options are type-scoped in the Alpine payload`, `RenderedFormOrderTest` |
+| Manual method kind column: default 'other' backfill, validated via Rule::in, persisted | ✅ | `MethodKindsAndLabelsTest::the kind column backfills legacy rows to other`, `…::methods persist an explicit kind`, migration `2026_09_30_190000_add_kind_to_manual_payment_methods` |
+| Checkout: per-method kind icon + "Scan to pay" QR block | ✅ | `MethodKindsAndLabelsTest::checkout renders the kind icon and Scan-to-pay QR block per active method`, `…::legacy fallback renders when zero methods exist` |
+| Admin manual-methods: kind select + QR helper text + kind chip in list | ✅ | `MethodKindsAndLabelsTest::methods persist an explicit kind`, `ManualPaymentMethodsTest` |
+| Admin Overview "paid orders · incl. pre-ledger" + Finance "ledger gross · post-cutover" chip | ✅ | `MethodKindsAndLabelsTest::admin overview and finance desk keep their two distinct revenue truths` |
+| Gamification doors: Badges/Frames nav pills for admins; badge/frame index 403 for moderators | ✅ | `MethodKindsAndLabelsTest::the admin nav carries Badges and Frames pills for admins`, `…::moderators are 403 on badges and frames management` |
+| Creator achievements section (badges grid + Lv chip + empty state) | ✅ | `AchievementsAndIdentityLinksTest::a badged profile renders the Achievements section between stats and prompts`, `…::an unbadged profile shows the honest empty state` |
+| Dashboard Achievements tab: earned wall + progress bars (verified, staff-judged top_rated) | ✅ | `AchievementsAndIdentityLinksTest::the dashboard achievements tab shows the earned wall and real progress rows` |
+| Identity links: dock You → public profile; navbar/profile "View profile" rows | ✅ | `AchievementsAndIdentityLinksTest::the dock You slot links to the public profile for authed users`, `…::the desktop dropdown keeps distinct view and edit profile entries` (testids `nav-view-profile`/`nav-edit-profile`), `…::the profile page hosts the You menu with a view-profile row`, `MobileDockTest` |
+| SEO: every named GET route has exactly one `<title>` with expected subject | ✅ | `SeoRouteCoverageTest::every named GET route renders exactly one x-seo <title>…` (full crawl, 122 assertions) |
+| SEO: route-list sync — new named GET routes fail the suite until mapped or exempted | ✅ | `SeoRouteCoverageTest::the permanent route list stays in sync — every named GET route is either asserted or explicitly exempted` |
+| SEO: previously headless pages now titled (prompt create/edit, software update) | ✅ | crawl covers `dashboard.prompts.create` ("Add a new prompt", noindex), `dashboard.prompts.edit` ("Edit: …"), `admin.update` ("Software update") |
+| Avatar component: size on wrapper, no saffron-block overlap, preset dropped when caller sizes | ✅ | `AvatarFrameCompositionTest::no-frame hero with a photo renders one full-size img and zero saffron placeholder nodes`, `…::with-frame hero renders photo plus ring`, `…::preset sizes still apply when no caller size class is present` |
+| Packs parity: index full head + landing Product/Offer JSON-LD + dock on both | ✅ | `AvatarFrameCompositionTest::packs index carries full x-seo head tags`, `…::pack landing carries full x-seo and Product/Offer JSON-LD`, `…::the mobile dock renders on both pack surfaces` |
+| Parity deploy: v1.4.3 DB + pv:update runs 130000+130100+190000, kind column lands | ✅ | `DeployParityAcceptanceTest::v1.4.3-schema database migrates exactly 130000+130100+190000…` |
+| Version chip 1.7.1 in config + builder; zip 404 entries, hygiene CLEAN | ✅ | `ReleaseHygieneTest` (builds real zip via `deploy/build-update-zip.php`) |
+
+---
+
+# PromptSewa QA Matrix — v1.7.0 "Community & Gamification"
+
+## G-block (v1.7.0)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| Badge/frame alpha-preservation through the pipeline | ✅ | `FramesTest::frame uploads preserve alpha through the image pipeline` |
+| JPEG → badge/frame rejected outright | ✅ | `FramesTest::jpeg sources are rejected for badge and frame variants` |
+| Badge award idempotent under double-fire (UNIQUE user+badge) | ✅ | `GamificationTest::badge award is idempotent under double-fire` |
+| Manual award audited (awarded_by + reason), duplicate refused | ✅ | `GamificationTest::manual award is audited with awarder and reason` |
+| XP thresholds + level chip pure function (Lv 1–10) | ✅ | `GamificationTest::xp thresholds and level chip are pure functions of xp` |
+| Publish → +50 XP, badge award, feed emission, no double-emit on re-save | ✅ | `GamificationTest::publishing pays xp and awards first_publish with a feed event` |
+| Rating received → +25 XP to creator | ✅ | `GamificationTest::rating received pays the creator 25 xp` |
+| Level chip renders in the feed | ✅ | `GamificationTest::level chip renders on the public feed` |
+| Feed renders for guests + noindex | ✅ | `FeedTest::the feed renders for guests and is noindex` |
+| Banned actors excluded at query level | ✅ | `FeedTest::banned actors are excluded at query level` |
+| Feed paginates 20/page | ✅ | `FeedTest::the feed paginates at 20 per page` |
+| Dashboard Feed tab: own events + global milestones only | ✅ | `FeedTest::the dashboard feed tab shows own events plus global milestones` |
+| Pack creation emits pack_created | ✅ | `FeedTest::pack_created events render in the public feed` |
+| Frame overlay on exactly the four ruled surfaces, never prompt cards | ✅ | `FramesTest::frame overlay renders on the four ruled surfaces and never on prompt cards` |
+| Frame select/clear in profile edit; delete falls users back safely | ✅ | `FramesTest::users can select and clear a frame…`, `deleting a frame falls users back…` |
+| Owner/staff views excluded; guest counted | ✅ | `AnalyticsTest::owner and staff views are excluded from counting` |
+| Session-hour view dedupe | ✅ | `AnalyticsTest::views dedupe once per session-hour per prompt` |
+| Daily stat upsert: one row per prompt/day, incremented | ✅ | `AnalyticsTest::the daily stat upserts one row per prompt per day` |
+| Empty series = dense 30 points, renders clean (sparkline component) | ✅ | `AnalyticsTest::series builders return dense 30-point arrays…`, `sparkline renders an empty series as a clean baseline` |
+| Admin overview renders with zero orders | ✅ | `AnalyticsTest::admin overview renders with zero orders` |
+| Creator Stats tab zero-data render | ✅ | `AnalyticsTest::creator stats tab renders clean with zero data` |
+
+---
+
+# PromptSewa QA Matrix — v1.6.1 "Empty-Ledger Hardening" (hotfix)
+
+## K-block (v1.6.1 hotfix — prod /earnings 500)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| Guest redirected from /earnings | ✅ | `EarningsEmptyLedgerTest::guest is redirected away from the earnings page` |
+| Zero wallet rows → 200 with Rs. 0 + pre-ledger banner | ✅ | `EarningsEmptyLedgerTest::creator with zero wallet rows gets a 200 showing Rs. 0…` |
+| Finance desk 200 in the same empty state | ✅ | `EarningsEmptyLedgerTest::finance desk renders 200 in the same empty state` |
+| Payout form renders with min-threshold label (settings row present AND absent) | ✅ | `EarningsEmptyLedgerTest::payout request form renders with the min-threshold label…` |
+| money_npr undefined at runtime (composer autoload gap) → views still render | ✅ | `EarningsEmptyLedgerTest::the helper fallback renders money…` (function_exists guard on <x-money>) |
+| Standalone sweep of both money surfaces with empty fixtures | ✅ | `EarningsEmptyLedgerTest::earnings and finance render standalone with empty fixtures in the sweep` |
+| MySQL parity of the empty-ledger scenario | ✅ (skips without MySQL) | `EmptyLedgerMysqlParityTest::earnings and finance survive an empty ledger on MySQL` |
+| Settings fallbacks in code (commission_bps absent → 2000) | ✅ | `EmptyLedgerMysqlParityTest` + `WalletServiceTest::commission respects the admin-editable bps setting` |
+| Commission property test re-run unchanged | ✅ | `CommissionPropertyTest` (unchanged, 12,005 assertions) |
+
+---
+
+# PromptSewa QA Matrix — v1.6.0 "Money Core"
+
+## Money Core (M-block, v1.6.0)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| Double-webhook single credit | ✅ | `WalletServiceTest::a double webhook credits exactly once` |
+| Callback + webhook both delivered → single credit | ✅ | `WalletServiceTest::callback and webhook double delivery credits once` |
+| Manual approve grants + credits atomically | ✅ | `WalletServiceTest::manual approval settles the order, grants licenses and credits the creator in one transaction` + `CheckoutFlowTest` regression rows |
+| Hold reduces available; reject/cancel restores; settle never double-debits | ✅ | `WalletServiceTest::payout hold reduces available and reject or cancel releases it`, `settling a payout inserts no further ledger rows` |
+| Over-available / under-min payout → 422 | ✅ | `WalletServiceTest::over available payout is refused` / `payout below the minimum threshold is refused` |
+| Commission integer property (200 random values) | ✅ | `CommissionPropertyTest::credit plus platform share equals gross across 200 random paisa values` |
+| No floats in WalletService (arch) | ✅ | `CommissionPropertyTest::walletservice contains no float casts or float functions` |
+| Ledger immutability — model boot throws | ✅ | `WalletLedgerImmutabilityTest::updating a wallet transaction throws`, `deleting one throws` |
+| Ledger immutability — repo-wide arch ban | ✅ | `WalletLedgerImmutabilityTest::no code path calls update or delete on WalletTransaction repo-wide` |
+| Comp grants create zero ledger rows | ✅ | `WalletServiceTest::comp grants create zero ledger rows` |
+| Earnings isolation between creators | ✅ | `WalletServiceTest::creator earnings are isolated to their own ledger rows` |
+| Destination encrypted at rest | ✅ | `WalletServiceTest::payout destination is encrypted at rest and decrypts for staff` |
+| Pre-ledger orders excluded from balances, present in desk | ✅ | `WalletServiceTest::pre ledger orders never appear in balances but appear in the finance desk` |
+| money_npr is the single money renderer (arch) | ✅ | `CommissionPropertyTest::views never echo raw paisa values` |
+| Only the admin-approval + eSewa paths call settleOrder | ✅ | `WalletServiceTest::settleorder has exactly two controller call sites` |
+| eSewa webhook CSRF-exempt + signature-verified | ✅ | `WalletServiceTest::the esewa webhook is csrf exempt and signature verified` |
+| Sandbox swaps credentials but never skips verification | ✅ | `WalletServiceTest::sandbox mode swaps the merchant code but signature verification stays on` |
+| H1 count semantics (profile published vs admin all) | ✅ | `CreatorProfileCountTest` (3 tests) |
+| H2 version authorship resilience | ✅ | `VersionAuthorshipResilienceTest` (3 tests) |
+
+---
+
+# PromptSewa QA Matrix — v1.4.5 "Release Hygiene" (historical)
 
 Every admin + user flow, its status, and the Pest test that locks it.
 Suite: `cd core && php artisan test` → **233 passed, 1023 assertions** (2026-09-29; parity test skips without MySQL).

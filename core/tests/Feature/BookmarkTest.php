@@ -66,10 +66,14 @@ test('the prompt card heart is pre-flipped for an existing bookmark', function (
     expect($html)->toContain('bookmarkHeart')
         ->and($html)->toContain('saved'.chr(92).'u0022:true');
 
-    // And without a bookmark it starts false.
+    // P1 (v1.7.1): pre-flipped saved state = the FILLED-ROSE class pair.
+    expect($html)->toContain('text-rose-600 fill-current');
+
+    // And without a bookmark it starts false with the outline state.
     $other = Prompt::factory()->for($creator, 'creator')->hasVersion()->create();
     $html2 = $this->actingAs($user)->get(route('library.index'))->getContent();
-    expect($html2)->toContain('saved'.chr(92).'u0022:false');
+    expect($html2)->toContain('saved'.chr(92).'u0022:false')
+        ->and($html2)->toContain('text-ink/40 fill-none');
 });
 
 test('the detail page shows the save button with the correct state', function () {

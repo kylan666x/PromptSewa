@@ -26,6 +26,11 @@ class PaymentMethodAdminController extends Controller
             'esewaMerchantCode' => (string) $this->settings->get('esewa_merchant_code', ''),
             'esewaBaseUrl' => (string) $this->settings->get('esewa_base_url', 'https://rc.esewa.com.np'),
             'esewaSecretSaved' => (string) $this->settings->get('esewa_secret_key', '') !== '',
+            // M3 (v1.6.0): sandbox rail + last-webhook info line.
+            'esewaSandbox' => $this->settings->isOn('esewa_sandbox'),
+            'esewaSandboxMerchantCode' => (string) $this->settings->get('esewa_sandbox_merchant_code', 'EPAYTEST'),
+            'esewaSandboxSecretSaved' => (string) $this->settings->get('esewa_sandbox_secret_key', '') !== '',
+            'esewaLastWebhook' => (string) $this->settings->get('esewa_last_webhook', ''),
             'manualEnabled' => $this->settings->isOn('manual_payment_enabled'),
             // keep legacy alias visible for BC if a key exists
             'manualInstructions' => (string) $this->settings->get('manual_payment_instructions', ''),
@@ -43,6 +48,9 @@ class PaymentMethodAdminController extends Controller
             'esewa_merchant_code' => ['nullable', 'string', 'max:60'],
             'esewa_base_url' => ['nullable', 'url', 'max:190'],
             'esewa_secret_key' => ['nullable', 'string', 'max:500'],
+            'esewa_sandbox' => ['nullable', 'boolean'],
+            'esewa_sandbox_merchant_code' => ['nullable', 'string', 'max:60'],
+            'esewa_sandbox_secret_key' => ['nullable', 'string', 'max:500'],
             'manual_enabled' => ['nullable', 'boolean'],
             'manual_payment_instructions' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -64,6 +72,14 @@ class PaymentMethodAdminController extends Controller
         // submitting the form without retyping them.
         if (($validated['esewa_secret_key'] ?? '') !== '') {
             $this->settings->set('esewa_secret_key', trim((string) $validated['esewa_secret_key']));
+        }
+
+        // M3 (v1.6.0): sandbox rail settings (same write-only secret rule).
+        $this->settings->set('esewa_sandbox', $request->boolean('esewa_sandbox') ? '1' : '0');
+        $this->settings->set('esewa_sandbox_merchant_code', trim((string) ($validated['esewa_sandbox_merchant_code'] ?? '')) ?: 'EPAYTEST');
+
+        if (($validated['esewa_sandbox_secret_key'] ?? '') !== '') {
+            $this->settings->set('esewa_sandbox_secret_key', trim((string) $validated['esewa_sandbox_secret_key']));
         }
 
         return back()->with('success', 'Payment settings saved.');

@@ -95,9 +95,10 @@ class CheckoutController extends Controller
     }
 
     /**
-     * eSewa return URL. The gateway POSTs the signed payload here.
-     * Signature verified → mark paid → fulfill. Grants follow payment,
-     * never the redirect itself.
+     * eSewa return URL (callback). The gateway POSTs the signed payload
+     * here. Signature verified → settleOrder — the M2 choke point (paid
+     * guard + grants + creator credits, all idempotent). Grants follow
+     * payment, never the redirect itself.
      */
     public function esewaVerify(Request $request)
     {
@@ -117,21 +118,57 @@ class CheckoutController extends Controller
         }
 
         if ($order->isPending()) {
-            DB::transaction(function () use ($order, $reference) {
-                $order->fill([
-                    'status' => Order::STATUS_PAID,
-                    'paid_at' => now(),
-                    'payment_method' => 'esewa',
-                    'payment_reference' => $reference,
-                ])->save();
-
-                $this->entitlements->fulfill($order->refresh());
-            });
+            app(\App\Services\WalletService::class)->settleOrder($order, 'esewa');
         }
 
         return redirect()
             ->route('purchases.index')
             ->with('success', 'Payment confirmed — your prompts are unlocked.');
+    }
+
+    /**
+     * M3 (v1.6.0): server-to-server eSewa webhook. CSRF-exempt (bootstrap
+     * app), signature-verified with the decrypted merchant secret. The
+     * per-item idempotency key inside settleOrder makes callback+webhook
+     * double-delivery credit exactly once. Responds 200 fast — eSewa
+     * retries on non-2xx and we never want a duplicate to fail loudly.
+     */
+    public function esewaWebhook(Request $request)
+    {
+        $payload = is_array($request->all()) ? $request->all() : [];
+
+        // Masked info-level log: audit trail without leaking secrets.
+        \Illuminate\Support\Facades\Log::info('esewa webhook received', [
+            'transaction_uuid' => substr((string) ($payload['transaction_uuid'] ?? ''), 0, 12),
+            'has_signature' => ($payload['signature'] ?? '') !== '',
+            'signed_field_names' => (string) ($payload['signed_field_names'] ?? ''),
+        ]);
+
+        // M3: the admin payments card shows this masked info line.
+        app(\App\Services\SettingsService::class)->set('esewa_last_webhook', now()->toDateTimeString()
+            .' · uuid '.substr((string) ($payload['transaction_uuid'] ?? '?'), 0, 12)
+            .' · sig '.((($payload['signature'] ?? '') !== '') ? 'present' : 'absent'));
+
+        try {
+            $reference = $this->esewa->verifyCallback($payload);
+        } catch (\RuntimeException $e) {
+            \Illuminate\Support\Facades\Log::warning('esewa webhook rejected', ['reason' => $e->getMessage()]);
+
+            return response()->json(['status' => 'rejected', 'reason' => 'signature verification failed'], 200);
+        }
+
+        $order = Order::query()->find((int) ($payload['transaction_uuid'] ?? 0));
+
+        if ($order === null) {
+            return response()->json(['status' => 'ignored', 'reason' => 'unknown order'], 200);
+        }
+
+        if ($order->isPending()) {
+            $order->fill(['payment_reference' => $reference])->save();
+            app(\App\Services\WalletService::class)->settleOrder($order, 'esewa');
+        }
+
+        return response()->json(['status' => 'ok']);
     }
 
     /** Buyer submits a manual payment reference; admin approves later. */

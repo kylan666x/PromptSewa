@@ -54,7 +54,7 @@
         <div class="relative -mt-12 px-1 sm:-mt-16">
             <div class="flex flex-col gap-3 pt-3 sm:flex-row sm:items-end sm:justify-between sm:pt-4">
                 <div class="flex min-w-0 items-end gap-4">
-                    <x-user-avatar :user="$creator" size="md"
+                    <x-user-avatar :user="$creator" size="md" :frame="$creator->activeFrame"
                                    class="relative size-24 rounded-3xl border-4 border-paper bg-saffron text-4xl shadow-card-hover sm:size-28"/>
 
                     {{-- Text block: normal document flow, pt clearance, truncate --}}
@@ -96,7 +96,9 @@
             <dl class="mt-4 flex flex-wrap gap-x-8 gap-y-2">
                 <div class="flex items-baseline gap-1.5">
                     <dd class="text-lg font-bold text-ink">{{ number_format($stats['prompts']) }}</dd>
-                    <dt class="text-sm text-ink/50">{{ \Illuminate\Support\Str::plural('prompt', $stats['prompts']) }}</dt>
+                    {{-- H1 (v1.5.2): the public stat is PUBLISHED listings only —
+                         drafts/pending/rejected/private never inflate it. --}}
+                    <dt class="text-sm text-ink/50">{{ \Illuminate\Support\Str::plural('published prompt', $stats['prompts']) }}</dt>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <dd class="text-lg font-bold text-ink">{{ number_format($stats['total_sales']) }}</dd>
@@ -104,6 +106,35 @@
                 </div>
             </dl>
         </div>
+
+        {{-- P2b (v1.7.1): Achievements — between stats and prompts. Earned
+             badges grid + Lv chip; honest empty state per DESIGN. --}}
+        <section class="mt-8" aria-label="Achievements of {{ $creator->name }}">
+            <h2 class="flex items-center gap-3 border-b border-ink/10 pb-3 font-mono text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">
+                Achievements
+                <span class="rounded-full bg-saffron/20 px-2.5 py-0.5 font-mono text-[11px] font-bold text-saffron-deep">Lv {{ \App\Services\GamificationService::levelForXp((int) $creator->xp) }}</span>
+            </h2>
+
+            @if ($earnedBadges->isEmpty())
+                <p class="mt-4 rounded-xl border border-dashed border-ink/15 bg-white px-4 py-3 text-sm text-ink/50">No badges yet — publish your first prompt to earn one.</p>
+            @else
+                <div class="mt-4 flex flex-wrap gap-4">
+                    @foreach ($earnedBadges as $earned)
+                        <div class="flex items-center gap-2.5 rounded-2xl border border-ink/10 bg-white px-3.5 py-2.5 shadow-sm">
+                            @if ($earned->badge?->image_path)
+                                <img src="{{ Storage::disk('public')->url($earned->badge->image_path) }}" alt="" class="size-9">
+                            @else
+                                <span class="flex size-9 items-center justify-center rounded-full bg-saffron/25 text-sm" aria-hidden="true">🏅</span>
+                            @endif
+                            <div>
+                                <p class="text-sm font-semibold text-ink">{{ $earned->badge?->name ?? 'Badge' }}</p>
+                                <p class="font-mono text-[10px] text-ink/50">{{ $earned->awarded_at->format('M j, Y') }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
 
         {{-- Catalog --}}
         <section class="mt-8 pb-16" aria-label="Prompts by {{ $creator->name }}">

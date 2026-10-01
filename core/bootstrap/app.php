@@ -17,6 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => EnsureUserIsStaff::class,
         ]);
 
+        // M3 (v1.6.0): the eSewa webhook is signature-verified instead of
+        // CSRF-protected (server-to-server, no session cookie). Keep this
+        // exemption narrow — signature verification IS the guard here.
+        $middleware->validateCsrfTokens(except: [
+            'payments/esewa/webhook',
+        ]);
+
         // A4: banned accounts are locked out of everything authenticated.
         // Appended to the web group (after StartSession so the logout can
         // invalidate the session; guests never reach the user check).

@@ -7,6 +7,7 @@ use App\Models\ManualPaymentMethod;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * C3 (v1.4.4): admin CRUD for manual payment methods.
@@ -38,6 +39,7 @@ class ManualPaymentMethodController extends Controller
 
         $method = new ManualPaymentMethod();
         $method->name = trim($validated['name']);
+        $method->kind = $validated['kind'] ?? ManualPaymentMethod::KIND_OTHER;
         $method->instructions = $validated['instructions'] ?? null;
         $method->position = (int) ($validated['position'] ?? 0);
         $method->active = $request->boolean('active');
@@ -54,6 +56,7 @@ class ManualPaymentMethodController extends Controller
         $validated = $this->validateMethod($request);
 
         $manualMethod->name = trim($validated['name']);
+        $manualMethod->kind = $validated['kind'] ?? $manualMethod->kind;
         $manualMethod->instructions = $validated['instructions'] ?? null;
         $manualMethod->position = (int) ($validated['position'] ?? 0);
         $manualMethod->active = $request->boolean('active');
@@ -92,11 +95,12 @@ class ManualPaymentMethodController extends Controller
         return back()->with('success', "Manual method \"{$manualMethod->name}\" deleted.");
     }
 
-    /** @return array{name: string, instructions?: string, position?: int} */
+    /** @return array{name: string, kind?: string, instructions?: string, position?: int} */
     private function validateMethod(Request $request): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'kind' => ['nullable', Rule::in(ManualPaymentMethod::KINDS)],
             'instructions' => ['nullable', 'string', 'max:2000'],
             'position' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'qr' => ['nullable', 'image', 'max:4096', 'mimes:png,webp,jpeg,jpg'],

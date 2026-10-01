@@ -101,6 +101,30 @@
                 </div>
             </section>
 
+            {{-- G3 (v1.7.0): profile frame picker — active frames, none = clear --}}
+            <section class="rounded-2xl border border-ink/10 bg-white p-6">
+                <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Avatar frame</h2>
+                <p class="mt-1 text-xs text-ink/50">Optional decorative ring shown on your profile, the navbar and the feed.</p>
+                <div class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="active_frame_id" value="" @checked(! $user->active_frame_id) class="peer sr-only">
+                        <span class="flex flex-col items-center gap-1 rounded-xl border border-ink/10 p-3 text-xs text-ink/60 transition peer-checked:border-saffron-deep peer-checked:bg-saffron/10 peer-checked:text-ink">
+                            <span class="flex size-10 items-center justify-center rounded-full bg-paper-deep text-ink/40">—</span>
+                            None
+                        </span>
+                    </label>
+                    @foreach ($frames as $frame)
+                        <label class="cursor-pointer">
+                            <input type="radio" name="active_frame_id" value="{{ $frame->id }}" @checked($user->active_frame_id === $frame->id) class="peer sr-only">
+                            <span class="flex flex-col items-center gap-1 rounded-xl border border-ink/10 p-3 text-xs text-ink/60 transition peer-checked:border-saffron-deep peer-checked:bg-saffron/10 peer-checked:text-ink">
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($frame->image_path) }}" alt="" class="size-10">
+                                {{ $frame->name }}
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </section>
+
             <div class="flex items-center gap-3">
                 <button type="submit" class="rounded-full bg-saffron px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">
                     Save changes
@@ -115,6 +139,9 @@
         <section aria-label="Account menu" class="mt-10 rounded-2xl border border-ink/10 bg-white p-5">
             <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Account</h2>
             <div class="mt-3 grid gap-1.5 sm:grid-cols-2">
+                {{-- P4 (v1.7.1): the You menu carries BOTH identities — view
+                     (public) and edit (this form). --}}
+                <a href="{{ route('creators.show', $user) }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">View profile</a>
                 <a href="{{ route('packs.index') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">Packs</a>
                 <a href="{{ route('pages.about') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">About PromptSewa</a>
                 <a href="{{ route('dashboard') }}" class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-2.5 text-sm font-medium text-ink/80 transition hover:border-saffron-deep hover:text-ink">Dashboard</a>

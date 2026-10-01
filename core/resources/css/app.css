@@ -33,6 +33,19 @@
     display: none !important;
 }
 
+/* A2 (v1.7.2) — cover block zero-JS truth. The Alpine x-show is the
+ * enhancement; THIS rule is the no-JavaScript contract: when no `type`
+ * radio is checked `image` (or when a non-image radio is checked), the
+ * cover block (and its file input) hide in the served HTML. On edit of an
+ * image prompt (image pre-checked) the block is visible without JS. */
+form:has(input[name="type"][value="image"]:checked) [data-cover-only] {
+    display: block;
+}
+
+form:not(:has(input[name="type"][value="image"]:checked)) [data-cover-only] {
+    display: none;
+}
+
 /* T12 (v1.5.0): bottom-dock tabs. ≥44px targets, visible focus rings. */
 .dock-tab {
     display: flex;

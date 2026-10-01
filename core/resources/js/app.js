@@ -247,13 +247,19 @@ Alpine.data('promptViewer', (rawBody, names) => ({
 }));
 
 /**
- * T13 (v1.5.0): bookmark heart — optimistic flip, POST toggle, no reload.
- * Server response confirms the final state (and repairs races).
+ * T13 (v1.5.0) / P1 (v1.7.1): bookmark heart — optimistic flip, POST
+ * toggle, no reload. Server response confirms the final state (and repairs
+ * races). The flip updates the FILL (rose fill when saved, outline when
+ * not) — the rose fill IS the saved state, not just a heavier stroke.
  */
 Alpine.data('bookmarkHeart', (config) => ({
     url: config.url,
     saved: config.saved ?? false,
     busy: false,
+
+    get heartClass() {
+        return this.saved ? 'text-rose-600 fill-current' : 'text-ink/40 fill-none';
+    },
 
     toggle() {
         if (this.busy) {
@@ -283,6 +289,8 @@ Alpine.data('bookmarkHeart', (config) => ({
 }));
 
 Alpine.data('promptForm', (config) => ({
+    /** A1 (v1.7.2): the type lives on the SERVER-RENDERED radios; this is
+     * a mirror derived from the checked one (the radios submit name="type"). */
     type: config.initialType || 'text',
     categoryId: config.initialCategoryId || '',
     selectedTools: config.initialTools || [],
@@ -330,6 +338,36 @@ Alpine.data('promptForm', (config) => ({
     },
 
     /**
+     * P2 (v1.7.1) / A2 (v1.7.2): chips as {name, modality} entries so the
+     * template can carry data-modality + the gate expression — the served
+     * HTML carries the gate; Alpine evaluates it on type change. Selected
+     * tools always stay listed (even modality-invalid) so a creator can
+     * see and remove a now-invalid chip. Type-default chips with no
+     * registry entry carry the current type as their modality.
+     */
+    get toolEntries() {
+        const entries = new Map();
+
+        for (const tool of config.tools || []) {
+            entries.set(tool.name, { name: tool.name, modality: tool.modality });
+        }
+
+        for (const name of this.context.example_tools || []) {
+            if (! entries.has(name)) {
+                entries.set(name, { name, modality: this.type });
+            }
+        }
+
+        for (const name of this.selectedTools) {
+            if (! entries.has(name)) {
+                entries.set(name, { name, modality: this.type });
+            }
+        }
+
+        return [...entries.values()];
+    },
+
+    /**
      * T6 (v1.5.0): registry tools offered for the current type — only
      * active tools whose modality matches (or is 'any'). Selected tools
      * always stay listed even when the type changes, so a creator sees
@@ -343,12 +381,23 @@ Alpine.data('promptForm', (config) => ({
         );
     },
 
+    /** A1 (v1.7.2): the checked radio IS the submitted state — this only
+     * mirrors it for Alpine so x-show regions stay in sync.
+     * A2: also toggles the per-option category gates and the cover-block
+     * show/hide (data-cover-only) so the enhancement applies immediately. */
     switchType(type) {
         if (type === this.type) {
             return;
         }
 
         this.type = type;
+
+        // Server truth: the matching radio becomes the checked one.
+        const form = this.$el.closest('form') ?? document;
+        const radio = form.querySelector(`input[type="radio"][name="type"][value="${type}"]`);
+        if (radio) {
+            radio.checked = true;
+        }
 
         // Drop a category scoped to another type; keep universal ones.
         const current = config.categories.find((c) => c.id === this.categoryId);

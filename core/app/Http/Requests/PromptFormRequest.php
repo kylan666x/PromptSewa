@@ -21,6 +21,26 @@ class PromptFormRequest extends FormRequest
 
     public const MAX_TIPS = 5;
 
+    /**
+     * A3 (v1.7.2): switching an EXISTING prompt to image type without a
+     * cover is a validation error. Create (type=image from scratch) and
+     * edits that keep image stay optional — the founder decision scopes
+     * the requirement to the switch itself.
+     */
+    private function isImageTypeSwitch(): bool
+    {
+        if ($this->input('type') !== Prompt::TYPE_IMAGE) {
+            return false;
+        }
+
+        $route = $this->route('prompt');
+        if (! $route instanceof Prompt) {
+            return false; // create: optional
+        }
+
+        return $route->type !== Prompt::TYPE_IMAGE;
+    }
+
     public function authorize(): bool
     {
         // Route-level policy checks (Gate::authorize) handle permission;
@@ -35,7 +55,14 @@ class PromptFormRequest extends FormRequest
             'description' => ['required', 'string', 'min:40', 'max:600'],
             'category_id' => [
                 'required',
-                Rule::exists('categories', 'id')->where('is_active', true),
+                Rule::exists('categories', 'id')->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    // A2 (v1.7.2): server truth for the type-scoped picker —
+                    // the category must belong to the chosen type (or be
+                    // universal). Mirrors the client-side re-scoping.
+                    ->where(fn ($inner) => $inner
+                        ->whereNull('type_scope')
+                        ->orWhere('type_scope', $this->input('type')))),
             ],
             'type' => ['required', 'string', 'in:'.implode(',', Prompt::TYPES)],
             'body' => ['required', 'string', 'min:30', 'max:4000'],
@@ -58,10 +85,14 @@ class PromptFormRequest extends FormRequest
             'changelog' => ['nullable', 'string', 'max:500'],
             'price_npr' => ['required', 'integer', 'min:0', 'max:50000'],
             'visibility' => ['required', 'string', 'in:'.Prompt::VISIBILITY_PUBLIC.','.Prompt::VISIBILITY_PRIVATE],
-            // Cover art: image prompts only, validated harder in the controller
-            // (GD re-encode). 8 MB here is a pre-filter; compression does the rest.
+            // Cover art (A2/A3, v1.7.2): image prompts only — prohibited on
+            // every other type; REQUIRED when the creator switches an existing
+            // prompt onto image (founder decision for this release; the A3
+            // rendered-route test locks it). GD re-encode validates harder in
+            // the controller. 8 MB here is a pre-filter.
             'cover_image' => ['nullable', 'image', 'max:8192',
                 Rule::when(fn () => $this->input('type') !== Prompt::TYPE_IMAGE, ['prohibited']),
+                Rule::when(fn () => $this->isImageTypeSwitch(), ['required']),
             ],
             'remove_cover' => ['nullable', 'boolean'],
         ];

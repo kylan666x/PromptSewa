@@ -134,7 +134,9 @@ test('owners open a prefilled edit form', function () {
 
 test('saving an edit appends a new version and never mutates old ones', function () {
     $creator = createCreator();
-    $prompt = Prompt::factory()->hasVersion()->create(['user_id' => $creator->id]);
+    // A1/A3 (v1.7.2): image-typed, so the image payload below is NOT a type
+    // switch (a switch without a cover would 422 under the new cover rule).
+    $prompt = Prompt::factory()->hasVersion()->ofType(Prompt::TYPE_IMAGE)->create(['user_id' => $creator->id]);
     $originalBody = $prompt->latestVersion->body;
     $originalVersionId = $prompt->latestVersion->id;
 
@@ -157,7 +159,8 @@ test('saving an edit appends a new version and never mutates old ones', function
 
 test('edit keeps pricing and the product in sync in both directions', function () {
     $creator = createCreator();
-    $prompt = Prompt::factory()->hasVersion()->priced(29900)->create(['user_id' => $creator->id]);
+    // Image-typed for the same A3 reason — the payload type must not switch.
+    $prompt = Prompt::factory()->hasVersion()->ofType(Prompt::TYPE_IMAGE)->priced(29900)->create(['user_id' => $creator->id]);
     expect($prompt->product()->exists())->toBeFalse(); // factory does not create products
 
     // Start paid → product is created.

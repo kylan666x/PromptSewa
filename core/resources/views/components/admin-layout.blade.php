@@ -26,6 +26,11 @@
                     'admin.tool-logos.index' => ['Tool logos', '✦'],
                     'admin.update' => ['Software update', '⬆'],
                     'admin.comp-grants.create' => ['Comp grants', '🎁'],
+                    // P1b (v1.7.1): gamification doors — a feature without a nav
+                    // entry is a missing feature (§6 watch-out). Controllers/routes
+                    // existed since v1.7.0; these pills are the acceptance criterion.
+                    'admin.badges.index' => ['Badges', '🏅'],
+                    'admin.frames.index' => ['Frames', '◯'],
                 ];
             @endphp
             @foreach ($adminNav as $route => [$label, $icon])

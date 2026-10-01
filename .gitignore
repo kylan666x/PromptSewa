@@ -1,5 +1,8 @@
 # Codebuff/agent workspace metadata
 .freebuff/
+core/.agents/
+core/.claude/
+core/.mcp.json
 
 # --- Laravel application (core/) ---
 core/.env

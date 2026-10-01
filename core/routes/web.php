@@ -164,6 +164,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/{order}/esewa', [CheckoutController::class, 'esewaPay'])->name('checkout.esewa.pay');
     // eSewa POSTs the signed payload here — never CSRF-protected (gateway
     // has no Laravel session) and must stay reachable after redirects.
+    // M3 (v1.6.0): server-to-server eSewa webhook. OUTSIDE the auth group
+    // (eSewa's servers have no session). CSRF-exempt via bootstrap/app.php;
+    // the HMAC signature check is the guard. Throttled mildly so a broken
+    // client retry loop can't hammer the ledger.
+    Route::post('/payments/esewa/webhook', [CheckoutController::class, 'esewaWebhook'])
+        ->middleware('throttle:30,1')
+        ->name('payments.esewa.webhook');
+
     Route::post('/checkout/esewa/verify', [CheckoutController::class, 'esewaVerify'])
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
         ->name('checkout.esewa.verify');
@@ -215,6 +223,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/users/purge-demo/preview', [\App\Http\Controllers\Admin\UserPurgeController::class, 'preview'])->name('users.purge.preview');
     Route::post('/users/purge-demo/run', [\App\Http\Controllers\Admin\UserPurgeController::class, 'run'])->name('users.purge.run');
 
+    // F3 (v1.5.2): "Apply adoption" panel — dry-run preview + force, shelling
+    // pv:adopt-catalog so the runbook logic and UI can't drift. Admin-only
+    // in the controller; the founder runs T4 from the browser (no SSH host).
+    Route::post('/users/adopt-catalog/preview', [\App\Http\Controllers\Admin\AdoptionController::class, 'preview'])->name('users.adopt.preview');
+    Route::post('/users/adopt-catalog/run', [\App\Http\Controllers\Admin\AdoptionController::class, 'run'])->name('users.adopt.run');
+
     // A5: complimentary grants (press copies, make-goods) — admin only.
     Route::get('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'create'])->name('comp-grants.create');
     Route::post('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'store'])->name('comp-grants.store');
@@ -256,6 +270,27 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/orders/{order}/approve', [OrderAdminController::class, 'approve'])->name('orders.approve');
     Route::patch('/orders/{order}/reject', [OrderAdminController::class, 'reject'])->name('orders.reject');
 
+    // M5 (v1.6.0): Finance desk — totals, pre-ledger list, payout queue,
+    // ledger browser. Admin-only in the controller.
+    Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
+    Route::post('/finance/payouts/{payout}/approve', [\App\Http\Controllers\Admin\FinanceController::class, 'approvePayout'])->name('finance.payouts.approve');
+    Route::post('/finance/payouts/{payout}/settle', [\App\Http\Controllers\Admin\FinanceController::class, 'settlePayout'])->name('finance.payouts.settle');
+    Route::post('/finance/payouts/{payout}/reject', [\App\Http\Controllers\Admin\FinanceController::class, 'rejectPayout'])->name('finance.payouts.reject');
+    Route::get('/finance/payouts/{payout}/destination', [\App\Http\Controllers\Admin\FinanceController::class, 'payoutDestination'])->name('finance.payouts.destination');
+
+    // G2 (v1.7.0): badge CRUD + manual award (admin, audited).
+    Route::get('/badges', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'index'])->name('badges.index');
+    Route::post('/badges', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'store'])->name('badges.store');
+    Route::put('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'update'])->name('badges.update');
+    Route::delete('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'destroy'])->name('badges.destroy');
+    Route::post('/badges/award', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'award'])->name('badges.award');
+
+    // G3 (v1.7.0): frame CRUD.
+    Route::get('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'index'])->name('frames.index');
+    Route::post('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'store'])->name('frames.store');
+    Route::put('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'update'])->name('frames.update');
+    Route::delete('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'destroy'])->name('frames.destroy');
+
     // Release updates via uploaded zip (existing feature).
     Route::get('/update', [ReleaseUpdateController::class, 'form'])->name('update');
     Route::post('/update', [ReleaseUpdateController::class, 'update'])->name('update.run');
@@ -268,6 +303,22 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])
     ->middleware('auth')
     ->name('impersonation.stop');
+
+// G4 (v1.7.0): public community feed (paper world, noindex, cached page 1).
+Route::get('/feed', [\App\Http\Controllers\FeedController::class, 'index'])
+    ->middleware('throttle:60,1')
+    ->name('feed.index');
+
+// M4 (v1.6.0): creator Earnings tab — balance, sales, payout request/cancel.
+Route::get('/dashboard/earnings', [\App\Http\Controllers\Dashboard\EarningsController::class, 'index'])
+    ->middleware('auth')
+    ->name('dashboard.earnings');
+Route::post('/dashboard/earnings/payouts', [\App\Http\Controllers\Dashboard\EarningsController::class, 'requestPayout'])
+    ->middleware('auth')
+    ->name('dashboard.earnings.request');
+Route::post('/dashboard/earnings/payouts/{payout}/cancel', [\App\Http\Controllers\Dashboard\EarningsController::class, 'cancelPayout'])
+    ->middleware('auth')
+    ->name('dashboard.earnings.cancel');
 
 // Legacy path kept working for bookmarks from the previous dashboard card.
 Route::get('/dashboard/update', fn () => redirect()->route('admin.update'))

@@ -25,6 +25,10 @@ class PromptController extends Controller
         $viewer = $request->user();
         $prompt->load(['category', 'creator', 'latestVersion']);
 
+        // G5 (v1.7.0): count the view — non-owner/non-staff only, once per
+        // session-hour per prompt. Stats, not money; never on the ledger.
+        app(\App\Services\AnalyticsService::class)->recordView($request, $prompt);
+
         $isOwner = $viewer !== null && $viewer->id === $prompt->user_id;
 
         // Staff moderation preview moved to GET /admin/prompts/{prompt}/preview
@@ -68,7 +72,11 @@ class PromptController extends Controller
             ->map(fn ($version) => [
                 'label' => $version->label(),
                 'changelog' => (string) ($version->changelog ?? ''),
-                'author' => $version->author?->name ?? 'Unknown',
+                // H2 (v1.5.2): authorship is historical — the FK now nulls on
+                // author deletion, so a missing author renders as the honest
+                // "Former creator" chip, never a crash or a blank row.
+                'author' => $version->author?->name,
+                'author_missing' => $version->author === null,
                 'created_at' => $version->created_at,
                 'has_snapshot' => $version->hasSnapshot(),
                 'body' => $fullBodyAllowed && $version->hasSnapshot() ? (string) $version->body : null,

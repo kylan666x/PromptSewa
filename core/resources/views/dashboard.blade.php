@@ -1,5 +1,11 @@
 <x-app-layout>
-    <x-seo :title="$tab === 'saved' ? 'Saved prompts' : 'Your prompts'" robots="noindex, follow"/>
+    <x-seo :title="match ($tab) {
+        'saved' => 'Saved prompts',
+        'stats' => 'Stats',
+        'feed' => 'Feed',
+        'achievements' => 'Achievements',
+        default => 'Your prompts',
+    }" robots="noindex, follow"/>
     @php
         /** @var \App\Models\Prompt $prompt */
         /** @var array{total: int, published: int, pending: int, draft: int} $stats */
@@ -38,11 +44,20 @@
                 <p class="mt-1 text-sm text-ink/60">{{ $tab === 'saved' ? "Listings you've bookmarked from the library." : "Everything you've created, including drafts and private listings." }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                {{-- T13: dashboard tabs — Your prompts / Saved --}}
+                {{-- T13 + G4/G5 (v1.7.0): dashboard tabs --}}
                 <a href="{{ route('dashboard') }}"
                    class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Your prompts</a>
                 <a href="{{ route('dashboard', ['tab' => 'saved']) }}"
                    class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Saved</a>
+                <a href="{{ route('dashboard', ['tab' => 'stats']) }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'stats' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Stats</a>
+                <a href="{{ route('dashboard', ['tab' => 'feed']) }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'feed' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Feed</a>
+                {{-- P2b (v1.7.1): Achievements tab --}}
+                <a href="{{ route('dashboard', ['tab' => 'achievements']) }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'achievements' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Achievements</a>
+                <a href="{{ route('dashboard.earnings') }}"
+                   class="rounded-full px-4 py-2 text-sm font-semibold transition border border-ink/15 text-ink/70 hover:border-ink/30">Earnings</a>
                 <a href="{{ route('dashboard.prompts.create') }}"
                    class="inline-flex items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-saffron-deep">
                     <span class="text-base leading-none">+</span> New prompt
@@ -50,7 +65,125 @@
             </div>
         </header>
 
-        @if ($tab === 'saved')
+        @if ($tab === 'stats')
+            {{-- ===== Stats tab (G5) ===== --}}
+            <div class="mt-8 grid gap-6 lg:grid-cols-2">
+                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                    <h2 class="text-sm font-semibold text-ink">Views — last 30 days</h2>
+                    <x-sparkline :series="$viewsSeries" label="Views over the last 30 days"/>
+                    <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($viewsSeries)) }} total · {{ number_format(max($viewsSeries)) }} best day</p>
+                </section>
+                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                    <h2 class="text-sm font-semibold text-ink">Sales — last 30 days</h2>
+                    <x-sparkline :series="$salesSeries" label="Paid orders over the last 30 days" stroke="#059669" fill="rgba(5, 150, 105, 0.12)"/>
+                    <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($salesSeries)) }} orders in the window</p>
+                </section>
+                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                    <h2 class="text-sm font-semibold text-ink">Rating trend — last 30 days</h2>
+                    <x-sparkline :series="$ratingSeries" label="Average rating over the last 30 days" stroke="#2563eb" fill="rgba(37, 99, 235, 0.10)"/>
+                    <p class="mt-1 font-mono text-xs text-ink/50">{{ array_sum($ratingSeries) > 0 ? number_format(array_sum($ratingSeries) / count(array_filter($ratingSeries)), 1) : '0.0' }} avg across rated days</p>
+                </section>
+                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                    <h2 class="text-sm font-semibold text-ink">Top prompts by views</h2>
+                    @if ($topPrompts->isEmpty())
+                        <p class="mt-3 text-sm text-ink/50">No published prompts yet — publish to start the clock.</p>
+                    @else
+                        <table class="mt-3 w-full text-sm">
+                            <tbody class="divide-y divide-ink/10">
+                                @foreach ($topPrompts as $top)
+                                    <tr>
+                                        <td class="py-2 font-medium text-ink"><a href="{{ route('prompts.show', $top) }}" class="hover:text-saffron-deep">{{ $top->title }}</a></td>
+                                        <td class="py-2 text-right font-mono text-xs text-ink/60">{{ number_format($top->views_count) }} views · {{ number_format($top->sales_count) }} sales</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+                </section>
+            </div>
+        @elseif ($tab === 'feed')
+            {{-- ===== Feed tab (G4, ink world) ===== --}}
+            <div class="mt-8 space-y-3">
+                @forelse ($feedEvents as $event)
+                    <div class="rounded-2xl border border-white/10 bg-ink-soft p-4 text-paper">
+                        <p class="flex flex-wrap items-center gap-2 text-sm">
+                            <x-user-avatar :user="$event->actor" size="sm" :frame="$event->actor->activeFrame"/>
+                            <span class="font-semibold">{{ $event->actor->name }}</span>
+                            <span class="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-paper/80">Lv {{ \App\Services\GamificationService::levelForXp((int) $event->actor->xp) }}</span>
+                            @if ($event->type === \App\Models\FeedEvent::TYPE_PROMPT_PUBLISHED)
+                                <span class="text-paper/70">published</span> <span class="font-semibold">{{ $event->meta['title'] }}</span>
+                            @elseif ($event->type === \App\Models\FeedEvent::TYPE_SALE_MILESTONE)
+                                <span class="text-paper/70">hit</span> <span class="font-semibold">{{ number_format($event->meta['sales_count']) }} sales</span> <span class="text-paper/70">with {{ $event->meta['title'] }}</span>
+                            @elseif ($event->type === \App\Models\FeedEvent::TYPE_BADGE_EARNED)
+                                <span class="text-paper/70">earned</span> <span class="font-semibold">{{ $event->meta['badge_name'] }}</span>
+                            @else
+                                <span class="text-paper/70">launched pack</span> <span class="font-semibold">{{ $event->meta['name'] }}</span>
+                            @endif
+                        </p>
+                        <p class="mt-1 font-mono text-[11px] text-paper/40">{{ $event->created_at->diffForHumans() }}</p>
+                    </div>
+                @empty
+                    <div class="rounded-2xl border border-dashed border-white/15 p-10 text-center text-sm text-paper/50">No activity yet.</div>
+                @endforelse
+                @if ($feedEvents->hasPages())
+                    <div>{{ $feedEvents->links('pagination::tailwind') }}</div>
+                @endif
+            </div>
+        @elseif ($tab === 'achievements')
+            {{-- ===== Achievements tab (P2b, v1.7.1) ===== --}}
+            <div class="mt-8 space-y-8">
+                <section aria-label="Earned badges">
+                    <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Earned badges</h2>
+                    @if ($achievements['earned']->isEmpty())
+                        <p class="mt-3 rounded-2xl border border-dashed border-ink/20 bg-white p-6 text-sm text-ink/60">No badges yet — publish your first prompt to earn one.</p>
+                    @else
+                        <div class="mt-3 flex flex-wrap gap-4">
+                            @foreach ($achievements['earned'] as $earned)
+                                <div class="flex items-center gap-2.5 rounded-2xl border border-ink/10 bg-white px-4 py-3 shadow-sm">
+                                    @if ($earned->badge?->image_path)
+                                        <img src="{{ Storage::disk('public')->url($earned->badge->image_path) }}" alt="" class="size-10">
+                                    @else
+                                        <span class="flex size-10 items-center justify-center rounded-full bg-saffron/25 text-base" aria-hidden="true">🏅</span>
+                                    @endif
+                                    <div>
+                                        <p class="text-sm font-semibold text-ink">{{ $earned->badge?->name ?? 'Badge' }}</p>
+                                        <p class="font-mono text-[10px] text-ink/50">awarded {{ $earned->awarded_at->format('M j, Y') }}</p>
+                                        @if ($earned->reason)
+                                            <p class="mt-0.5 max-w-[220px] truncate text-xs text-ink/50" title="{{ $earned->reason }}">{{ $earned->reason }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </section>
+
+                <section aria-label="Progress">
+                    <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Progress</h2>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        @foreach ($achievements['progress'] as $row)
+                            <div class="rounded-2xl border border-ink/10 bg-white p-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="text-sm font-medium text-ink">{{ $row['label'] }}</p>
+                                    @if ($row['earned'])
+                                        <span class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-800">earned</span>
+                                    @endif
+                                </div>
+                                @if ($row['current'] !== null && $row['goal'] !== null && ! $row['earned'])
+                                    @php $pct = $row['goal'] > 0 ? min(100, (int) floor($row['current'] / $row['goal'] * 100)) : 0; @endphp
+                                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-paper-deep">
+                                        <div class="h-full rounded-full bg-saffron" style="width: {{ $pct }}%"></div>
+                                    </div>
+                                    <p class="mt-1 font-mono text-[11px] text-ink/50">{{ $row['current'] }}/{{ $row['goal'] }}</p>
+                                @elseif ($row['current'] === null && ! $row['earned'])
+                                    <p class="mt-1 text-xs text-ink/50">Awarded by the community team.</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            </div>
+        @elseif ($tab === 'saved')
             {{-- ===== Saved tab (T13) ===== --}}
             <div class="mt-8">
                 @if ($saved->isEmpty())

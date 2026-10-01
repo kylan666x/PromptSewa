@@ -25,6 +25,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // G2/G4 (v1.7.0): gamification + feed emission points. Observers
+        // fire INSIDE the triggering transaction; controllers never emit.
+        \App\Models\Prompt::observe(\App\Observers\PromptObserver::class);
+        \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        \App\Models\UserBadge::observe(\App\Observers\UserBadgeObserver::class);
+        \App\Models\Rating::observe(\App\Observers\RatingObserver::class);
+        \App\Models\Pack::observe(\App\Observers\PackObserver::class);
         Paginator::defaultView('pagination::tailwind');
 
         // /creators/{creator} binds by the public handle (username) with a

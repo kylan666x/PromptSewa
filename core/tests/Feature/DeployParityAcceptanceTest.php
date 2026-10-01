@@ -97,6 +97,10 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
         $pending = [
             '2026_09_29_130000_create_manual_payment_methods_table',
             '2026_09_29_130100_add_manual_proof_to_orders_table',
+            // v1.7.1: ships in the same pv:update batch as the two above —
+            // excluded from the schema build because manual_payment_methods
+            // does not exist yet at v1.4.3 state.
+            '2026_09_30_190000_add_kind_to_manual_payment_methods',
         ];
 
         DB::statement('CREATE TABLE migrations (id int unsigned not null auto_increment primary key, migration varchar(255) not null, batch int not null)');
@@ -143,7 +147,7 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
 
         $batchMax = DB::table('migrations')->max('batch');
         $latestBatchCount = DB::table('migrations')->where('batch', $batchMax)->count();
-        expect($latestBatchCount)->toBe(2, 'exactly 130000+130100 in the latest batch');
+        expect($latestBatchCount)->toBe(3, 'exactly 130000+130100+190000 in the latest batch');
 
         // Sample rows: the buyer's row SURVIVES with its exact identity —
         // count may grow only if test-env seeding ran (local machines);
@@ -155,7 +159,8 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
 
         // New schema objects exist.
         expect(DB::getSchemaBuilder()->hasTable('manual_payment_methods'))->toBeTrue()
-            ->and(DB::getSchemaBuilder()->hasColumn('orders', 'manual_txn_id'))->toBeTrue();
+            ->and(DB::getSchemaBuilder()->hasColumn('orders', 'manual_txn_id'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasColumn('manual_payment_methods', 'kind'))->toBeTrue();
 
         // D4 gate: on a production deploy the demo/bulk/flagship seeders
         // hard-refuse (locked by ReleaseHygieneTest); on this test-env run

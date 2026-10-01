@@ -3,6 +3,10 @@
         /** @var array<string, int> $stats */
         /** @var \Illuminate\Support\Collection<int, \App\Models\Prompt> $reviewQueue */
         /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $manualQueue */
+        /** @var array $revenueSeries */
+        /** @var array $ordersSeries */
+        /** @var array $usersSeries */
+        /** @var array $reportsSeries */
     @endphp
 
     {{-- A1: running release chip — value lives in config/app.php 'version' --}}
@@ -11,7 +15,34 @@
         v{{ config('app.version') }}
     </p>
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    {{-- G5 (v1.7.0): 30-day series — same sparkline component as creator Stats --}}
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-ink/10 bg-white p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-ink0">Revenue · 30d</p>
+            {{-- P4 (v1.7.1): honest sublabel — this series is PAID ORDERS
+                 (orders table), which includes pre-ledger revenue. The
+                 ledger-based truth lives on the Finance desk. --}}
+            <x-sparkline :series="$revenueSeries" label="Revenue over the last 30 days (paisa)"/>
+            <p class="mt-1 font-mono text-xs text-ink/50">paid orders · incl. pre-ledger · <x-money :paisa="array_sum($revenueSeries)"/></p>
+        </div>
+        <div class="rounded-2xl border border-ink/10 bg-white p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-ink0">Orders · 30d</p>
+            <x-sparkline :series="$ordersSeries" label="Paid orders over the last 30 days" stroke="#059669" fill="rgba(5, 150, 105, 0.12)"/>
+            <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($ordersSeries)) }} paid</p>
+        </div>
+        <div class="rounded-2xl border border-ink/10 bg-white p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-ink0">New users · 30d</p>
+            <x-sparkline :series="$usersSeries" label="New users over the last 30 days" stroke="#2563eb" fill="rgba(37, 99, 235, 0.10)"/>
+            <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($usersSeries)) }} joined</p>
+        </div>
+        <div class="rounded-2xl border border-ink/10 bg-white p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-ink0">Reports · 30d</p>
+            <x-sparkline :series="$reportsSeries" label="Reports filed over the last 30 days" stroke="#dc2626" fill="rgba(220, 38, 38, 0.10)"/>
+            <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($reportsSeries)) }} filed</p>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         @foreach ([
             'Prompts' => [$stats['prompts'], 'text-ink'],
             'Published' => [$stats['published'], 'text-emerald-800'],

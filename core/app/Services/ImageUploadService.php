@@ -36,6 +36,12 @@ class ImageUploadService
         // (JPEG fine) but land on the PRIVATE proofs disk, not public.
         'qr' => ['max' => 1024, 'dir' => 'qr', 'quality' => 90, 'alpha' => true],
         'proof' => ['max' => 1600, 'dir' => 'proofs', 'quality' => 82, 'alpha' => false, 'disk' => 'proofs'],
+        // G1 (v1.7.0): gamification art is CONTENT imagery with transparency
+        // — badges and frames sit over avatars/profiles, so JPEG (no alpha
+        // channel) is never acceptable. Same alpha logic as the QR variant.
+        'badge' => ['max' => 512, 'dir' => 'badges', 'quality' => 90, 'alpha' => true],
+        'frame' => ['max' => 512, 'dir' => 'frames', 'quality' => 90, 'alpha' => true],
+        'pack_hero' => ['max' => 1600, 'dir' => 'pack_heroes', 'quality' => 82, 'alpha' => false],
     ];
 
     public const MAX_INPUT_KB = 8192; // 8 MB hard ceiling before compression
@@ -64,6 +70,14 @@ class ImageUploadService
         $mime = strtolower((string) $file->getMimeType());
         if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
             throw new \RuntimeException('Only JPG, PNG or WebP images are accepted.');
+        }
+
+        // G1 (v1.7.0): badge/frame uploads reject JPEG sources outright —
+        // these variants EXIST to carry transparency; a JPEG source has
+        // none, and silently flattening it onto a black box is worse than
+        // a clear rejection at the desk.
+        if (in_array($variant, ['badge', 'frame'], true) && $mime === 'image/jpeg') {
+            throw new \RuntimeException('Badges and frames must be PNG or WebP (transparency required) — JPEG is not accepted.');
         }
 
         // Real decode check — a renamed .php with an image mime fails here.

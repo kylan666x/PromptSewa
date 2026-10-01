@@ -28,7 +28,9 @@ The dark pill navbar and dark footer sit on both worlds and stitch them together
 - `official` `#1d9bf0` — the official-account badge circle (white check on top). Founder-sanctioned as the single new token addition (v1.5.0): **official blue circle badge is founder-sanctioned; saffron seal remains the verified badge.** Used ONLY inside the badge SVG — never as a UI accent.
 - **Bottom dock (v1.5.0, T12)**: `x-mobile-dock` — ink ground (`ink`), exactly five slots, and the CENTER CTA carries the only saffron fill; tab states use text color only (saffron text = active). ≥44px targets, aria-labels, visible focus rings, safe-area padding. Mobile navigation is the dock — never reintroduce a burger drawer. Error/maintenance layouts are exempt.
 - Semantic: emerald = owned/free/success, rose = destructive, sky = informational/manual payment. Keep zinc-* utilities inside the dark world.
+- **Rose heart fill = saved state (founder-sanctioned, v1.7.1)** — the one exception to "rose = destructive": a bookmark heart that is filled rose (`text-rose-600 fill-current`, `aria-pressed="true"`) always means *saved*; outline (`ink/40` on cards, `ink/70` on the detail page) means unsaved. Rose remains destructive everywhere else.
 - Legacy amber-500 gradients are retired for new UI; saffron replaces them.
+- **Hero avatar geometry (v1.7.2 addendum): the sanctioned shape is the SQUIRCLE + FRAME RING, not circular.** The creator-profile hero avatar renders `rounded-3xl` (squircle) sized by the caller, and an equipped frame draws its alpha-PNG ring AROUND it (the `-inset-1` overlay). P5 (v1.7.1) fixed the composition (size on wrapper, `rounded-[inherit]` inner badge); v1.7.2 codifies the shape decision in writing: circular geometry stays reserved for small identity badges (cards, bylines, typeahead, navbar) — large hero surfaces are squircles. Small avatars keep their circular crop exactly as shipped.
 
 ## Typography
 

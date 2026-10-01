@@ -19,6 +19,7 @@ class SettingsService
     /** Settings that hold credentials — always encrypted at rest. */
     public const SECRET_KEYS = [
         'esewa_secret_key',
+        'esewa_sandbox_secret_key',
     ];
 
     /** Well-known settings with defaults. */
@@ -35,6 +36,11 @@ class SettingsService
         'esewa_enabled' => '0',
         'esewa_merchant_code' => '',
         'esewa_base_url' => 'https://rc.esewa.com.np',
+        // M3 (v1.6.0): sandbox rail — swaps merchant code + secret, never
+        // skips signature verification.
+        'esewa_sandbox' => '0',
+        'esewa_sandbox_merchant_code' => 'EPAYTEST',
+        'esewa_sandbox_secret_key' => '',
         'manual_payment_enabled' => '0',
         // v1.4.4: the admin form's checkbox field is named manual_enabled,
         // but the canonical runtime key is manual_payment_enabled — the C2

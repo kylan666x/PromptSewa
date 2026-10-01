@@ -6,6 +6,9 @@
 @endphp
 
 <x-app-layout>
+    {{-- P3 (v1.7.1): the add-prompt page was the SEO crawl's founding
+         offender — headless (brand-only/no title). x-seo is mandatory. --}}
+    <x-seo :title="'Add a new prompt'" robots="noindex, follow"/>
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6" x-data="promptForm({
         contexts: {{ Js::from($typeContexts) }},
         categories: {{ Js::from($categories->values()) }},
@@ -26,7 +29,9 @@
 
         <form method="POST" enctype="multipart/form-data" action="{{ route('dashboard.prompts.store') }}" class="mt-8" @submit="onSubmit()">
             @csrf
-            <input type="hidden" name="type" :value="type">
+            {{-- A1 (v1.7.2): the type radios themselves submit name="type" —
+                 the hidden :value mirror is gone (server-rendered checked
+                 state IS the contract now). --}}
 
             {{-- Step 1: prompt type cards (God of Prompt taxonomy) --}}
             <section aria-label="Prompt type">
@@ -35,25 +40,31 @@
                     <h2 class="text-sm font-semibold uppercase tracking-wider text-ink/60">What are you selling?</h2>
                 </div>
 
-                <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                    <template x-for="(ctx, key) in contexts" :key="key">
-                        <button
-                            type="button"
-                            @click="switchType(key)"
-                            :class="type === key
-                                ? 'border-saffron-deep bg-saffron/20 shadow-[0_0_0_1px_rgba(245,158,11,0.25)]'
-                                : 'border-ink/10 bg-paper-deep hover:border-ink/25'"
-                            class="rounded-2xl border p-4 text-left transition"
-                        >
-                            <span class="text-lg" x-text="ctx.icon"></span>
-                            <span class="mt-1.5 block text-sm font-semibold text-ink" x-text="ctx.label"></span>
-                            <span class="mt-0.5 block text-xs leading-relaxed text-ink0" x-text="ctx.blurb"></span>
-                        </button>
-                    </template>
+                {{-- A1 (v1.7.2): five SERVER-RENDERED radio cards — the served
+                     HTML carries real checked inputs (mono label + one-line
+                     description each), visible and submittable with zero
+                     JavaScript. A2: Alpine switchType only ENHANCES — guidance
+                     copy, category re-scope, the section-3 chip, the cover
+                     block and the tool wall adapt on change. Server-side
+                     validation remains the source of truth. --}}
+                <div class="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    @foreach ($typeContexts as $key => $ctx)
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="{{ $key }}" @checked($oldType === $key)
+                                   @change="switchType('{{ $key }}')" class="peer sr-only">
+                            <span class="block rounded-2xl border border-ink/10 bg-paper-deep p-4 transition hover:border-ink/25 peer-checked:border-saffron-deep peer-checked:bg-saffron/20 peer-checked:shadow-[0_0_0_1px_rgba(245,158,11,0.25)]">
+                                <span class="text-lg">{{ $ctx['icon'] }}</span>
+                                <span class="mt-1.5 block font-mono text-sm font-bold tracking-tight text-ink">{{ $ctx['label'] }}</span>
+                                <span class="mt-0.5 block text-xs leading-relaxed text-ink0">{{ $ctx['blurb'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
                 </div>
 
+                {{-- A2: guidance copy ships server-side for the initial type;
+                     Alpine swaps it (x-text) when the radio changes. --}}
                 <p class="mt-3 rounded-xl border border-saffron-deep/40 bg-saffron/10 px-4 py-3 text-sm leading-relaxed text-saffron-deep/90"
-                   x-text="guidance"></p>
+                   x-text="guidance">{{ $typeContexts[$oldType]['guidance'] ?? '' }}</p>
             </section>
 
             <div class="mt-10 grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -105,10 +116,17 @@
                                         x-model="categoryId"
                                         class="block w-full rounded-xl border bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none transition focus:bg-paper-deep border-ink/10 focus:border-saffron-deep"
                                     >
-                                        <option value="" disabled>Choose a category…</option>
-                                        <template x-for="option in categoryOptions" :key="option.id">
-                                            <option :value="option.id" x-text="option.name" :selected="String(option.id) === categoryId"></option>
-                                        </template>
+                                        {{-- A2: options are SERVER-RENDERED (no JS
+                                             needed to pick one); each scoped option
+                                             carries its own x-show gate so Alpine
+                                             re-scopes the list on type change. --}}
+                                        <option value="" disabled @selected(! old('category_id'))>Choose a category…</option>
+                                        @foreach ($categories as $category)
+                                            <option value="{{ $category->id }}"
+                                                @selected((string) old('category_id', '') === (string) $category->id)
+                                                @if ($category->type_scope) x-show="type === '{{ $category->type_scope }}'" @endif
+                                            >{{ $category->name }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <p class="mt-1 text-xs text-ink0">Only categories that fit the selected prompt type are listed.</p>
@@ -122,7 +140,8 @@
                         <div class="flex items-center gap-3">
                             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-saffron/25 text-xs font-bold text-saffron-deep">3</span>
                             <h2 class="text-sm font-semibold uppercase tracking-wider text-ink/60">The prompt</h2>
-                            <span class="rounded-full border border-ink/10 bg-paper-deep px-2.5 py-0.5 text-[11px] text-ink/60" x-text="context.label"></span>
+                            {{-- A2: chip label ships server-side, swaps via Alpine. --}}
+                            <span class="rounded-full border border-ink/10 bg-paper-deep px-2.5 py-0.5 text-[11px] text-ink/60" x-text="context.label">{{ $typeContexts[$oldType]['label'] ?? '' }}</span>
                         </div>
 
                         <div class="mt-4 space-y-5">
@@ -145,17 +164,23 @@
                             <div>
                                 <x-form.label name="recommended_tools" label="Works best in" hint="Pick 1–4 tools this prompt is tuned for." :required="true"/>
                                 <div class="mt-2 flex flex-wrap gap-2">
-                                    <template x-for="tool in toolChips" :key="tool">
+                                    {{-- P2 (v1.7.1): tool chips render ONCE with a
+                                         data-modality attribute and an x-show gate —
+                                         an image tool is invisible on Text the
+                                         instant the form loads, with zero JS work. --}}
+                                    <template x-for="entry in toolEntries" :key="entry.name">
                                         <button
                                             type="button"
-                                            @click="toggleTool(tool)"
-                                            :class="selectedTools.includes(tool)
+                                            :data-modality="entry.modality"
+                                            x-show="entry.modality === type || entry.modality === 'any' || selectedTools.includes(entry.name)"
+                                            @click="toggleTool(entry.name)"
+                                            :class="selectedTools.includes(entry.name)
                                                 ? 'border-emerald-500/50 bg-emerald-100 text-emerald-800'
-                                                : (isToolDisabled(tool)
+                                                : (isToolDisabled(entry.name)
                                                     ? 'border-ink/10 bg-white/[0.02] text-ink/40 cursor-not-allowed'
                                                     : 'border-ink/10 bg-paper-deep text-ink/60 hover:border-ink/25')"
                                             class="rounded-full border px-3.5 py-1.5 text-xs font-medium transition"
-                                            x-text="tool"
+                                            x-text="entry.name"
                                         ></button>
                                     </template>
                                 </div>
@@ -166,7 +191,8 @@
                                 @error('recommended_tools') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="grid gap-5 sm:grid-cols-2">                                <div>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
                                     <x-form.label name="audience" label="Perfect for (optional)"/>
                                     <div class="mt-1.5">
                                         <input
@@ -216,11 +242,19 @@
 
                 {{-- Sidebar: pricing + visibility --}}
                 <aside class="space-y-5 lg:sticky lg:top-24 lg:self-start">
-                    <div class="rounded-2xl border border-ink/10 bg-white p-5" x-show="type === 'image'" x-cloak>
+                    {{-- A2 (v1.7.2): cover-upload block appears for image. Zero-JS
+                         truth lives in the type radio: CSS `:has()` + the shared
+                         `data-cover-only` hook show/hide it in served HTML; the
+                         x-show is the same Alpine enhancement the other adaptive
+                         regions use. image type only — server validation mirrors. --}}
+                    <div class="rounded-2xl border border-ink/10 bg-white p-5"
+                         data-cover-only
+                         x-show="type === 'image'" x-cloak>
                         <h3 class="text-sm font-semibold text-ink">Cover image</h3>
                         <p class="mt-1 text-xs leading-relaxed text-ink/50">Show buyers the result your prompt produces. JPG/PNG/WebP — large files are compressed automatically.</p>
                         <div class="mt-3">
                             <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp"
+                                   data-cover-input
                                    class="block w-full cursor-pointer rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-xs text-ink/80 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-saffron file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink hover:file:bg-saffron-deep">
                         </div>
                         @error('cover_image') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror

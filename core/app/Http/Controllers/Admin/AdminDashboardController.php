@@ -43,10 +43,18 @@ class AdminDashboardController extends Controller
             ->take(5)
             ->get();
 
+        // G5 (v1.7.0): 30-day admin series (file-cached 10 min). Zero-data
+        // states are first-class — 30 zeros, never sparse/null.
+        $analytics = app(\App\Services\AnalyticsService::class);
+
         return view('admin.dashboard', [
             'stats' => $stats,
             'reviewQueue' => $reviewQueue,
             'manualQueue' => $manualQueue,
+            'revenueSeries' => $analytics->salesSeries(), // paisa per day
+            'ordersSeries' => $analytics->salesSeries(countOnly: true),
+            'usersSeries' => $analytics->usersSeries(),
+            'reportsSeries' => $analytics->reportsSeries(),
         ]);
     }
 }

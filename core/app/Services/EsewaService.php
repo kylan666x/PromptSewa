@@ -80,6 +80,15 @@ class EsewaService
     {
         $secret = (string) $this->settings->get('esewa_secret_key', '');
 
+        // M3 (v1.6.0): sandbox mode swaps the merchant code AND secret but
+        // NEVER skips signature verification — the sandbox is still a
+        // signature-checked rail.
+        $sandboxSecret = (string) $this->settings->get('esewa_sandbox_secret_key', '');
+
+        if ($this->settings->isOn('esewa_sandbox') && $sandboxSecret !== '') {
+            $secret = $sandboxSecret;
+        }
+
         if ($secret === '') {
             throw new RuntimeException('eSewa secret key is not configured.');
         }
@@ -89,6 +98,15 @@ class EsewaService
 
     private function merchantCode(): string
     {
+        // M3 (v1.6.0): sandbox mode uses the sandbox merchant code.
+        if ($this->settings->isOn('esewa_sandbox')) {
+            $sandboxCode = (string) $this->settings->get('esewa_sandbox_merchant_code', '');
+
+            if ($sandboxCode !== '') {
+                return $sandboxCode;
+            }
+        }
+
         $code = (string) $this->settings->get('esewa_merchant_code', '');
 
         if ($code === '') {

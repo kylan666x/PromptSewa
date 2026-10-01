@@ -1,6 +1,6 @@
 @php
     /** @var \App\Models\Prompt $prompt */
-    /** @var \Illuminate\Support\Collection<int, array{label: string, changelog: string, author: string, created_at: \Illuminate\Support\Carbon}> $versions */
+    /** @var \Illuminate\Support\Collection<int, array{label: string, changelog: string, author: ?string, author_missing: bool, created_at: \Illuminate\Support\Carbon}> $versions */
     /** @var bool $isPaid */
 @endphp
 
@@ -49,7 +49,15 @@
                             <span class="rounded-full bg-saffron/25 px-2.5 py-0.5 font-mono text-xs font-bold text-saffron-deep">{{ $version['label'] }}</span>
                             <span class="text-sm font-semibold text-ink">{{ $version['changelog'] !== '' ? $version['changelog'] : 'No changelog note' }}</span>
                         </p>
-                        <p class="font-mono text-xs text-ink/50">{{ $version['created_at']->format('M j, Y') }} · {{ $version['author'] }}</p>
+                        <p class="font-mono text-xs text-ink/50">{{ $version['created_at']->format('M j, Y') }} ·
+                            {{-- H2 (v1.5.2): missing/deleted author → "Former creator" chip,
+                                 never a crash or a blank row. --}}
+                            @if ($version['author_missing'])
+                                <span class="rounded-full bg-paper-deep px-2 py-0.5 font-mono text-[10px] text-ink/50">Former creator</span>
+                            @else
+                                {{ $version['author'] }}
+                            @endif
+                        </p>
                     </div>
 
                     {{-- T7 (v1.5.0): snapshot honesty + full-snapshot rendering --}}

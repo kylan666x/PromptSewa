@@ -31,7 +31,9 @@ test('the dock renders exactly five slots with correct hrefs for an authed membe
     expect(substr_count($dock, '<a '))->toBe(5)
         ->and($dock)->toContain('href="'.route('dashboard.prompts.create').'"')
         ->and($dock)->toContain('href="'.route('purchases.index').'"')
-        ->and($dock)->toContain('href="'.route('dashboard.profile.edit').'"')
+        // P4 (v1.7.1): the You slot lands on the PUBLIC profile.
+        ->and($dock)->toContain('href="'.route('creators.show', $member).'"')
+        ->and($dock)->not->toContain(route('dashboard.profile.edit'))
         // Member must never see an admin destination.
         ->not->toContain(route('admin.dashboard'));
 });

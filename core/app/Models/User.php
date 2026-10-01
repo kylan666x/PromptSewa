@@ -38,6 +38,8 @@ class User extends Authenticatable
         'is_official',
         'banned_at',
         'xp',
+        'active_frame_id',
+        'xp',
         'banner_path',
         'avatar_path',
         'bio',
@@ -68,6 +70,7 @@ class User extends Authenticatable
             'is_verified' => 'boolean',
             'is_official' => 'boolean',
             'banned_at' => 'datetime',
+            'xp' => 'integer',
         ];
     }
 
@@ -115,6 +118,18 @@ class User extends Authenticatable
     public function prompts(): HasMany
     {
         return $this->hasMany(Prompt::class);
+    }
+
+    /** G2 (v1.7.0): earned badges (pivot rows). */
+    public function userBadges(): HasMany
+    {
+        return $this->hasMany(UserBadge::class);
+    }
+
+    /** G3 (v1.7.0): the equipped avatar frame, if any. */
+    public function activeFrame()
+    {
+        return $this->belongsTo(Frame::class, 'active_frame_id');
     }
 
     public function promptVersions(): HasMany

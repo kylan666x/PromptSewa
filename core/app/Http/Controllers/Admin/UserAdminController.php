@@ -20,6 +20,9 @@ class UserAdminController extends Controller
         $query = trim((string) $request->query('q', ''));
         $role = (string) $request->query('role', '');
 
+        // H1 (v1.5.2): the admin users column is "All prompts" — the TOTAL
+        // across every status/visibility, deliberately unlike the public
+        // profile stat (published-only). Locked by CreatorProfileCountTest.
         $users = User::query()
             ->withCount('prompts')
             ->when($query !== '', function ($builder) use ($query) {

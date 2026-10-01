@@ -155,11 +155,14 @@
             @auth
                 <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">+ Add prompt</a>
 
-                {{-- Account menu (X-style): avatar opens profile/library/settings links --}}
+                {{-- Account menu (X-style): avatar opens profile/library/settings links.
+                     P4 (v1.7.1): the dropdown keeps DISTINCT "My profile" (public)
+                     and "Edit profile" entries — mobile's You slot also lands on
+                     the public profile now. --}}
                 <div x-data="{ open: false }" class="relative">
                     <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-ink/5" aria-label="Account menu" :aria-expanded="open">
                         <span class="flex size-8 items-center justify-center overflow-hidden rounded-full bg-ink text-xs font-bold text-saffron">
-                            <x-user-avatar :user="auth()->user()" size="md"/>
+                            <x-user-avatar :user="auth()->user()" size="md" :frame="auth()->user()->activeFrame"/>
                         </span>
                         <svg class="size-4 text-creak" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
@@ -168,17 +171,17 @@
                     <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-ink/10 bg-white py-1.5 shadow-card-hover">
                         <div class="border-b border-ink/10 px-4 py-2.5">
                             <p class="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
-                                <x-user-avatar :user="auth()->user()" size="sm"/>
+                                <x-user-avatar :user="auth()->user()" size="sm" :frame="auth()->user()->activeFrame"/>
                                 {{ auth()->user()->name }}
                                 <x-verified-badge :user="auth()->user()" size="xs"/>
                             </p>
                             <x-user-handle :user="auth()->user()" size="text-xs" class="block"/>
                         </div>
-                        <a href="{{ route('creators.show', auth()->user()) }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                        <a href="{{ route('creators.show', auth()->user()) }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink" data-testid="nav-view-profile">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
                             My profile
                         </a>
-                        <a href="{{ route('dashboard.profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                        <a href="{{ route('dashboard.profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink" data-testid="nav-edit-profile">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
                             Edit profile
                         </a>

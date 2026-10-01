@@ -25,6 +25,7 @@
                         @endif
                         <div>
                             <p class="flex items-center gap-2 font-semibold text-ink">
+                                <span class="rounded-md bg-paper-deep px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-ink/60" title="Method kind">{{ $method->kind }}</span>
                                 {{ $method->name }}
                                 <span class="rounded-full px-2 py-0.5 text-[10px] font-bold {{ $method->active ? 'bg-emerald-100 text-emerald-800' : 'bg-ink/10 text-ink/50' }}">
                                     {{ $method->active ? 'Active' : 'Inactive' }}
@@ -53,13 +54,21 @@
                             <input type="number" name="position" value="{{ $method->position }}" min="0" max="9999"
                                    class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">
                         </div>
+                        <div>
+                            <label class="block text-xs font-medium text-ink/60">Kind</label>
+                            <select name="kind" class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">
+                                @foreach (\App\Models\ManualPaymentMethod::KINDS as $kind)
+                                    <option value="{{ $kind }}" @selected($method->kind === $kind)>{{ ucfirst($kind) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-medium text-ink/60">Instructions shown at checkout</label>
                             <textarea name="instructions" rows="3"
                                       class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">{{ $method->instructions }}</textarea>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-ink/60">Replace QR (PNG/WebP, ≤4 MB)</label>
+                            <label class="block text-xs font-medium text-ink/60">Replace QR (PNG/WebP, transparency preserved, ≤4 MB)</label>
                             <input type="file" name="qr" accept=".png,.webp,.jpg,.jpeg"
                                    class="mt-1 block w-full text-xs text-ink/70">
                         </div>
@@ -106,6 +115,14 @@
                        class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">
             </div>
             <div>
+                <label class="block text-xs font-medium text-ink/60">Kind</label>
+                <select name="kind" class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">
+                    @foreach (\App\Models\ManualPaymentMethod::KINDS as $kind)
+                        <option value="{{ $kind }}" @selected($kind === \App\Models\ManualPaymentMethod::KIND_OTHER)>{{ ucfirst($kind) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-ink/60">Position</label>
                 <input type="number" name="position" value="0" min="0" max="9999"
                        class="mt-1 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink outline-none focus:border-saffron-deep">
@@ -117,7 +134,7 @@
                           placeholder="e.g. Scan the QR, send the amount, then submit the transaction ID below."></textarea>
             </div>
             <div>
-                <label class="block text-xs font-medium text-ink/60">QR code (PNG/WebP, ≤4 MB)</label>
+                <label class="block text-xs font-medium text-ink/60">QR code (PNG/WebP, transparency preserved, ≤4 MB)</label>
                 <input type="file" name="qr" accept=".png,.webp,.jpg,.jpeg"
                        class="mt-1 block w-full text-xs text-ink/70">
             </div>

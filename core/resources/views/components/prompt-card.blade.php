@@ -21,8 +21,10 @@
             </span>
         </div>
 
-        {{-- T13 (v1.5.0): bookmark heart — Alpine optimistic flip, no reload.
-             Guests get a plain link to login; $saved pre-flips the state. --}}
+        {{-- T13 (v1.5.0) / P1 (v1.7.1): bookmark heart — Alpine optimistic
+             flip, no reload. Saved = FILLED ROSE (text-rose-600 fill-current,
+             aria-pressed true); unsaved = outline ink/40. Guests get a plain
+             link to login; $saved pre-flips the state server-side. --}}
         @auth
             <button type="button"
                     x-data="bookmarkHeart({{ Js::from(['url' => route('bookmarks.toggle', $prompt), 'saved' => $saved]) }})"
@@ -30,8 +32,8 @@
                     :aria-pressed="saved"
                     aria-label="Save this prompt"
                     class="absolute right-4 top-4 z-10 flex size-9 items-center justify-center rounded-full bg-white/90 shadow-sm transition hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron">
-                <svg class="size-5 transition" :class="saved ? 'text-rose-600' : 'text-ink/40'"
-                     :fill="saved ? 'currentColor' : 'none'"
+                <svg class="size-5 transition"
+                     :class="saved ? 'text-rose-600 fill-current' : 'text-ink/40 fill-none'"
                      xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
                 </svg>

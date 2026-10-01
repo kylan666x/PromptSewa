@@ -382,14 +382,16 @@
                     </div>
                 @endif
 
-                {{-- T13 (v1.5.0): bookmark heart on the detail page --}}
+                {{-- T13 (v1.5.0) / P1 (v1.7.1): bookmark heart on the detail
+                     page. Saved = FILLED ROSE; unsaved = outline ink/70. --}}
                 @auth
+                    @php $isSavedNow = \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id); @endphp
                     <button type="button"
-                            x-data="bookmarkHeart({{ Js::from(['url' => route('bookmarks.toggle', $prompt), 'saved' => \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id)]) }})"
+                            x-data="bookmarkHeart({{ Js::from(['url' => route('bookmarks.toggle', $prompt), 'saved' => $isSavedNow]) }})"
                             @click="toggle()"
                             :aria-pressed="saved"
-                            class="flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition {{ \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id) ? 'border-rose-500 text-rose-600' : 'border-ink/15 text-ink/70 hover:border-rose-500 hover:text-rose-600' }}">
-                        <svg class="size-4 transition" :class="saved ? 'text-rose-600' : 'text-current'" :fill="saved ? 'currentColor' : 'none'"
+                            class="flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition {{ $isSavedNow ? 'border-rose-500 text-rose-600' : 'border-ink/15 text-ink/70 hover:border-rose-500 hover:text-rose-600' }}">
+                        <svg class="size-4 transition" :class="saved ? 'text-rose-600 fill-current' : 'fill-none text-current'"
                              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
                         </svg>
