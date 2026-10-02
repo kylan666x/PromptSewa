@@ -70,6 +70,9 @@
                 </div>
             @endguest
 
+            {{-- T3 (v1.7.3): bot check (off by default) — renders nothing when disabled. --}}
+            <x-captcha form="report"/>
+
             <div class="flex items-center gap-3 pt-2">
                 <button
                     type="submit"

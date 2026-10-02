@@ -79,6 +79,10 @@
                        class="w-full rounded-xl border border-ink/15 bg-white px-3 py-2.5 text-sm text-ink placeholder-creak shadow-sm outline-none transition focus:border-saffron-deep focus:ring-2 focus:ring-saffron/40">
             </div>
 
+            {{-- T3 (v1.7.3): bot check — widget sits above the submit button,
+                 visible focus states (WCAG). Renders nothing when disabled. --}}
+            <x-captcha form="register"/>
+
             <x-button type="submit" class="w-full">Create account</x-button>
 
             <p class="text-center text-sm text-ink/60">

@@ -42,7 +42,7 @@ class PromptSearchService
             return Prompt::query()
                 ->publicListing()
                 ->when($type !== null, fn ($query) => $query->where('type', $type))
-                ->with(['category', 'creator', 'latestVersion'])
+                ->with(['category', 'creator.activeFrame', 'creator', 'latestVersion'])
                 ->latest()
                 ->paginate($perPage);
         }
@@ -51,7 +51,7 @@ class PromptSearchService
             ->query(fn ($query) => $query
                 ->publicListing()
                 ->when($type !== null, fn ($q) => $q->where('type', $type))
-                ->with(['category', 'creator', 'latestVersion']))
+                ->with(['category', 'creator.activeFrame', 'creator', 'latestVersion']))
             ->paginate($perPage);
     }
 
@@ -75,8 +75,8 @@ class PromptSearchService
     /**
      * Search creator profiles by handle/name/email for the library page
      * sidebar section and the navbar typeahead. Only users with at least
-     * one public prompt are surfaced.
-     * Only users with at least one public prompt are surfaced.
+     * one public prompt are surfaced. Eager-loads activeFrame (W1: the
+     * typeahead rows render the creator's equipped frame).
      *
      * @return \Illuminate\Support\Collection<int, \App\Models\User>
      */
@@ -94,7 +94,7 @@ class PromptSearchService
                 ->orWhere('email', 'like', "%{$term}%")
                 ->orWhere('username', 'like', "%{$term}%"))
             ->whereHas('prompts', fn ($q) => $q->publicListing())
-            ->withCount(['prompts' => fn ($q) => $q->publicListing()])
+            ->withCount(['prompts' => fn ($q) => $q->publicListing()])->with('activeFrame')
             ->orderByDesc('prompts_count')
             ->limit($limit)
             ->get();

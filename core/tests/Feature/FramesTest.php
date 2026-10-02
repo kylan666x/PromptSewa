@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\Storage;
 uses(RefreshDatabase::class);
 
 /**
- * G6 (v1.7.0) — profile frames.
+ * G6 (v1.7.0) / W1 (v1.7.3) — profile frames.
  *
- * Surfaces ruling (G3): the frame ring renders on exactly FOUR places —
- * profile hero, navbar dropdown, dock "You" avatar, feed actor avatars —
- * and NEVER on prompt cards (cards stay clean).
+ * Surfaces ruling REVERSED by W1 (v1.7.3) FRAME SURFACE PARITY: the frame
+ * ring now renders on EVERY avatar surface — profile hero, navbar dropdown
+ * (both rows), dock "You", feed actors, prompt cards (both variants),
+ * image-gallery cards, library creators grid, versions author, purchases
+ * rows, admin users table and typeahead rows. Cards are framed now.
  */
 
 function framePng(): UploadedFile
@@ -70,7 +72,7 @@ test('jpeg sources are rejected for badge and frame variants', function () {
         ->toThrow(RuntimeException::class);
 });
 
-test('frame overlay renders on the four ruled surfaces and never on prompt cards', function () {
+test('frame overlay renders on every avatar surface including prompt cards', function () {
     Storage::fake('public');
     $path = Storage::disk('public')->putFileAs('frames', framePng(), 'ring.png');
 
@@ -84,23 +86,35 @@ test('frame overlay renders on the four ruled surfaces and never on prompt cards
 
     // 1. Profile hero.
     expect($this->get(route('creators.show', $creator))->getContent())->toContain($frameUrl)
-        // 4. Feed actor avatars (prompt publish emits an event).
-        ->and($this->get(route('feed.index'))->getContent())->toContain($frameUrl);
+        // Feed actor avatars (prompt publish emits an event).
+        ->and($this->get(route('feed.index'))->getContent())->toContain($frameUrl)
+        // Versions author row.
+        ->and($this->get(route('prompts.versions', $prompt))->getContent())->toContain($frameUrl);
 
-    // 2. Navbar dropdown (authenticated).
+    // 2. Navbar dropdown (authenticated) — dashboard page hosts both rows.
     $navbar = $this->actingAs($creator)->get(route('dashboard'))->getContent();
     expect($navbar)->toContain($frameUrl);
 
     // 3. Dock "You" avatar — the dashboard profile page hosts the You menu.
     expect($this->actingAs($creator)->get(route('dashboard.profile.edit'))->getContent())->toContain($frameUrl);
 
-    // NEVER on prompt cards (library) — cards stay clean by ruling. The
-    // authenticated navbar renders the avatar twice on this page (desktop
-    // dropdown + mobile row — both ruled surfaces), so the exact count is
-    // 2: any third occurrence would be a prompt card leaking a frame.
+    // W1 PARITY: the LIBRARY page — every prompt card in the grid now
+    // carries the creator's frame (desktop dropdown + mobile row + the
+    // published card on page 1 = 3 occurrences minimum on this fixture).
     $library = $this->get(route('library.index'))->getContent();
     expect($library)->toContain($creator->name)
-        ->and(substr_count($library, $frameUrl))->toBe(2, 'frame may appear ONLY in the two navbar avatars on the library — never in prompt cards');
+        ->and(substr_count($library, $frameUrl))->toBeGreaterThanOrEqual(3, 'prompt cards must carry the creator frame (W1 parity)');
+
+    // Storefront cards (featured + image gallery) carry it too.
+    expect($this->get(route('home'))->getContent())->toContain($frameUrl);
+
+    // Admin users table.
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    expect($this->actingAs($admin)->get(route('admin.users.index'))->getContent())->toContain($frameUrl);
+
+    // Typeahead JSON carries the frame URL for the client row overlay.
+    $preview = $this->get(route('search.preview', ['q' => $creator->name]));
+    expect($preview->json('creators.0.frame_url'))->toBe($frameUrl);
 });
 
 test('users can select and clear a frame from profile edit', function () {

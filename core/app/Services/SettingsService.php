@@ -20,6 +20,8 @@ class SettingsService
     public const SECRET_KEYS = [
         'esewa_secret_key',
         'esewa_sandbox_secret_key',
+        // T1 (v1.7.3): bot-challenge secret (Cloudflare Turnstile / reCAPTCHA).
+        'captcha_secret',
     ];
 
     /** Well-known settings with defaults. */
@@ -48,6 +50,23 @@ class SettingsService
         // (A legacy manual_enabled row may exist in old installs; nothing
         // reads it anymore.)
         'manual_payment_instructions' => '',
+
+        // T1 (v1.7.3): bot challenge. Provider '' = disabled (pass-through);
+        // register is ON by default, every other form off.
+        'captcha_provider' => '',
+        'captcha_site_key' => '',
+        'captcha_min_score' => '0.5',
+        'captcha_fail_open' => '0',
+        'captcha_form_register' => '1',
+        'captcha_form_login' => '0',
+        'captcha_form_reset' => '0',
+        'captcha_form_submit' => '0',
+        'captcha_form_report' => '0',
+
+        // T5 (v1.7.3): disposable-mail gate. Extra admin-blocked domains
+        // (newline textarea); the curated bundle lives in config/disposable-domains.php.
+        'blocked_domains_extra' => '',
+        'block_disposable_on_reports' => '0',
     ];
 
     public function get(string $key, ?string $default = null): ?string

@@ -68,6 +68,7 @@ function seoExpectedSubjects(): array
         'admin.finance' => ['Finance', ['admin']],
         'admin.badges.index' => ['Badges', ['admin']],
         'admin.frames.index' => ['Frames', ['admin']],
+        'admin.security.edit' => ['Security', ['admin']],
         'admin.comp-grants.create' => ['Comp grants', ['admin']],
         'admin.update' => ['Software update', ['admin']],
     ];

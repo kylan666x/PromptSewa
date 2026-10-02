@@ -148,15 +148,26 @@
                             <div>
                                 <x-form.label name="body" label="Prompt body" :hint="$variableHint" :required="true"/>
                                 <div class="mt-1.5">
-                                    <textarea
-                                        id="body"
-                                        name="body"
-                                        rows="12"
-                                        required
-                                        maxlength="4000"
-                                        :placeholder="bodyPlaceholder"
-                                        class="block w-full rounded-xl border bg-white px-3.5 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none transition placeholder:text-ink/40 border-ink/10 focus:border-saffron-deep"
-                                    >{{ old('body') }}</textarea>
+                                    {{-- H1 (v1.7.3 hotfix): body ceiling is 50,000 chars —
+                                         see PromptFormRequest::MAX_BODY_CHARS. The
+                                         counter is plain JS on an x-data div, so it
+                                         works even with JS off (maxlength still caps
+                                         the input; no template mutation needed). --}}
+                                    <div x-data="{ n: document.getElementById('body') ? document.getElementById('body').value.length : 0 }"
+                                         x-on:input.debounce.100ms="n = document.getElementById('body').value.length">
+                                        <textarea
+                                            id="body"
+                                            name="body"
+                                            rows="12"
+                                            required
+                                            maxlength="{{ \App\Http\Requests\PromptFormRequest::MAX_BODY_CHARS }}"
+                                            :placeholder="bodyPlaceholder"
+                                            class="block w-full rounded-xl border bg-white px-3.5 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none transition placeholder:text-ink/40 border-ink/10 focus:border-saffron-deep"
+                                        >{{ old('body') }}</textarea>
+                                        <p class="mt-1 text-right text-[11px] text-ink/40" aria-live="off">
+                                            <span x-text="n.toLocaleString()">{{ number_format(strlen(old('body') ?? '')) }}</span> / {{ number_format(\App\Http\Requests\PromptFormRequest::MAX_BODY_CHARS) }} chars
+                                        </p>
+                                    </div>
                                 </div>
                                 @error('body') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                             </div>
@@ -297,6 +308,9 @@
                     </div>
 
                     <div class="rounded-2xl border border-ink/10 bg-white p-5">
+                        {{-- T3 (v1.7.3): bot check on prompt submit (off by default). --}}
+                        <x-captcha form="submit"/>
+
                         <button
                             type="submit"
                             :disabled="submitting"

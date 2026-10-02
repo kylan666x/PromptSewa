@@ -86,6 +86,13 @@ class PromptFormController extends Controller
 
     public function store(PromptFormRequest $request)
     {
+        // T4 (v1.7.3): bot challenge on prompt submit (off by default).
+        if (! app(\App\Services\BotChallengeService::class)->verify('submit', $request->input('cf-turnstile-response') ?? $request->input('captcha_token'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'captcha' => 'Bot check failed — please retry.',
+            ]);
+        }
+
         $validated = $request->fields();
         $user = $request->user();
 

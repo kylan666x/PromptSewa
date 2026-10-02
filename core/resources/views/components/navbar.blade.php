@@ -82,16 +82,22 @@
                                 <a :href="creator.url"
                                    class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
                                    :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"
-                                   @mouseenter="activeIndex = prompts.length + index">
-                                    <span class="flex min-w-0 items-center gap-2">
-                                        <span class="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-saffron">
-                                            <template x-if="creator.avatar_url">
-                                                <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full object-cover" loading="lazy">
-                                            </template>
-                                            <template x-if="! creator.avatar_url">
-                                                <span class="text-[10px]" x-text="creator.initial"></span>
-                                            </template>
-                                        </span>
+                                   @mouseenter="activeIndex = prompts.length + index">                                        <span class="flex min-w-0 items-center gap-2">
+                                            {{-- W1 (v1.7.3): frame parity — typeahead rows render the
+                                                 creator's equipped frame (absolute overlay, decorative). --}}
+                                            <span class="relative flex size-6 shrink-0 items-center justify-center">
+                                                <span class="flex size-full items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-saffron">
+                                                    <template x-if="creator.avatar_url">
+                                                        <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full object-cover" loading="lazy">
+                                                    </template>
+                                                    <template x-if="! creator.avatar_url">
+                                                        <span class="text-[10px]" x-text="creator.initial"></span>
+                                                    </template>
+                                                </span>
+                                                <template x-if="creator.frame_url">
+                                                    <img :src="creator.frame_url" alt="" aria-hidden="true" class="pointer-events-none absolute -inset-1 size-[calc(100%+8px)]" loading="lazy">
+                                                </template>
+                                            </span>
                                         <span class="min-w-0 truncate">
                                             <span x-text="creator.name"></span>
                                             {{-- F2 (v1.5.1): official/verified badge in the typeahead —

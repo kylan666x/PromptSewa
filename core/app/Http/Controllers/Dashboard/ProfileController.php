@@ -19,9 +19,35 @@ class ProfileController extends Controller
     {
         $this->abortIfOfficialAndNotAdmin($request->user());
 
-        // G3 (v1.7.0): the frame picker — active frames only, none = clear.
+        // G3 (v1.7.0) + W4 (v1.7.3): the frame picker — active frames with
+        // lock-state data (unlocked emerald / locked ink · {criterion}
+        // {have}/{need} chips). None = clear.
+        $evaluator = \App\Services\CriterionEvaluator::class;
+        $frames = \App\Models\Frame::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(function (\App\Models\Frame $frame) use ($request, $evaluator) {
+                $unlocked = $frame->isUnlockedBy($request->user());
+
+                $progress = null;
+                $goal = null;
+
+                if (! $unlocked && $frame->criterion !== null && $frame->criterion !== 'manual') {
+                    $progress = $evaluator::progress($request->user(), $frame->criterion);
+                    $goal = $evaluator::goal($frame->criterion);
+                }
+
+                return [
+                    'model' => $frame,
+                    'unlocked' => $unlocked,
+                    'progress' => $progress,
+                    'goal' => $goal,
+                ];
+            });
+
         return view('dashboard.profile', [
-            'frames' => \App\Models\Frame::query()->where('is_active', true)->orderBy('name')->get(),
+            'frames' => $frames,
             'user' => $request->user(),
         ]);
     }
@@ -116,6 +142,19 @@ class ProfileController extends Controller
 
         // G3 (v1.7.0): frame selection — a missing/empty checkbox clears it.
         $user->active_frame_id = $validated['active_frame_id'] ?? null;
+
+        // W4 (v1.7.3): equipping a LOCKED frame is a 422 — criterion frames
+        // require an unlock row (manual grant or a met criterion), free
+        // frames are open to everyone.
+        if ($user->active_frame_id !== null) {
+            $frame = \App\Models\Frame::query()->find($user->active_frame_id);
+
+            if ($frame !== null && ! $frame->isUnlockedBy($user)) {
+                return back()->withErrors([
+                    'active_frame_id' => "The \"{$frame->name}\" frame is locked — it unlocks with its criterion (or an admin grant).",
+                ])->withInput();
+            }
+        }
 
         $user->save();
 

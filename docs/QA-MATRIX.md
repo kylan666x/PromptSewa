@@ -1,3 +1,35 @@
+# PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"
+
+## W-block (v1.7.3)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| W1 frame overlay renders on EVERY avatar surface (cards both variants, gallery, library, feed actors, versions, purchases, admin users, navbar, dock, typeahead) | ✅ | `FrameTruthTest::the frame overlay renders on every avatar surface`, `…the overlay stays pointer-events-none and aria-hidden everywhere` |
+| W1 avatar geometry circle-everywhere (reverses v1.7.0 cards-clean ruling; v1.7.2 hero ring stays for the large hero) | ✅ | `FramesTest::frame overlay renders on every avatar surface including prompt cards`, DESIGN.md v1.7.3 addendum |
+| W2 alpha truth: blending OFF + save-alpha ON before every save; transparent corners on frame/badge/qr (PNG + WebP sources) | ✅ | `FrameTruthTest::stored frame corner alpha is fully transparent for a PNG source`, `…survives a WebP source`, `…badge and QR variants keep transparent corners` |
+| W3 animated GIF/WebP pass-through byte-identical (≤512×512 header-parsed); static GIF rejected | ✅ | `FrameTruthTest::animated gif uploads pass through byte-identical`, `…oversized animated webp is refused` |
+| W3 animation classes gated behind prefers-reduced-motion (compiled stylesheet) | ✅ | `FrameTruthTest::an animated frame renders its animation class on the overlay`, `…reduced-motion guard is present in the compiled stylesheet` |
+| W4 criteria & awarding: CriterionEvaluator single source; admin award/revoke idempotent + audited; locked frames refused at equip | ✅ | `FrameTruthTest::criterion evaluator is the single threshold source`, `…manual award persists an audited unlock and is idempotent`, `…a locked frame shows an ink lock chip…`, `…granting an unlock lets the user equip the frame` |
+| W4 frames admin carries criterion selects + manual award panel; moderators 403 | ✅ | `FrameTruthTest::admin frames page carries criterion selects…`, `…moderators are 403 on the frames admin and award endpoint` |
+| W5 own-profile Dashboard + Edit profile buttons (testids), strangers see neither | ✅ | `FrameTruthTest::own profile shows Dashboard and Edit profile buttons; strangers see neither` |
+| W5 Saved heart parity re-verified (filled rose on saved surfaces) | ✅ | `FrameTruthTest::a saved card serves the filled-rose class…`, `…the Saved tab serves filled hearts…` |
+
+## T-block (v1.7.3)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| T1/T2 provider drivers: null pass-through; turnstile; recaptcha_v3 (score ≥ min AND action == form) | ✅ | `BotChallengeTest::service is a pass-through…`, `…turnstile success/failure…`, `…recaptcha v3 requires score and matching action` |
+| T2 server-side-only verification; transport error FAILS CLOSED by default; captcha_fail_open flips | ✅ | `BotChallengeTest::transport timeout fails closed by default`, `…fails open when captcha_fail_open is on` |
+| T2 per-form enables (register on by default, others opt-in); disabled forms never hit the provider | ✅ | `BotChallengeTest::per-form enablement defaults…`, `…forms without the challenge enabled never hit the provider` |
+| T2 secret encrypted at rest; write-only admin input; missing token/secret rejected without a provider call | ✅ | `BotChallengeTest::the captcha secret is encrypted at rest…`, `…missing token or secret is rejected…` |
+| T3 x-captcha renders ZERO markup when inactive; turnstile widget when active | ✅ | `BotChallengeTest::the captcha component renders silently…`, `…renders the turnstile widget…` |
+| T4 enforcement: register refused on challenge fail, accepted on pass | ✅ | `BotChallengeTest::register is refused when the challenge fails…` |
+| T5 disposable gate: bundled ~172 domains; exact + subdomain + case-insensitive; admin-extended list merged | ✅ | `DisposableEmailTest::the bundled disposable-domain list is loaded`, `…blocked domains trigger…`, `…subdomains…`, `…uppercase…`, `…admin-extended…` |
+| T5 signup enforcement: disposable refused, subdomain refused, gmail passes | ✅ | `DisposableEmailTest::signup with a disposable address is refused`, `…disposable subdomain is refused but gmail passes` |
+| T6 Admin → Security page + nav pill; moderators 403; test-email endpoint reports blocked/ok | ✅ | `BotChallengeTest::the security admin page shows captcha controls…`, `DisposableEmailTest::the admin test-email endpoint…`, `…is admin-only` |
+
+---
+
 # PromptSewa QA Matrix — v1.7.2 "The Type Selector, For Real"
 
 ## A-block (v1.7.2)

@@ -18,6 +18,23 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingsService::class);
+
+        // T5 (v1.7.3): the merged disposable-domain set (curated bundle +
+        // admin's blocked_domains_extra) resolved once per request.
+        $this->app->singleton('disposable.domains', function () {
+            $settings = app(SettingsService::class);
+
+            $extra = collect(preg_split('/[\r\n,]+/', (string) $settings->get('blocked_domains_extra', '')) ?: [])
+                ->map(fn (string $d) => strtolower(trim($d)))
+                ->filter()
+                ->unique();
+
+            return collect(config('disposable-domains', []))
+                ->map(fn (string $d) => strtolower(trim($d)))
+                ->merge($extra)
+                ->unique()
+                ->values();
+        });
     }
 
     /**

@@ -29,12 +29,11 @@ function compositionPng(): UploadedFile
     return UploadedFile::fake()->createWithContent('ring.png', $binary);
 }
 
-function heroHtml(User $creator): string
+function heroBlock(string $html): string
 {
-    $html = $this->get(route('creators.show', $creator))->getContent();
-    preg_match('/<div class="relative -mt-12.*?<\/div>\s*<\/div>\s*<\/div>/s', $html, $m);
+    preg_match('/<div class="relative -mt-12.*?<div class="mt-6/is', $html, $m);
 
-    return $m[0] ?? $html;
+    return $m[0] ?? '';
 }
 
 // ---------------------------------------------------------------------------
@@ -57,8 +56,9 @@ test('no-frame hero with a photo renders one full-size img and zero saffron plac
     expect($html)->toContain($avatarUrl)
         // Inner badge + photo both fill the wrapper (the composition fix).
         ->and($html)->toContain('flex size-full items-center justify-center overflow-hidden rounded-[inherit] bg-ink')
-        // No frame → no ring img anywhere.
-        ->and($html)->not->toContain('pointer-events-none absolute -inset-1');
+        // No frame on THIS creator → no ring on the hero block. (W1 parity:
+        // other avatars elsewhere on the page may legitimately carry one.)
+        ->and(heroBlock($html))->not->toContain('pointer-events-none absolute -inset-1');
 });
 
 test('with-frame hero renders photo plus ring', function () {

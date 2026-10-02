@@ -126,6 +126,12 @@ class User extends Authenticatable
         return $this->hasMany(UserBadge::class);
     }
 
+    /** W4 (v1.7.3): earned/manual frame unlocks (award ledger rows). */
+    public function frameUnlocks(): HasMany
+    {
+        return $this->hasMany(\App\Models\UserFrameUnlock::class);
+    }
+
     /** G3 (v1.7.0): the equipped avatar frame, if any. */
     public function activeFrame()
     {

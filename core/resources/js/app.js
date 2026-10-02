@@ -288,6 +288,31 @@ Alpine.data('bookmarkHeart', (config) => ({
     },
 }));
 
+/**
+ * T3 (v1.7.3): reCAPTCHA v3 submit hook — runs grecaptcha.execute with the
+ * form name as the action, writes the token into the hidden input, then
+ * lets the submit proceed. No-op when grecaptcha is absent (provider off).
+ */
+Alpine.data('captchaToken', (config) => ({
+    token: '',
+
+    tokenize(event) {
+        if (typeof grecaptcha === 'undefined' || ! this.$el.closest('form')) {
+            return; // provider inactive — submit unmodified
+        }
+
+        event.preventDefault();
+
+        grecaptcha.ready(() => {
+            grecaptcha.execute(document.querySelector('meta[name="captcha-site-key"]')?.content ?? '', { action: config.action })
+                .then((token) => {
+                    this.token = token;
+                    this.$el.closest('form').submit();
+                });
+        });
+    },
+}));
+
 Alpine.data('promptForm', (config) => ({
     /** A1 (v1.7.2): the type lives on the SERVER-RENDERED radios; this is
      * a mirror derived from the checked one (the radios submit name="type"). */

@@ -136,15 +136,24 @@
                             <div>
                                 <x-form.label name="body" label="Prompt body" :hint="$variableHint" :required="true"/>
                                 <div class="mt-1.5">
-                                    <textarea
-                                        id="body"
-                                        name="body"
-                                        rows="12"
-                                        required
-                                        maxlength="4000"
-                                        :placeholder="bodyPlaceholder"
-                                        class="block w-full rounded-xl border bg-white px-3.5 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none transition placeholder:text-ink/40 border-ink/10 focus:border-saffron-deep"
-                                    >{{ old('body', $latest?->body) }}</textarea>
+                                    {{-- H1 (v1.7.3 hotfix): body ceiling is 50,000 chars —
+                                         see PromptFormRequest::MAX_BODY_CHARS. Same
+                                         zero-JS-safe counter as create. --}}
+                                    <div x-data="{ n: document.getElementById('body') ? document.getElementById('body').value.length : 0 }"
+                                         x-on:input.debounce.100ms="n = document.getElementById('body').value.length">
+                                        <textarea
+                                            id="body"
+                                            name="body"
+                                            rows="12"
+                                            required
+                                            maxlength="{{ \App\Http\Requests\PromptFormRequest::MAX_BODY_CHARS }}"
+                                            :placeholder="bodyPlaceholder"
+                                            class="block w-full rounded-xl border bg-white px-3.5 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none transition placeholder:text-ink/40 border-ink/10 focus:border-saffron-deep"
+                                        >{{ old('body', $latest?->body) }}</textarea>
+                                        <p class="mt-1 text-right text-[11px] text-ink/40" aria-live="off">
+                                            <span x-text="n.toLocaleString()">{{ number_format(strlen(old('body', $latest?->body) ?? '')) }}</span> / {{ number_format(\App\Http\Requests\PromptFormRequest::MAX_BODY_CHARS) }} chars
+                                        </p>
+                                    </div>
                                 </div>
                                 @error('body') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                             </div>

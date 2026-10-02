@@ -31,7 +31,7 @@
                 <span>{{ $versions->count() }} {{ \Illuminate\Support\Str::plural('version', $versions->count()) }}</span>
                 <span aria-hidden="true">&middot;</span>
                 <a href="{{ route('creators.show', $prompt->creator) }}" class="flex items-center gap-1.5 transition hover:text-saffron-deep">
-                    <x-user-avatar :user="$prompt->creator" size="xs"/>
+                    <x-user-avatar :user="$prompt->creator" size="xs" :frame="$prompt->creator->activeFrame"/>
                     <x-user-handle :user="$prompt->creator" size="text-sm"/>
                 </a>
                 @if ($isPaid)

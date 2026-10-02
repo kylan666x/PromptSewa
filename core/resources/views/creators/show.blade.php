@@ -79,10 +79,19 @@
                 </div>
 
                 @if ($isOwner)
-                    <a href="{{ route('dashboard') }}"
-                       class="shrink-0 self-start rounded-full border-2 border-ink/80 bg-white px-5 py-2 text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper hover:shadow-card sm:self-auto">
-                        Edit profile
-                    </a>
+                    {{-- W5 (v1.7.3): BOTH actions for the owner at every
+                         breakpoint — Edit profile + a Dashboard secondary
+                         button. Strangers see neither (the @if is owner-only). --}}
+                    <div class="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+                        <a href="{{ route('dashboard') }}" data-testid="profile-dashboard"
+                           class="rounded-full border border-ink/15 bg-white px-5 py-2 text-sm font-semibold text-ink/80 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/40 hover:text-ink">
+                            Dashboard
+                        </a>
+                        <a href="{{ route('dashboard.profile.edit') }}" data-testid="profile-edit"
+                           class="rounded-full border-2 border-ink/80 bg-white px-5 py-2 text-sm font-bold text-ink shadow-sm transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper hover:shadow-card">
+                            Edit profile
+                        </a>
+                    </div>
                 @endif
             </div>
         </div>

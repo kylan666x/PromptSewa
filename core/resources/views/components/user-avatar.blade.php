@@ -10,21 +10,29 @@
      *
      * Sizes: xs (cards/typeahead), sm (compact rows), md (bylines, navbar),
      * lg (creator grids, admin tables). Extra classes merge through
-     * $attributes so special shapes (creator profile's rounded-3xl hero)
-     * can override the default pill without forking the markup.
+     * $attributes so special shapes (creator profile's hero) can override
+     * the default pill without forking the markup.
      *
-     * G3 (v1.7.0): optional `frame` (App\Models\Frame|null) renders an
-     * absolute, pointer-events-none, decorative alpha-PNG ring around the
-     * avatar. Ruled surfaces only (profile hero, navbar dropdown, dock
-     * "You" avatar, feed actors) — prompt cards stay clean by design.
+     * W1 (v1.7.3) — FRAME SURFACE PARITY: the frame overlay now renders on
+     * EVERY surface that passes a frame (hero, prompt cards, image-gallery
+     * cards, library creators grid, navbar dropdown, dock You, feed actors,
+     * versions author, admin users table). This REVERSES the v1.7.0
+     * "cards stay clean" ruling — see handoff §6.40. The overlay is always
+     * pointer-events-none + aria-hidden; sizes xs–lg all support it.
+     *
+     * Geometry (v1.7.2 DESIGN addendum): the shape stays the CALLER's
+     * choice — the hero's sanctioned squircle + ring, circular pills on
+     * small badges — because the inner badge is rounded-[inherit]; the
+     * frame overlay inherits the wrapper's shape by layering over it.
      *
      * P5 (v1.7.1) — composition fix: the SIZE now lives on the outer
      * wrapper and the inner badge fills it (`size-full` + `rounded-inherit`).
-     * Before, custom caller classes (the hero's size-24 bg-saffron) merged
-     * onto the wrapper while the photo stayed in a fixed size-8 inner box —
-     * the wrapper painted a full-size saffron block with the photo cornered.
      * If the caller supplies its own size-* class, the preset is dropped so
      * exactly one size utility rules the box.
+     *
+     * W3 (v1.7.3): an animated frame carries its CSS motion class on the
+     * overlay (spin | pulse | shine) — decorative-only, keyframes gated
+     * behind prefers-reduced-motion: no-preference in app.css.
      *
      * @var \App\Models\User $user
      * @var \App\Models\Frame|null $frame
@@ -38,6 +46,7 @@
     ];
     $callerClass = (string) $attributes->get('class', '');
     $preset = str_contains($callerClass, 'size-') ? '' : ($sizes[$size] ?? $sizes['md']);
+    $animationClass = ($frame?->animation ?? 'none') !== 'none' ? ' frame-anim-'.$frame->animation : '';
 @endphp
 
 <span {{ $attributes->merge(['class' => 'relative inline-flex shrink-0 text-[length:inherit] '.$preset]) }}>
@@ -54,6 +63,6 @@
 
     @if ($frame?->image_path)
         <img src="{{ Storage::disk('public')->url($frame->image_path) }}" alt="" aria-hidden="true"
-             class="pointer-events-none absolute -inset-1 size-[calc(100%+8px)]" loading="lazy">
+             class="pointer-events-none absolute -inset-1 size-[calc(100%+8px)]{{ $animationClass }}" loading="lazy">
     @endif
 </span>

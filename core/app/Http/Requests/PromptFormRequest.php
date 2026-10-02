@@ -22,6 +22,15 @@ class PromptFormRequest extends FormRequest
     public const MAX_TIPS = 5;
 
     /**
+     * H1 (v1.7.3 hotfix): prompt-body ceiling. 4,000 chars was the v1.0
+     * floor; serious system/agent prompts need more. 50,000 sits comfortably
+     * below Claude's ~40k-token (~200k char) message budget while staying a
+     * sane guardrail (≈12k words / ~100KB). The DB column is LONGTEXT after
+     * migration 2026_09_30_210000, so nothing truncates.
+     */
+    public const MAX_BODY_CHARS = 50000;
+
+    /**
      * A3 (v1.7.2): switching an EXISTING prompt to image type without a
      * cover is a validation error. Create (type=image from scratch) and
      * edits that keep image stay optional — the founder decision scopes
@@ -65,7 +74,8 @@ class PromptFormRequest extends FormRequest
                         ->orWhere('type_scope', $this->input('type')))),
             ],
             'type' => ['required', 'string', 'in:'.implode(',', Prompt::TYPES)],
-            'body' => ['required', 'string', 'min:30', 'max:4000'],
+            // H1 (v1.7.3 hotfix): 4000 → MAX_BODY_CHARS (50,000) — see the const.
+            'body' => ['required', 'string', 'min:30', 'max:'.self::MAX_BODY_CHARS],
             'tags' => ['required', 'string', 'min:2', 'max:200'],
             'recommended_tools' => ['required', 'array', 'min:1', 'max:4'],
             // T6 (v1.5.0): tools must be active registry entries whose

@@ -35,6 +35,7 @@ class FeedController extends Controller
         // LengthAwarePaginator over the public stream, 20/page.
         return FeedEvent::query()
             ->publicStream()
+            ->with(['actor', 'actor.activeFrame', 'subject'])
             ->paginate(20)
             ->withQueryString();
     }

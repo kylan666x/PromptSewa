@@ -59,6 +59,8 @@ class ImageUploadService
             throw new \InvalidArgumentException("Unknown image variant [{$variant}].");
         }
 
+        $cfg = self::VARIANTS[$variant];
+
         if (! $file->isValid()) {
             throw new \RuntimeException('Upload failed — the file did not arrive intact.');
         }
@@ -68,7 +70,11 @@ class ImageUploadService
         }
 
         $mime = strtolower((string) $file->getMimeType());
-        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        // W3 (v1.7.3): image/gif is allowlisted ONLY for the animated
+        // pass-through lane below; a STATIC gif falls through to the decode
+        // check and is rejected with a clear message (GD re-encode would
+        // destroy its frames, so it never enters the pipeline).
+        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
             throw new \RuntimeException('Only JPG, PNG or WebP images are accepted.');
         }
 
@@ -80,11 +86,35 @@ class ImageUploadService
             throw new \RuntimeException('Badges and frames must be PNG or WebP (transparency required) — JPEG is not accepted.');
         }
 
+        // W3 (v1.7.3): animated GIF/WebP pass-through lane — GD cannot
+        // preserve animation, so animated uploads skip it ENTIRELY. Gate:
+        // header-parsed ≤512×512, ≤2 MB, then stored byte-identical (the
+        // hash-equality test locks "stored == uploaded"). Alpha variants
+        // only — covers/banners never take this lane.
+        if (in_array($variant, ['badge', 'frame'], true)
+            && in_array($mime, ['image/gif', 'image/webp'], true)
+            && $this->isAnimated($file->getRealPath(), $mime)) {
+            [$width, $height] = $this->animatedDimensions($file->getRealPath(), $mime);
+
+            if ($width > 512 || $height > 512) {
+                throw new \RuntimeException('Animated frames must be 512×512 or smaller.');
+            }
+
+            $extension = $mime === 'image/gif' ? 'gif' : 'webp';
+            $path = $cfg['dir'].'/'.Str::random(40).'.'.$extension;
+            Storage::disk('public')->put($path, (string) file_get_contents($file->getRealPath()));
+
+            return $path;
+        }
+
         // Real decode check — a renamed .php with an image mime fails here.
         $src = match ($mime) {
             'image/jpeg' => @imagecreatefromjpeg($file->getRealPath()),
             'image/png' => @imagecreatefrompng($file->getRealPath()),
             'image/webp' => @imagecreatefromwebp($file->getRealPath()),
+            // Static GIF: the animated lane above didn't claim it, so it
+            // can't be stored losslessly — reject rather than flatten.
+            'image/gif' => false,
             default => false,
         };
         if ($src === false) {
@@ -92,21 +122,33 @@ class ImageUploadService
         }
 
         try {
-            $cfg = self::VARIANTS[$variant];
             $image = $this->downscale($src, $cfg['max'], $cfg['alpha']);
             $quality = $cfg['quality'];
 
             if ($cfg['alpha']) {
-                // Logos/marks keep transparency: PNG (or WebP for webp
-                // sources). No background flattening, no EXIF risk (PNG has
-                // none of consequence and GD strips everything anyway).
+                // W2 (v1.7.3) ALPHA TRUTH: blending OFF + save-alpha ON is
+                // set on the FINAL image before EVERY encode — this is the
+                // exact pair that prevents GD compositing transparent
+                // corners onto black. Re-asserted after downscale because
+                // imagecopyresampled onto a fresh canvas resets nothing but
+                // the flags live per-resource; being explicit twice is the
+                // contract the pixel tests lock.
                 imagealphablending($image, false);
                 imagesavealpha($image, true);
 
-                ob_start();
-                imagepng($image, null, 6);
-                $binary = (string) ob_get_clean();
-                $extension = 'png';
+                if ($mime === 'image/webp') {
+                    // WebP sources keep WebP output (alpha supported) —
+                    // never routed through the JPEG-flattening path.
+                    ob_start();
+                    imagewebp($image, null, $quality);
+                    $binary = (string) ob_get_clean();
+                    $extension = 'webp';
+                } else {
+                    ob_start();
+                    imagepng($image, null, 6);
+                    $binary = (string) ob_get_clean();
+                    $extension = 'png';
+                }
             } else {
                 // Photos: JPEG re-encode strips metadata and crushes size.
                 ob_start();
@@ -132,6 +174,35 @@ class ImageUploadService
         }
     }
 
+    /**
+     * W3: does this GIF/WebP contain multiple frames (i.e. is animated)?
+     * GIF: multiple image descriptors follow the first — a second 0x2C
+     * image-separator byte before the trailer means animated. WebP: the
+     * 'ANIM' chunk in the RIFF payload. Static files return false and
+     * take the normal GD path.
+     */
+    private function isAnimated(string $realPath, string $mime): bool
+    {
+        $bytes = (string) file_get_contents($realPath);
+
+        if ($mime === 'image/gif') {
+            // Count 0x2C image separators (cheap + dependency-free); >1 = animated.
+            return substr_count(substr($bytes, 0, 512 * 1024), "\x2C") > 1
+                || (strlen($bytes) > 512 * 1024 && substr_count($bytes, "\x2C") > 1);
+        }
+
+        // WebP: RIFF container — animated frames carry an ANIM chunk.
+        return str_contains($bytes, 'ANIM');
+    }
+
+    /** @return array{0: int, 1: int} width/height of an animated upload. */
+    private function animatedDimensions(string $realPath, string $mime): array
+    {
+        $data = getimagesize($realPath);
+
+        return [(int) ($data[0] ?? 0), (int) ($data[1] ?? 0)];
+    }
+
     /** Proportional downscale so no dimension exceeds $max. Alpha
      *  variants get a transparent canvas instead of GD's default black. */
     private function downscale(\GdImage $src, int $max, bool $preserveAlpha = false): \GdImage
@@ -150,11 +221,15 @@ class ImageUploadService
         $dst = imagecreatetruecolor($nw, $nh);
 
         if ($preserveAlpha) {
+            // W2 alpha truth: transparent canvas BEFORE the resample, and
+            // blending OFF for the fill itself (ON during the copy would
+            // composite the source over black — the founder's black-corner
+            // bug). The copy below runs with blending OFF so source alpha
+            // is REPLACED, not composited.
             imagealphablending($dst, false);
             imagesavealpha($dst, true);
             $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
             imagefill($dst, 0, 0, $transparent);
-            imagealphablending($dst, true);
         }
 
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);

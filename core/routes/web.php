@@ -289,7 +289,16 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'index'])->name('frames.index');
     Route::post('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'store'])->name('frames.store');
     Route::put('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'update'])->name('frames.update');
+
+    // W4 (v1.7.3): manual frame award (audited: granted_by + reason) + revoke.
+    Route::post('/frames/award', [\App\Http\Controllers\Admin\FrameAdminController::class, 'award'])->name('frames.award');
+    Route::delete('/frames/unlocks/{unlock}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'revoke'])->name('frames.unlocks.revoke');
     Route::delete('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'destroy'])->name('frames.destroy');
+
+    // T6 (v1.7.3): Admin → Security — bot challenge + disposable blocklist.
+    Route::get('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'edit'])->name('security.edit');
+    Route::put('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'update'])->name('security.update');
+    Route::post('/security/test-email', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'testEmail'])->name('security.test-email');
 
     // Release updates via uploaded zip (existing feature).
     Route::get('/update', [ReleaseUpdateController::class, 'form'])->name('update');

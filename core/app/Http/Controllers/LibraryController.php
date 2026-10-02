@@ -44,7 +44,7 @@ class LibraryController extends Controller
         return view('library', [
             'prompts' => $category->prompts()
                 ->publicListing()
-                ->with(['category', 'creator', 'latestVersion'])
+                ->with(['category', 'creator.activeFrame', 'creator', 'latestVersion'])
                 ->latest()
                 ->paginate(12),
             'creators' => collect(),

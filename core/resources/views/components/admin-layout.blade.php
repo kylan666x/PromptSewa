@@ -31,6 +31,9 @@
                     // existed since v1.7.0; these pills are the acceptance criterion.
                     'admin.badges.index' => ['Badges', '🏅'],
                     'admin.frames.index' => ['Frames', '◯'],
+                    // T6 (v1.7.3): the trust gate ships with its nav entry in
+                    // the same commit (§6.36 watch-out).
+                    'admin.security.edit' => ['Security', '🛡'],
                 ];
             @endphp
             @foreach ($adminNav as $route => [$label, $icon])

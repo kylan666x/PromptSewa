@@ -21,6 +21,14 @@ class AuthController extends Controller
 
     public function store(Request $request)
     {
+        // T4 (v1.7.3): bot challenge on register (on by default). Failure is
+        // a plain validation error — no different route, no enumeration.
+        if (! app(\App\Services\BotChallengeService::class)->verify('register', $request->input('cf-turnstile-response') ?? $request->input('captcha_token'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'captcha' => 'Bot check failed — please retry.',
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
             // S4: the handle is the identity — required, normalized, unique.
@@ -32,7 +40,15 @@ class AuthController extends Controller
                 'alpha_dash',
                 'unique:users,username',
             ],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users,email',
+                // T5 (v1.7.3): disposable inboxes are refused at signup.
+                new \App\Support\NotDisposableEmail(),
+            ],
             'password' => [
                 'required',
                 'string',
@@ -87,6 +103,13 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        // T4 (v1.7.3): bot challenge on login (off by default).
+        if (! app(\App\Services\BotChallengeService::class)->verify('login', $request->input('cf-turnstile-response') ?? $request->input('captcha_token'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'captcha' => 'Bot check failed — please retry.',
+            ]);
+        }
+
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],

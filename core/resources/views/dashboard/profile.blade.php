@@ -101,10 +101,12 @@
                 </div>
             </section>
 
-            {{-- G3 (v1.7.0): profile frame picker — active frames, none = clear --}}
+            {{-- G3 (v1.7.0) + W4 (v1.7.3): profile frame picker — emerald
+                 unlocked / ink locked chips with honest {have}/{need} progress;
+                 equipping a locked frame 422s server-side. --}}
             <section class="rounded-2xl border border-ink/10 bg-white p-6">
                 <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Avatar frame</h2>
-                <p class="mt-1 text-xs text-ink/50">Optional decorative ring shown on your profile, the navbar and the feed.</p>
+                <p class="mt-1 text-xs text-ink/50">Optional decorative ring shown on your profile, the navbar and the feed. Locked frames unlock with their criterion.</p>
                 <div class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
                     <label class="cursor-pointer">
                         <input type="radio" name="active_frame_id" value="" @checked(! $user->active_frame_id) class="peer sr-only">
@@ -113,16 +115,32 @@
                             None
                         </span>
                     </label>
-                    @foreach ($frames as $frame)
+                    @foreach ($frames as $frameData)
+                        @php
+                            $frame = $frameData['model'];
+                            $unlocked = $frameData['unlocked'];
+                        @endphp
                         <label class="cursor-pointer">
-                            <input type="radio" name="active_frame_id" value="{{ $frame->id }}" @checked($user->active_frame_id === $frame->id) class="peer sr-only">
-                            <span class="flex flex-col items-center gap-1 rounded-xl border border-ink/10 p-3 text-xs text-ink/60 transition peer-checked:border-saffron-deep peer-checked:bg-saffron/10 peer-checked:text-ink">
-                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($frame->image_path) }}" alt="" class="size-10">
+                            <input type="radio" name="active_frame_id" value="{{ $frame->id }}" @checked($user->active_frame_id === $frame->id) @disabled(! $unlocked) class="peer sr-only">
+                            <span class="flex flex-col items-center gap-1 rounded-xl border border-ink/10 p-3 text-xs transition peer-checked:border-saffron-deep peer-checked:bg-saffron/10 {{ $unlocked ? 'text-ink/60 peer-checked:text-ink' : 'cursor-not-allowed text-ink/40' }}">
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($frame->image_path) }}" alt="" class="size-10 {{ $unlocked ? '' : 'opacity-50' }}">
                                 {{ $frame->name }}
+                                @if ($unlocked)
+                                    <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-emerald-800">unlocked</span>
+                                @else
+                                    @php
+                                        $label = $frame->criterion === 'manual'
+                                            ? 'admin grant only'
+                                            : str_replace('_', ' ', (string) $frame->criterion)
+                                              .(($frameData['goal'] !== null) ? ' '.($frameData['progress'] ?? 0).'/'.$frameData['goal'] : '');
+                                    @endphp
+                                    <span class="rounded-full bg-ink px-1.5 py-0.5 font-mono text-[9px] font-bold text-paper" title="Locked — {{ $label }}">{{ $label }}</span>
+                                @endif
                             </span>
                         </label>
                     @endforeach
                 </div>
+                @if (isset($errors)) @error('active_frame_id') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror @endif
             </section>
 
             <div class="flex items-center gap-3">

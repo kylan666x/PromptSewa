@@ -83,7 +83,7 @@
 
             @if ($prompt->creator)
                 <a href="{{ route('creators.show', $prompt->creator) }}" class="flex min-w-0 items-center gap-1.5 text-xs text-ink/50 transition hover:text-ink">
-                    <x-user-avatar :user="$prompt->creator" size="xs"/>
+                    <x-user-avatar :user="$prompt->creator" size="xs" :frame="$prompt->creator->activeFrame"/>
                     <span class="flex items-center gap-1 truncate"><x-user-handle :user="$prompt->creator" size="text-xs"/> <x-verified-badge :user="$prompt->creator" size="xs"/></span>
                 </a>
             @endif

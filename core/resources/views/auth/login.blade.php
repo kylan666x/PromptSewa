@@ -25,6 +25,9 @@
                 Remember me
             </label>
 
+            {{-- T3 (v1.7.3): bot check (off by default) — renders nothing when disabled. --}}
+            <x-captcha form="login"/>
+
             <x-button type="submit" class="w-full">Log in</x-button>
 
             <p class="text-center text-sm text-ink/60">

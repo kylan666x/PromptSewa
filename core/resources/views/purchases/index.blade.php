@@ -125,6 +125,13 @@
                                 </h3>
                                 <span class="shrink-0 rounded-md bg-emerald-100 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-800">ACTIVE</span>
                             </div>
+                            {{-- W1 (v1.7.3): purchases rows carry the creator frame. --}}
+                            @if ($grant->prompt->creator)
+                                <div class="mt-2 flex items-center gap-2 text-xs text-ink/50">
+                                    <x-user-avatar :user="$grant->prompt->creator" size="xs" :frame="$grant->prompt->creator->activeFrame"/>
+                                    <x-user-handle :user="$grant->prompt->creator" size="text-xs"/>
+                                </div>
+                            @endif
                             <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ink/50">{{ $grant->prompt->description }}</p>
                             <div class="mt-auto flex items-center justify-between pt-4">
                                 <span class="font-mono text-[11px] text-ink/50">{{ ucfirst($grant->license_tier) }} license</span>

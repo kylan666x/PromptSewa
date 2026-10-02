@@ -15,7 +15,7 @@ class StorefrontController extends Controller
     {
         $featured = Prompt::query()
             ->publicListing()
-            ->with(['category', 'creator', 'latestVersion'])
+            ->with(['category', 'creator.activeFrame', 'creator', 'latestVersion'])
             ->latest()
             ->take(6)
             ->get();
@@ -25,7 +25,7 @@ class StorefrontController extends Controller
         $imagePrompts = Prompt::query()
             ->publicListing()
             ->where('type', Prompt::TYPE_IMAGE)
-            ->with(['category', 'creator', 'latestVersion'])
+            ->with(['category', 'creator.activeFrame', 'creator', 'latestVersion'])
             ->orderByDesc('cover_image_path')
             ->latest()
             ->take(8)

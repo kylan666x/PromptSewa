@@ -214,7 +214,7 @@ class CheckoutController extends Controller
 
         $orders = Order::query()
             ->where('buyer_id', $user->id)
-            ->with(['items.pack', 'items.product.prompt', 'items.licenseGrant'])
+            ->with(['items.pack', 'items.product.prompt.creator.activeFrame', 'items.product.prompt.creator', 'items.product.prompt', 'items.licenseGrant'])
             ->latest()
             ->get();
 

@@ -58,6 +58,12 @@ class SearchController extends Controller
                 // T2 (v1.5.0): badge variant for the typeahead — official
                 // (blue house-account mark) wins over verified (saffron seal).
                 'badge' => $creator->is_official ? 'official' : ($creator->is_verified ? 'verified' : 'none'),
+                // W1 (v1.7.3): frame parity — the typeahead row carries the
+                // equipped frame URL (null when none) so the client renders
+                // the same ring as every other avatar surface.
+                'frame_url' => $creator->activeFrame?->image_path
+                    ? Storage::disk('public')->url($creator->activeFrame->image_path)
+                    : null,
             ])
             ->values();
 
