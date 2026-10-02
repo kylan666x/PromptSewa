@@ -172,6 +172,33 @@ test('pv:update purges bootstrap caches and reloads config so view:cache succeed
 });
 
 // ---------------------------------------------------------------------------
+// H3 — cache rebuild contract (post-deploy hotfix 2)
+// ---------------------------------------------------------------------------
+
+test('the update pipeline rebuilds config and clears stale compiled views', function () {
+    // H3 (v1.7.3 hotfix 2): on shared cPanel the pipeline is the ONLY thing
+    // that refreshes caches — a changed Blade component otherwise keeps
+    // serving the previous release's compiled view forever (this is the
+    // "my fix didn't show up on the site" class). Lock the ORDER: config is
+    // re-cached, then view:clear runs BEFORE view:cache so stale compiled
+    // views can never survive into the new cache.
+    $source = (string) file_get_contents(app_path('Console/Commands/UpdateFromRelease.php'));
+
+    // config is re-cached through the ['config:cache', 'route:cache'] loop —
+    // config:cache REWRITES bootstrap/cache/config.php, so a separate
+    // config:clear is unnecessary (and would break the D3 reload below,
+    // which reads that file back). What matters is the ORDER.
+    expect($source)->toContain("'config:cache'")
+        ->and($source)->toContain("Artisan::call('view:clear')")
+        ->and($source)->toContain("Artisan::call('view:cache')")
+        // view:clear before view:cache, by source position.
+        ->and(strpos($source, "Artisan::call('view:clear')"))
+        ->toBeLessThan(strpos($source, "Artisan::call('view:cache')"))
+        ->and(strpos($source, "'config:cache'"))
+        ->toBeLessThan(strpos($source, "Artisan::call('view:clear')"));
+});
+
+// ---------------------------------------------------------------------------
 // D4 — production seeder gate
 // ---------------------------------------------------------------------------
 

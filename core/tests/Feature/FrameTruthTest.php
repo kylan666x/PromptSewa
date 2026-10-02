@@ -67,9 +67,9 @@ test('the frame overlay renders on every avatar surface', function () {
     $prompt->update(['status' => Prompt::STATUS_PUBLISHED]);
 
     $frameUrl = Storage::disk('public')->url($path);
-    // Hotfix addendum DOM: the overlay is inset-0 + object-contain over
-    // the hard-forced circle wrapper.
-    $overlayClass = 'pointer-events-none absolute inset-0 size-full rounded-full object-contain';
+    // Hotfix 2 DOM: the overlay is inset-0 + object-contain + z-10 over the
+    // hard-forced circle wrapper (which owns its own stacking context).
+    $overlayClass = 'pointer-events-none absolute inset-0 z-10 size-full rounded-full object-contain';
 
     // Profile hero + versions author + feed actor.
     expect($this->get(route('creators.show', $creator))->getContent())->toContain($frameUrl)
@@ -223,6 +223,34 @@ test('an animated frame renders its animation class on the overlay', function ()
     $html = $this->get(route('library.index'))->getContent();
 
     expect($html)->toContain('frame-anim-spin');
+});
+
+test('the frame url accessor resolves a usable public URL (the buried-frame repro)', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'url-ring.png');
+    $frame = Frame::query()->create(['name' => 'URL ring', 'image_path' => $path, 'is_active' => true]);
+
+    // The overlay src comes from THIS accessor — a frame whose url is empty
+    // is the "broken image" half of the buried-frame bug, and an empty src
+    // renders a silent no-op overlay with no error anywhere.
+    expect($frame->url)->toBe(Storage::disk('public')->url($path))
+        ->and($frame->url)->not->toBe('')
+        ->and($frame->url)->toContain('url-ring.png');
+
+    // A frame row with no image (admin draft placeholder) yields an empty
+    // URL rather than a broken "/storage/frames/" one — and the component
+    // then renders NO overlay at all (guarded by image_path).
+    $empty = Frame::query()->create(['name' => 'No image', 'image_path' => '', 'is_active' => true]);
+    expect($empty->url)->toBe('');
+
+    // End-to-end: the served overlay carries the resolved URL + z-10, and
+    // the wrapper isolates its stacking context.
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    $html = $this->get(route('creators.show', $creator))->getContent();
+
+    expect($html)->toContain('src="'.$frame->url.'"')
+        ->and($html)->toContain('absolute inset-0 z-10 size-full rounded-full object-contain')
+        ->and($html)->toContain('relative isolate inline-flex shrink-0 rounded-full overflow-hidden');
 });
 
 test('reduced-motion guard is present in the compiled stylesheet', function () {

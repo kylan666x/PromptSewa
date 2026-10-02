@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * G3 (v1.7.0) — a cosmetic avatar ring. image_path is an alpha-PNG frame
@@ -31,6 +33,26 @@ class Frame extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * H3 (v1.7.3 hotfix 2) — the frame's PUBLIC URL, resolved in ONE place.
+     *
+     * The column is `image_path` (NOT `path`): it holds the public-disk
+     * relative path written by the ImageUploadService 'frame' variant.
+     * Views used to hand-roll `Storage::disk('public')->url($frame->image_path)`
+     * inline, which is how a "buried frame" bug hides — a mistyped disk or
+     * path silently rendered an empty src with no error. `$frame->url` is now
+     * the single accessor every surface reads, and the URL is non-empty for
+     * any frame that actually has an image (locked by FrameTruthTest).
+     */
+    protected function url(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string => $this->image_path
+                ? Storage::disk('public')->url($this->image_path)
+                : '',
+        );
     }
 
     /** Free frame: null criterion (anyone may equip it). */
