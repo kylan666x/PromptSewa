@@ -72,12 +72,13 @@ test('with-frame hero renders photo plus ring', function () {
 
     expect($html)->toContain(Storage::disk('public')->url('avatars/ring.jpg'))
         ->and($html)->toContain(Storage::disk('public')->url($path))
-        // Overlay present exactly where the frame is equipped — hotfix 2 DOM:
-        // inset-0 + z-10 + object-contain over the circle, and the wrapper
-        // isolates its stacking context so the frame can never sit behind
-        // the picture (or leak z-10 onto a neighbour).
-        ->and($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full rounded-full object-contain')
-        ->and($html)->toContain('relative isolate inline-flex shrink-0 rounded-full overflow-hidden');
+        // G1 (v1.7.4): frame OUTSIDE the circle — the hero's own class chain
+        // is a caller size (size-28/sm:size-28), the overlay protrudes by the
+        // md/lg inset and stacks with z-10, and the wrapper isolates WITHOUT
+        // clipping (an isolate+overflow-hidden wrapper would eat the ring).
+        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[12%]')
+        ->and($html)->toContain('relative inline-block isolate shrink-0')
+        ->and($html)->toContain('block size-full overflow-hidden rounded-full');
 });
 
 test('preset sizes still apply when no caller size class is present', function () {

@@ -150,3 +150,60 @@ test('creator profile hero uses the shared component', function () {
 
     assertAvatarSurface($response, $creator, Storage::disk('public')->url($creator->avatar_path));
 });
+
+// ---------------------------------------------------------------------------
+// G1 (v1.7.4) — frame-outside-circle geometry additions
+// ---------------------------------------------------------------------------
+
+test('every avatar surface clips the PHOTO, never the frame', function () {
+    // §6.35: the database cache store SURVIVES RefreshDatabase — flush or a
+    // previous test's cached page 1 shadows this fixture.
+    cache()->flush();
+
+    $creator = User::factory()->create(['name' => 'Clip G1', 'username' => 'clipg1']);
+    withAvatar($creator);
+    Prompt::factory()->published()->for($creator, 'creator')->create();
+
+    $surfaces = [
+        'hero' => route('creators.show', $creator),
+        'library' => route('library.index', ['q' => 'Clip']),
+        'home' => route('home'),
+    ];
+
+    foreach ($surfaces as $name => $url) {
+        $html = $this->get($url)->getContent();
+
+        // The circle is created by the inner clipper…
+        expect($html)->toContain('block size-full overflow-hidden rounded-full');
+
+        // …and the wrapper (which holds the protruding frame) does NOT clip.
+        preg_match('/<span class="relative inline-block isolate[^"]*">/', $html, $wrapper);
+        expect($wrapper[0] ?? 'no-wrapper')->not->toContain('overflow-hidden');
+    }
+});
+
+test('the navbar account pill does not clip a framed avatar', function () {
+    Storage::fake('public');
+    $frame = App\Models\Frame::query()->create([
+        'name' => 'Nav pill', 'image_path' => 'frames/nav.png', 'is_active' => true,
+    ]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    withAvatar($creator);
+
+    $html = $this->actingAs($creator)->get(route('dashboard'))->getContent();
+
+    // The pill wraps the avatar tightly — a clipping pill truncates the ring.
+    preg_match('/<span class="flex size-8 shrink-0 items-center justify-center">/', $html, $pill);
+    expect($pill[0] ?? 'no-pill')->not->toContain('overflow-hidden');
+});
+
+test('the typeahead row renders the frame outside the circle with the same inset rule', function () {
+    $html = $this->get(route('home'))->getContent();
+
+    // Hand-rolled Alpine row mirrors the component: isolate wrapper, clipped
+    // photo, protruding overlay with the sm/xs inset token.
+    expect($html)->toContain('relative isolate inline-block size-6 shrink-0')
+        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[8%]');
+});
+
+

@@ -44,20 +44,29 @@
                 <p class="mt-1 text-sm text-ink/60">{{ $tab === 'saved' ? "Listings you've bookmarked from the library." : "Everything you've created, including drafts and private listings." }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                {{-- T13 + G4/G5 (v1.7.0): dashboard tabs --}}
-                <a href="{{ route('dashboard') }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Your prompts</a>
-                <a href="{{ route('dashboard', ['tab' => 'saved']) }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Saved</a>
-                <a href="{{ route('dashboard', ['tab' => 'stats']) }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'stats' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Stats</a>
-                <a href="{{ route('dashboard', ['tab' => 'feed']) }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'feed' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Feed</a>
-                {{-- P2b (v1.7.1): Achievements tab --}}
-                <a href="{{ route('dashboard', ['tab' => 'achievements']) }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'achievements' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Achievements</a>
-                <a href="{{ route('dashboard.earnings') }}"
-                   class="rounded-full px-4 py-2 text-sm font-semibold transition border border-ink/15 text-ink/70 hover:border-ink/30">Earnings</a>
+                {{-- T13 + G4/G5 (v1.7.0): dashboard tabs.
+                     G3 (v1.7.4): below md the tab pills live in a horizontal
+                     scroll rail so six tabs never wrap into three rows; the
+                     active pill keeps its ink fill (WCAG contrast unchanged)
+                     and the rail is keyboard-reachable via tabindex. The
+                     "New prompt" CTA stays OUT of the rail — it is an
+                     action, not a tab. --}}
+                <div class="-mx-4 flex w-full snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+                     role="navigation" aria-label="Dashboard sections" tabindex="0">
+                    <a href="{{ route('dashboard') }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Your prompts</a>
+                    <a href="{{ route('dashboard', ['tab' => 'saved']) }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Saved</a>
+                    <a href="{{ route('dashboard', ['tab' => 'stats']) }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'stats' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Stats</a>
+                    <a href="{{ route('dashboard', ['tab' => 'feed']) }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'feed' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Feed</a>
+                    {{-- P2b (v1.7.1): Achievements tab --}}
+                    <a href="{{ route('dashboard', ['tab' => 'achievements']) }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'achievements' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Achievements</a>
+                    <a href="{{ route('dashboard.earnings') }}"
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition border border-ink/15 text-ink/70 hover:border-ink/30">Earnings</a>
+                </div>
                 <a href="{{ route('dashboard.prompts.create') }}"
                    class="inline-flex items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-saffron-deep">
                     <span class="text-base leading-none">+</span> New prompt
@@ -67,23 +76,25 @@
 
         @if ($tab === 'stats')
             {{-- ===== Stats tab (G5) ===== --}}
-            <div class="mt-8 grid gap-6 lg:grid-cols-2">
-                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+            {{-- G3: single column below md (full-width sparklines/cards),
+                     two-up from lg — unchanged on desktop. --}}
+            <div class="mt-8 grid grid-cols-2 gap-3 md:grid-cols-1 md:gap-6 lg:grid-cols-2">
+                <section class="col-span-2 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm md:p-6">
                     <h2 class="text-sm font-semibold text-ink">Views — last 30 days</h2>
                     <x-sparkline :series="$viewsSeries" label="Views over the last 30 days"/>
                     <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($viewsSeries)) }} total · {{ number_format(max($viewsSeries)) }} best day</p>
                 </section>
-                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                <section class="col-span-2 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm md:col-span-1 md:p-6">
                     <h2 class="text-sm font-semibold text-ink">Sales — last 30 days</h2>
                     <x-sparkline :series="$salesSeries" label="Paid orders over the last 30 days" stroke="#059669" fill="rgba(5, 150, 105, 0.12)"/>
                     <p class="mt-1 font-mono text-xs text-ink/50">{{ number_format(array_sum($salesSeries)) }} orders in the window</p>
                 </section>
-                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                <section class="col-span-2 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm md:col-span-1 md:p-6">
                     <h2 class="text-sm font-semibold text-ink">Rating trend — last 30 days</h2>
                     <x-sparkline :series="$ratingSeries" label="Average rating over the last 30 days" stroke="#2563eb" fill="rgba(37, 99, 235, 0.10)"/>
                     <p class="mt-1 font-mono text-xs text-ink/50">{{ array_sum($ratingSeries) > 0 ? number_format(array_sum($ratingSeries) / count(array_filter($ratingSeries)), 1) : '0.0' }} avg across rated days</p>
                 </section>
-                <section class="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+                <section class="col-span-2 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm md:col-span-1 md:p-6">
                     <h2 class="text-sm font-semibold text-ink">Top prompts by views</h2>
                     @if ($topPrompts->isEmpty())
                         <p class="mt-3 text-sm text-ink/50">No published prompts yet — publish to start the clock.</p>

@@ -13,6 +13,34 @@
 
 ---
 
+# PromptSewa QA Matrix — v1.7.4 "Frame Outside the Circle + Commerce Polish"
+
+## G-block (v1.7.4)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| G1 wrapper is `relative inline-block isolate`, carries NO `overflow-hidden` and NO `rounded-full` | ✅ | `FrameTruthTest::the wrapper isolates but never clips; the clipper owns the circle`, `AvatarFidelityTest::every avatar surface clips the PHOTO, never the frame` |
+| G1 inner clipper `size-full overflow-hidden rounded-full` wraps photo/initials | ✅ | same two tests (clipper token asserted on hero, library, home) |
+| G1 overlay = `pointer-events-none absolute z-10 object-contain` + size-keyed inset (xs/sm −8%, md/lg −12%) | ✅ | `FrameTruthTest::the overlay protrudes by the size-keyed negative inset` |
+| G1 ancestor clip audit: card roots + navbar pill + admin panel do not clip; cover child still clips | ✅ | `FrameTruthTest::no overflow-hidden ancestor clips the protruding frame`, `…the admin users panel does not clip the avatar frames inside it`, `AvatarFidelityTest::the navbar account pill does not clip a framed avatar` |
+| G1 typeahead row mirrors the component (hand-rolled Alpine row, same inset rule) | ✅ | `AvatarFidelityTest::the typeahead row renders the frame outside the circle with the same inset rule` |
+| G1 frameless avatar = clipper + photo + ZERO overlay nodes; empty-URL lock retained | ✅ | `FrameTruthTest::a frameless avatar renders the clipper and photo with zero overlay nodes`, `…the frame url accessor resolves a usable public URL (the buried-frame repro)` |
+| G1 animated frame still byte-identical pass-through, animates on the PROTRUDING overlay, reduced-motion guarded | ✅ | `FrameTruthTest::animated gif uploads pass through byte-identical`, `…an animated frame renders its animation class on the overlay`, `…reduced-motion guard is present in the compiled stylesheet` |
+| G2 ink hero band: display name, tagline, real stat chips (count · ★ AVG or "No ratings yet" · future versions) | ✅ | `PackLandingV2Test::the ink hero band carries the pack name, tagline and real stat chips`, `…an unrated pack says No ratings yet and never shows a made-up average`, `…the star figure is the real average over the pack ratings` |
+| G2 sticky buy card: saffron mono price, struck individual sum, emerald savings in integer paisa; savings only when real | ✅ | `PackLandingV2Test::savings appear only when the contents really cost more` |
+| G2 contents dark card grid (type icon, category mono, price chip / emerald Free) + honest licence checklist (facts only) | ✅ | `PackLandingV2Test::contents render as a dark grid with type icon, category and price`, `…the licence checklist states facts, not superlatives` |
+| G2 FAQ answers real policy (versioning, payment rails, refunds) + related packs never self-recommend | ✅ | `PackLandingV2Test::the FAQ answers real policy questions`, `…related packs list real rows and stay off the pack itself` |
+| G2 Product/Offer JSON-LD + full x-seo head retained through the redesign | ✅ | `PackLandingV2Test::JSON-LD and the x-seo head survive the redesign`, `PackLandingAndSeoTest` (5) |
+| G3 homepage <md: hero type scale steps down, ONE primary CTA + secondary text link | ✅ | `MobileEngagementPassTest::the hero type scale steps down below md`, `…the hero shows one primary CTA with a demoted text link on mobile` |
+| G3 trending chips + categories = horizontal scroll-snap rails (keyboard reachable), un-railed from md | ✅ | `MobileEngagementPassTest::the trending chips are a keyboard-reachable snap rail that un-rails on desktop` |
+| G3 "Fresh from the library" = snap carousel <md, grid from md up, SAME DOM | ✅ | `MobileEngagementPassTest::Fresh from the library is a carousel below md and a grid from md up` |
+| G3 stats band = three mono chips on phones; image gallery 2-col 4:5; right-aligned arrow links | ✅ | `MobileEngagementPassTest::the stats band is three mono chips…`, `…the image gallery is two columns with 4:5 covers on phones`, `…section headers keep their right-aligned arrow links` |
+| G3 dashboard <md: tab row horizontal scroll (active pill kept), stat cards 2-col, sparklines full-width | ✅ | `MobileEngagementPassTest::the dashboard tab row scrolls horizontally below md`, `…the dashboard stat cards are two-up on phones and full-width sparklines` |
+| G3 CSS scroll-snap only — zero dependencies, no scrollbar hacks, viewport still user-scalable | ✅ | `MobileEngagementPassTest::the engagement pass adds no new dependencies or scrollbar-hiding hacks` |
+| G4 chip v1.7.4 (config single source + builder APP_VERSION); suite 458 passed / 13,959 assertions | ✅ | `config('app.version')`; `ReleaseHygieneTest` builds the real zip |
+
+---
+
 # PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"
 
 ## W-block (v1.7.3)

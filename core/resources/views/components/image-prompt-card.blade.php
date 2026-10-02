@@ -19,7 +19,9 @@
     $initials = collect(explode(' ', $prompt->title))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('');
 @endphp
 
-<article class="group relative flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
+{{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
+     frame protrudes outside the avatar box; the cover below clips itself. --}}
+<article class="group relative flex flex-col rounded-2xl border border-ink/10 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
 
     {{-- Cover image — full-bleed, category pill overlaid --}}
     <a href="{{ route('prompts.show', $prompt) }}" class="relative block focus:outline-none" aria-label="View {{ $prompt->title }}">

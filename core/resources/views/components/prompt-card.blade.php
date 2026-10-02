@@ -5,7 +5,10 @@
     $tags = collect($prompt->latestVersion?->tags ?? [])->take(3);
 @endphp
 
-<article class="group relative flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
+{{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
+     frame protrudes outside the avatar box and a clipping root would eat
+     the ornament. The cover bleed clips on x-prompt-cover itself. --}}
+<article class="group relative flex flex-col rounded-2xl border border-ink/10 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
     <a href="{{ route('prompts.show', $prompt) }}" class="focus:outline-none" aria-label="View {{ $prompt->title }}">
         <x-prompt-cover :prompt="$prompt"/>
     </a>

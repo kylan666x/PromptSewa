@@ -67,9 +67,10 @@ test('the frame overlay renders on every avatar surface', function () {
     $prompt->update(['status' => Prompt::STATUS_PUBLISHED]);
 
     $frameUrl = Storage::disk('public')->url($path);
-    // Hotfix 2 DOM: the overlay is inset-0 + object-contain + z-10 over the
-    // hard-forced circle wrapper (which owns its own stacking context).
-    $overlayClass = 'pointer-events-none absolute inset-0 z-10 size-full rounded-full object-contain';
+    // G1 (v1.7.4) overlay DOM: z-10 + object-contain pulled OUT of the circle
+    // by a size-keyed negative inset (the exact inset token per size is
+    // locked by 'the overlay protrudes by the size-keyed negative inset').
+    $overlayClass = 'pointer-events-none absolute z-10 object-contain';
 
     // Profile hero + versions author + feed actor.
     expect($this->get(route('creators.show', $creator))->getContent())->toContain($frameUrl)
@@ -243,14 +244,118 @@ test('the frame url accessor resolves a usable public URL (the buried-frame repr
     $empty = Frame::query()->create(['name' => 'No image', 'image_path' => '', 'is_active' => true]);
     expect($empty->url)->toBe('');
 
-    // End-to-end: the served overlay carries the resolved URL + z-10, and
-    // the wrapper isolates its stacking context.
+    // End-to-end: the served overlay carries the resolved URL + z-10 on the
+    // PROTRUDING overlay, and the wrapper isolates its stacking context.
     $creator = User::factory()->for($frame, 'activeFrame')->create();
     $html = $this->get(route('creators.show', $creator))->getContent();
 
     expect($html)->toContain('src="'.$frame->url.'"')
-        ->and($html)->toContain('absolute inset-0 z-10 size-full rounded-full object-contain')
-        ->and($html)->toContain('relative isolate inline-flex shrink-0 rounded-full overflow-hidden');
+        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[12%]')
+        ->and($html)->toContain('relative inline-block isolate shrink-0');
+});
+
+// ---------------------------------------------------------------------------
+// G1 (v1.7.4) — FRAME OUTSIDE THE CIRCLE
+// ---------------------------------------------------------------------------
+
+test('the wrapper isolates but never clips; the clipper owns the circle', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-ring.png');
+    $frame = Frame::query()->create(['name' => 'G1', 'image_path' => $path, 'is_active' => true]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
+
+    $html = $this->get(route('library.index'))->getContent();
+
+    // 1. WRAPPER: isolate stacking context, NO overflow-hidden (a clipping
+    //    wrapper would eat the protruding frame), no rounded-full either —
+    //    the circle belongs to the photo, not the frame.
+    expect($html)->toContain('relative inline-block isolate shrink-0');
+
+    preg_match('/<span class="relative inline-block isolate[^"]*">/', $html, $wrapper);
+    expect($wrapper[0] ?? 'no-wrapper')->not->toContain('overflow-hidden')
+        ->and($wrapper[0] ?? 'no-wrapper')->not->toContain('rounded-full');
+
+    // 2. CLIPPER: the circle is created here and only here.
+    expect($html)->toContain('block size-full overflow-hidden rounded-full');
+});
+
+test('the overlay protrudes by the size-keyed negative inset', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-inset.png');
+    $frame = Frame::query()->create(['name' => 'G1 inset', 'image_path' => $path, 'is_active' => true]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+
+    // md + lg = −12%; xs + sm = −8% (a ring would swallow a 20px avatar at
+    // 12%). Both tokens are arbitrary-value utilities, so they only exist in
+    // the compiled CSS once npm build has seen them.
+    $large = view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $frame])->render();
+    expect($large)->toContain('object-contain -inset-[12%]');
+
+    $small = view('components.user-avatar', ['user' => $creator, 'size' => 'xs', 'frame' => $frame])->render();
+    expect($small)->toContain('object-contain -inset-[8%]');
+
+    // z-10 stays on the overlay (H3 stacking rule survives G1).
+    expect($large)->toContain('pointer-events-none absolute z-10 object-contain');
+});
+
+test('no overflow-hidden ancestor clips the protruding frame', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-clip.png');
+    $frame = Frame::query()->create(['name' => 'G1 clip', 'image_path' => $path, 'is_active' => true]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
+
+    $html = $this->get(route('library.index'))->getContent();
+
+    // The CARD ROOT must not clip — the avatar sits deep inside the card,
+    // so a clipping root would truncate the ornament.
+    preg_match('/<article class="([^"]*)">/', $html, $card);
+    expect($card[1] ?? 'no-card')->not->toContain('overflow-hidden');
+
+    // The COVER element still clips (full-bleed crop) — the clip moved off
+    // the root, it was not simply deleted.
+    expect($html)->toContain('w-full overflow-hidden');
+
+    // Navbar account pill hugs the avatar tightly — it must not clip either.
+    preg_match('/<span class="flex size-8 shrink-0 items-center justify-center">/', $html, $pill);
+    expect($pill[0] ?? 'no-pill')->not->toContain('overflow-hidden');
+});
+
+test('the admin users panel does not clip the avatar frames inside it', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-admin.png');
+    $frame = Frame::query()->create(['name' => 'G1 admin', 'image_path' => $path, 'is_active' => true]);
+    $admin = User::factory()->for($frame, 'activeFrame')->create(['role' => User::ROLE_ADMIN]);
+
+    $html = $this->actingAs($admin)->get(route('admin.users.index'))->getContent();
+
+    preg_match('/<div class="mt-6 ([^"]*)">/', $html, $panel);
+    expect($panel[1] ?? 'no-panel')->not->toContain('overflow-hidden');
+    expect($html)->toContain($frame->url);
+});
+
+test('a frameless avatar renders the clipper and photo with zero overlay nodes', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    Storage::disk('public')->put('avatars/g1.jpg', 'fake-bytes');
+    $user->forceFill(['avatar_path' => 'avatars/g1.jpg'])->save();
+    Prompt::factory()->for($user, 'creator')->hasVersion()->published()->create();
+
+    // Rendered COMPONENT markup (page-level HTML also carries the navbar
+    // typeahead template, whose overlay markup would mask a false positive).
+    $markup = view('components.user-avatar', ['user' => $user, 'size' => 'md'])->render();
+
+    // Clipper + circular photo present…
+    expect($markup)->toContain('block size-full overflow-hidden rounded-full')
+        ->and($markup)->toContain('size-full rounded-full object-cover');
+    // …and ZERO overlay nodes: no z-10, and exactly ONE img (the photo).
+    expect($markup)->not->toContain('z-10')
+        ->and(substr_count($markup, '<img'))->toBe(1);
+
+    // And no framed md/lg avatar exists anywhere on that page.
+    $html = $this->get(route('library.index'))->getContent();
+    expect($html)->not->toContain('-inset-[12%]');
 });
 
 test('reduced-motion guard is present in the compiled stylesheet', function () {

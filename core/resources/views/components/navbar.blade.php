@@ -85,17 +85,22 @@
                                    @mouseenter="activeIndex = prompts.length + index">                                        <span class="flex min-w-0 items-center gap-2">
                                             {{-- W1 (v1.7.3): frame parity — typeahead rows render the
                                                  creator's equipped frame (absolute overlay, decorative). --}}
-                                            <span class="relative flex size-6 shrink-0 items-center justify-center">
-                                                <span class="flex size-full items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-saffron">
+                                            <span class="relative isolate inline-block size-6 shrink-0">
+                                                <span class="block size-full overflow-hidden rounded-full">
                                                     <template x-if="creator.avatar_url">
-                                                        <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full object-cover" loading="lazy">
+                                                        <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full rounded-full object-cover" loading="lazy">
                                                     </template>
                                                     <template x-if="! creator.avatar_url">
-                                                        <span class="text-[10px]" x-text="creator.initial"></span>
+                                                        <span class="flex size-full items-center justify-center rounded-full bg-ink font-bold text-saffron">
+                                                            <span class="text-[10px]" x-text="creator.initial"></span>
+                                                        </span>
                                                     </template>
                                                 </span>
+                                                {{-- G1 (v1.7.4): frame OUTSIDE the circle — same
+                                                     size-keyed negative inset + z-10 as the
+                                                     x-user-avatar overlay. --}}
                                                 <template x-if="creator.frame_url">
-                                                    <img :src="creator.frame_url" alt="" aria-hidden="true" class="pointer-events-none absolute -inset-1 size-[calc(100%+8px)]" loading="lazy">
+                                                    <img :src="creator.frame_url" alt="" aria-hidden="true" class="pointer-events-none absolute z-10 object-contain -inset-[8%]" loading="lazy">
                                                 </template>
                                             </span>
                                         <span class="min-w-0 truncate">
@@ -167,7 +172,9 @@
                      the public profile now. --}}
                 <div x-data="{ open: false }" class="relative">
                     <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-ink/5" aria-label="Account menu" :aria-expanded="open">
-                        <span class="flex size-8 items-center justify-center overflow-hidden rounded-full bg-ink text-xs font-bold text-saffron">
+                        {{-- G1 (v1.7.4): no overflow-hidden here — the frame
+                             protrudes past the avatar and this pill hugs it. --}}
+                        <span class="flex size-8 shrink-0 items-center justify-center">
                             <x-user-avatar :user="auth()->user()" size="md" :frame="auth()->user()->activeFrame"/>
                         </span>
                         <svg class="size-4 text-creak" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">

@@ -16,9 +16,12 @@
         <button class="rounded-xl bg-saffron px-4 py-2 text-sm font-semibold text-ink transition hover:bg-saffron-deep">Filter</button>
     </form>
 
-    <div class="mt-6 overflow-hidden rounded-2xl border border-ink/10">
+    {{-- G1 (v1.7.4): the panel must NOT clip — avatar frames protrude
+         outside their box. The rounded corners are carried by the panel +
+         the header's own rounded-t, instead of by an overflow clip. --}}
+    <div class="mt-6 rounded-2xl border border-ink/10">
         <table class="min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="rounded-t-2xl bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
                 <tr>
                     <th class="px-5 py-3 font-semibold">User</th>
                     <th class="hidden px-5 py-3 font-semibold sm:table-cell">Prompts</th>
