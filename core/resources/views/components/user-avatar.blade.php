@@ -4,35 +4,31 @@
     /**
      * C1 — identity avatar component (v1.4.4 "Avatar Fidelity").
      *
-     * Renders the user's real profile photo when `avatar_path` exists,
-     * otherwise the deterministic initials badge. The verified tick is
-     * ALWAYS a sibling outside this component — never baked inside the img.
+     * W1 (v1.7.3, HOTFIX ADDENDUM) — CIRCLE-EVERYWHERE, hard-forced:
+     * the wrapper ALWAYS carries rounded-full + overflow-hidden, no
+     * conditional geometry and no caller-override shape (the former
+     * hero squircle class chain is retired; see handoff §6.40 and the
+     * post-deploy hotfix directive). The avatar img and the initials
+     * badge are both rounded-full themselves so the circle survives
+     * even if a caller injects extra classes onto the wrapper.
      *
-     * Sizes: xs (cards/typeahead), sm (compact rows), md (bylines, navbar),
-     * lg (creator grids, admin tables). Extra classes merge through
-     * $attributes so special shapes (creator profile's hero) can override
-     * the default pill without forking the markup.
+     * Frame overlay: absolutely positioned over the avatar
+     * (inset-0, object-contain — the 512×512 PNG's transparent center
+     * lets the picture show through), pointer-events-none + aria-hidden,
+     * rendered whenever a frame is passed (callers only pass
+     * ->activeFrame, which is null without an equipped frame — the
+     * hidden-by-default contract). Animated frames keep their
+     * frame-anim-* motion class (W3), gated behind
+     * prefers-reduced-motion: no-preference in the built CSS.
      *
-     * W1 (v1.7.3) — FRAME SURFACE PARITY: the frame overlay now renders on
-     * EVERY surface that passes a frame (hero, prompt cards, image-gallery
-     * cards, library creators grid, navbar dropdown, dock You, feed actors,
-     * versions author, admin users table). This REVERSES the v1.7.0
-     * "cards stay clean" ruling — see handoff §6.40. The overlay is always
-     * pointer-events-none + aria-hidden; sizes xs–lg all support it.
+     * Sizes: xs (cards/typeahead), sm (compact rows), md (bylines,
+     * navbar), lg (creator grids, admin tables). Extra classes still
+     * merge through $attributes (color/layout only — geometry is fixed).
      *
-     * Geometry (v1.7.2 DESIGN addendum): the shape stays the CALLER's
-     * choice — the hero's sanctioned squircle + ring, circular pills on
-     * small badges — because the inner badge is rounded-[inherit]; the
-     * frame overlay inherits the wrapper's shape by layering over it.
-     *
-     * P5 (v1.7.1) — composition fix: the SIZE now lives on the outer
-     * wrapper and the inner badge fills it (`size-full` + `rounded-inherit`).
-     * If the caller supplies its own size-* class, the preset is dropped so
+     * P5 (v1.7.1) — composition fix retained: the SIZE lives on the
+     * outer wrapper; the inner badge fills it (size-full). If the
+     * caller supplies its own size-* class, the preset is dropped so
      * exactly one size utility rules the box.
-     *
-     * W3 (v1.7.3): an animated frame carries its CSS motion class on the
-     * overlay (spin | pulse | shine) — decorative-only, keyframes gated
-     * behind prefers-reduced-motion: no-preference in app.css.
      *
      * @var \App\Models\User $user
      * @var \App\Models\Frame|null $frame
@@ -49,20 +45,19 @@
     $animationClass = ($frame?->animation ?? 'none') !== 'none' ? ' frame-anim-'.$frame->animation : '';
 @endphp
 
-<span {{ $attributes->merge(['class' => 'relative inline-flex shrink-0 text-[length:inherit] '.$preset]) }}>
-    <span class="flex size-full items-center justify-center overflow-hidden rounded-[inherit] bg-ink font-bold text-saffron">
-        @if ($user->avatar_path)
-            <img src="{{ Storage::disk('public')->url($user->avatar_path) }}"
-                 alt="{{ '@'.$handle }}"
-                 loading="lazy"
-                 class="size-full object-cover">
-        @else
-            <span aria-hidden="true">{{ mb_substr($user->name, 0, 1) }}</span>
-        @endif
-    </span>
+<span {{ $attributes->merge(['class' => 'relative inline-flex shrink-0 rounded-full overflow-hidden text-[length:inherit] '.$preset]) }}>
+    @if ($user->avatar_path)
+        <img src="{{ Storage::disk('public')->url($user->avatar_path) }}"
+             alt="{{ '@'.$handle }}"
+             loading="lazy"
+             class="absolute inset-0 size-full rounded-full object-cover">
+    @else
+        <span class="absolute inset-0 flex size-full items-center justify-center rounded-full bg-ink font-bold text-saffron"
+              aria-hidden="true">{{ mb_substr($user->name, 0, 1) }}</span>
+    @endif
 
     @if ($frame?->image_path)
         <img src="{{ Storage::disk('public')->url($frame->image_path) }}" alt="" aria-hidden="true"
-             class="pointer-events-none absolute -inset-1 size-[calc(100%+8px)]{{ $animationClass }}" loading="lazy">
+             class="pointer-events-none absolute inset-0 size-full rounded-full object-contain{{ $animationClass }}" loading="lazy">
     @endif
 </span>

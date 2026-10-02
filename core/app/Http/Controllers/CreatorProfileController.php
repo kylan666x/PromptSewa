@@ -14,9 +14,14 @@ class CreatorProfileController extends Controller
     // soft-deleted accounts are excluded at the binding level.
     public function show(User $creator)
     {
+        // Hotfix directive: the profile hero + prompt cards need activeFrame
+        // loaded or the frame overlay never renders (the relation lazily
+        // loads too, but the eager load keeps the N+1 away on card grids).
+        $creator->loadMissing('activeFrame');
+
         $prompts = $creator->prompts()
             ->publicListing()
-            ->with(['category', 'latestVersion'])
+            ->with(['category', 'latestVersion', 'creator.activeFrame'])
             ->withCount('versions')
             ->latest('sales_count')
             ->latest()

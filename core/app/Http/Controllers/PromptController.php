@@ -52,7 +52,9 @@ class PromptController extends Controller
     {
         abort_unless($prompt->isViewableBy($request->user()), 404);
 
-        $prompt->load(['category', 'creator', 'versions.author']);
+        // Hotfix directive: versions author rows render the frame overlay —
+        // eager-load the frame relation through creator + version authors.
+        $prompt->load(['category', 'creator.activeFrame', 'versions.author.activeFrame']);
 
         $viewer = $request->user();
         $isOwner = $viewer !== null && $viewer->id === $prompt->user_id;

@@ -207,8 +207,10 @@ class CheckoutController extends Controller
     {
         $user = $request->user();
 
+        // Hotfix directive: the grants table renders creator rows with the
+        // frame overlay — eager-load creator + frame with the grants too.
         $grants = $user->licenseGrants()
-            ->with(['prompt.category', 'prompt.latestVersion', 'orderItem.order', 'orderItem.pack'])
+            ->with(['prompt.category', 'prompt.creator.activeFrame', 'prompt.latestVersion', 'orderItem.order', 'orderItem.pack'])
             ->latest()
             ->get();
 

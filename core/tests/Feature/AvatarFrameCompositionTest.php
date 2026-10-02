@@ -50,15 +50,14 @@ test('no-frame hero with a photo renders one full-size img and zero saffron plac
 
     $avatarUrl = Storage::disk('public')->url('avatars/hero.jpg');
 
-    // The photo fills the badge: its img is size-full object-cover inside a
-    // size-full inner badge — and the caller's size-24 hero class rules the
-    // wrapper. Exactly ONE full-size avatar img on the hero surface.
+    // The photo fills the badge: its img is size-full object-cover inside the
+    // hard-forced circle wrapper (HOTFIX ADDENDUM: rounded-full +
+    // overflow-hidden always; the initials badge is rounded-full itself).
     expect($html)->toContain($avatarUrl)
-        // Inner badge + photo both fill the wrapper (the composition fix).
-        ->and($html)->toContain('flex size-full items-center justify-center overflow-hidden rounded-[inherit] bg-ink')
-        // No frame on THIS creator → no ring on the hero block. (W1 parity:
+        ->and($html)->toContain('rounded-full object-cover')
+        // No frame on THIS creator → no overlay on the hero block. (W1 parity:
         // other avatars elsewhere on the page may legitimately carry one.)
-        ->and(heroBlock($html))->not->toContain('pointer-events-none absolute -inset-1');
+        ->and(heroBlock($html))->not->toContain('pointer-events-none absolute inset-0');
 });
 
 test('with-frame hero renders photo plus ring', function () {
@@ -73,8 +72,9 @@ test('with-frame hero renders photo plus ring', function () {
 
     expect($html)->toContain(Storage::disk('public')->url('avatars/ring.jpg'))
         ->and($html)->toContain(Storage::disk('public')->url($path))
-        // Ring overlay present exactly where the frame is equipped.
-        ->and($html)->toContain('pointer-events-none absolute -inset-1');
+        // Overlay present exactly where the frame is equipped — hotfix
+        // addendum DOM: inset-0 + object-contain over the circle.
+        ->and($html)->toContain('pointer-events-none absolute inset-0 size-full rounded-full object-contain');
 });
 
 test('preset sizes still apply when no caller size class is present', function () {

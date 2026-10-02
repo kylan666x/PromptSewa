@@ -51,6 +51,7 @@ class DashboardController extends Controller
         $feedEvents = $tab === 'feed'
             ? \App\Models\FeedEvent::query()
                 ->publicStream()
+                ->with('actor.activeFrame') // W1: feed actors render the overlay.
                 ->where(function ($q) use ($user) {
                     $q->where('actor_id', $user->id)
                         ->orWhere('type', \App\Models\FeedEvent::TYPE_SALE_MILESTONE);

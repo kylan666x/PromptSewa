@@ -24,6 +24,7 @@ class UserAdminController extends Controller
         // across every status/visibility, deliberately unlike the public
         // profile stat (published-only). Locked by CreatorProfileCountTest.
         $users = User::query()
+            ->with('activeFrame') // W1: the users table renders the frame overlay.
             ->withCount('prompts')
             ->when($query !== '', function ($builder) use ($query) {
                 $builder->where(fn ($inner) => $inner

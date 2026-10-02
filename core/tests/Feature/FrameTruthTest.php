@@ -67,7 +67,9 @@ test('the frame overlay renders on every avatar surface', function () {
     $prompt->update(['status' => Prompt::STATUS_PUBLISHED]);
 
     $frameUrl = Storage::disk('public')->url($path);
-    $overlayClass = 'pointer-events-none absolute -inset-1';
+    // Hotfix addendum DOM: the overlay is inset-0 + object-contain over
+    // the hard-forced circle wrapper.
+    $overlayClass = 'pointer-events-none absolute inset-0 size-full rounded-full object-contain';
 
     // Profile hero + versions author + feed actor.
     expect($this->get(route('creators.show', $creator))->getContent())->toContain($frameUrl)
