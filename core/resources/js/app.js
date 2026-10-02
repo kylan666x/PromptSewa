@@ -249,16 +249,35 @@ Alpine.data('promptViewer', (rawBody, names) => ({
 /**
  * T13 (v1.5.0) / P1 (v1.7.1): bookmark heart — optimistic flip, POST
  * toggle, no reload. Server response confirms the final state (and repairs
- * races). The flip updates the FILL (rose fill when saved, outline when
- * not) — the rose fill IS the saved state, not just a heavier stroke.
+ * races). The rose fill IS the saved state, not just a heavier stroke.
+ *
+ * H4 (v1.7.4): `saved` is the ONLY source of truth and it is SERVER-rendered
+ * (config.saved comes from the view). The icons are two mutually exclusive
+ * svgs toggled with x-show — deliberately NOT a `heartClass` utility pair.
+ * Toggling two conflicting Tailwind utilities on one element leaves both in
+ * the class attribute and the winner is decided by stylesheet order: in the
+ * browser the heart went rose but stayed an outline (fill-none beat
+ * fill-current). Do not reintroduce a class getter here.
  */
 Alpine.data('bookmarkHeart', (config) => ({
     url: config.url,
     saved: config.saved ?? false,
     busy: false,
+    toast: '',
+    toastTimer: null,
 
-    get heartClass() {
-        return this.saved ? 'text-rose-600 fill-current' : 'text-ink/40 fill-none';
+    /**
+     * H4 (v1.7.4): silent lies are banned. Any non-OK response (419 CSRF,
+     * 401/403 session, 422 validation, 500) must REVERT the optimistic flip
+     * and tell the user — the previous code only reverted when .json()
+     * threw, and showed nothing, so a failed save looked exactly like a
+     * successful one until the next refresh.
+     */
+    fail(message) {
+        this.saved = !this.saved;
+        this.toast = message;
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => (this.toast = ''), 4000);
     },
 
     toggle() {
@@ -268,19 +287,40 @@ Alpine.data('bookmarkHeart', (config) => ({
         this.busy = true;
         this.saved = !this.saved; // optimistic
 
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+
         fetch(this.url, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                // X-CSRF-TOKEN is read from the layout meta tag; never invent it.
+                'X-CSRF-TOKEN': token ?? '',
+                'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
             },
         })
-            .then((response) => response.json())
+            .then((response) => {
+                if (!response.ok) {
+                    // 419 = CSRF token mismatch (session rotated); anything
+                    // non-OK is equally untrustworthy.
+                    this.fail(
+                        response.status === 419
+                            ? 'Save failed — your session expired. Reload and try again.'
+                            : 'Save failed — try again',
+                    );
+                    return null;
+                }
+
+                return response.json();
+            })
             .then((data) => {
+                if (data === null) {
+                    return;
+                }
                 this.saved = data.saved;
             })
             .catch(() => {
-                this.saved = !this.saved; // revert on failure
+                this.fail('Save failed — try again');
             })
             .finally(() => {
                 this.busy = false;

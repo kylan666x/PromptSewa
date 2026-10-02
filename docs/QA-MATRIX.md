@@ -39,6 +39,23 @@
 | G3 CSS scroll-snap only — zero dependencies, no scrollbar hacks, viewport still user-scalable | ✅ | `MobileEngagementPassTest::the engagement pass adds no new dependencies or scrollbar-hiding hacks` |
 | G4 chip v1.7.4 (config single source + builder APP_VERSION); suite 458 passed / 13,959 assertions | ✅ | `config('app.version')`; `ReleaseHygieneTest` builds the real zip |
 
+## H4-block (v1.7.4 — saved-heart truth: parity + the fetch contract)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| H4 ROOT CAUSE (browser-reproduced, NOT CSRF): the toggle POST returned **200** and the row was written, but the heart rendered `aria-pressed="false"` after a refresh — only the library grid passed `:saved` into `x-prompt-card`; every other surface fell through to the component's `false` default and the optimistic flip was undone on reload | ✅ | `SavedHeartParityTest::the heart pre-flips on the home fresh grid after a refresh` (the repro, now the lock) |
+| H4 pre-flip parity on EVERY heart surface: home fresh grid, library grid, library search, creator profile grid, prompt detail | ✅ | `SavedHeartParityTest::every heart surface pre-flips: home, library, search, creator profile, detail` |
+| H4 per-prompt parity on one page (the bookmarked card is rose, its neighbour is not) + one viewer never sees another's state | ✅ | `SavedHeartParityTest::on a grid, exactly the bookmarked card shows the filled icon`, `…one viewer never sees another viewer bookmarked state` |
+| H4 the set costs ONE query per request, not one per card | ✅ | `SavedHeartParityTest::the parity set costs ONE query per request, not one per card` |
+| H4 fetch contract: `credentials: same-origin` + `X-CSRF-TOKEN` read from `<meta name="csrf-token">` (never invented) + `X-Requested-With: XMLHttpRequest` + `Accept: application/json`; the layout serves the meta tag | ✅ | `SavedHeartParityTest::the served layout carries the CSRF meta token the fetch reads`, `…the served heart markup carries the fetch header wiring` (built-asset string tokens, because Pest never runs `fetch()`) |
+| H4 any non-OK reverts the optimistic flip AND shows a rose toast — silent lies are banned (419 gets the session-expired copy) | ✅ | `SavedHeartParityTest::…carries the fetch header wiring` (`.ok` / `===419` / `Save failed` in the built JS) + `every heart surface tells the user when a save failed` (grid AND detail — the detail button used to fail in silence) |
+| H4 the flip toggles PRESENCE, not utility classes: two mutually exclusive icons via `x-show`, server-cloaked with `x-cloak` so the pre-Alpine paint is truthful. A static SSR pair + an Alpine `:class` pair on ONE element left both pairs in the class attribute and the cascade picked the winner — browser-observed: rose but still an OUTLINE (`fill-none` beat `fill-current`) | ✅ | `SavedHeartParityTest::a saved heart ships the filled icon visible and the outline cloaked`, `…an unsaved heart ships the outline visible and the rose icon cloaked`, and the built JS must NOT contain `heartClass` |
+| H4 the detail save button's LABEL is server-rendered too (an `x-text`-only label is empty until Alpine boots) | ✅ | `SavedHeartParityTest::an unsaved heart ships the outline visible and the rose icon cloaked` (`>Save for later<`) |
+| H4 viewer state is a container singleton PLUS a forget-per-request middleware — a long-lived worker or the test client would otherwise serve the PREVIOUS viewer's hearts | ✅ | `SavedHeartParityTest` (the cross-request regression it fixed), `ForgetPerRequestState` in the `web` group |
+| H4 guests get a login link, never a heart button; the Saved tab lists only the viewer's bookmarks and renders no heart | ✅ | `SavedHeartParityTest::guests get a login link, never a heart button`, `…the Saved tab lists the viewer bookmarks and nobody else` |
+| H4 browser gate (release-blocking, 4th "passes tests, fails browser"): verified under `artisan serve` — home/library/creator/detail pre-flip after a hard refresh, tap → **200** + filled rose heart, untap → outline, blanked CSRF token → **419** + visible rose toast + revert | ✅ | manual browser gate + the served-HTML locks above; Pest bypasses CSRF by design and can never see this class |
+| Suite | ✅ | 470 passed / 14,018 assertions |
+
 ---
 
 # PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"

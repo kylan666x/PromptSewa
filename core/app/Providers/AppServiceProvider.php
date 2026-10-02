@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\User;
 use App\Services\SettingsService;
+use App\Support\BookmarkedIds;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +19,12 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingsService::class);
+
+        // H4 (v1.7.4): the viewer's bookmarked prompt ids, resolved ONCE per
+        // request so every heart surface can pre-flip server-side (the bug:
+        // only the library grid knew the saved state, so a heart saved on the
+        // home grid rendered unsaved after refresh).
+        $this->app->singleton('bookmarked.ids', fn (): array => BookmarkedIds::resolve());
 
         // T5 (v1.7.3): the merged disposable-domain set (curated bundle +
         // admin's blocked_domains_extra) resolved once per request.

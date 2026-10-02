@@ -33,6 +33,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // validates the session's impersonator_id after StartSession,
         // before auth-dependent routes run.
         $middleware->appendToGroup('web', \App\Http\Middleware\ResolveImpersonation::class);
+
+        // H4 (v1.7.4): per-request viewer state (bookmarked ids) must never
+        // outlive its request — a long-lived worker or the test client would
+        // otherwise serve the previous viewer saved state.
+        $middleware->appendToGroup('web', \App\Http\Middleware\ForgetPerRequestState::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // cPanel hardening: never leak stack traces to visitors. The cron

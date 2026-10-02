@@ -87,7 +87,10 @@
                 @else
                     <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach ($prompts as $prompt)
-                            <x-prompt-card :prompt="$prompt" :saved="auth()->check() && \App\Models\Bookmark::isSaved(auth()->id(), $prompt->id)"/>
+                            {{-- H4: the card resolves its own pre-flip from the per-request
+                                 bookmarked-id set (one query per request,
+                                 not one per card). --}}
+                            <x-prompt-card :prompt="$prompt"/>
                         @endforeach
                     </div>
 
