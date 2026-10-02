@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -171,5 +172,18 @@ class User extends Authenticatable
     public function creatorRouteKey(): string
     {
         return $this->getRouteKey();
+    }
+
+    /**
+     * A1 (v1.7.6): the reset mail is the branded PromptSewa template, not
+     * Laravel's default markdown. The broker calls this method
+     * (CanResetPassword), so overriding it here is the whole wiring — no
+     * custom broker, no service-provider registration, and every caller
+     * (the forgot-password form, a future admin "send reset" action) gets
+     * the same branded mail.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

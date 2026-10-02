@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
 /**
  * S4 — server-side password floor.
  *
@@ -25,6 +28,51 @@ final class PasswordPolicy
     public static function isCommon(string $password): bool
     {
         return in_array(strtolower($password), self::COMMON, true);
+    }
+
+    /**
+     * A1 (v1.7.6) — the SHARED signup/reset floor as a validation rule.
+     *
+     * Containment checks (your name / your email inside the password) need
+     * the live request, so they could only ever live in a controller. That
+     * duplicated the rule across register and forgot-password — and a reset
+     * that accepted a password signup would refuse is a real hole. One
+     * definition, used by both surfaces.
+     *
+     * `$name` is the account's display name at signup; the reset surface
+     * has no name field, so that half of the check simply does not run
+     * there (the email half still does).
+     */
+    public static function rule(Request $request, ?string $name = null): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($request, $name) {
+            $value = (string) $value;
+
+            if (self::isCommon($value)) {
+                $fail('That password is too common — choose something less guessable.');
+
+                return;
+            }
+
+            $haystack = mb_strtolower($value);
+
+            // Name containment: check each token ("sita", "sharma") so
+            // "SitaSharma2026!" is caught even though the raw display name
+            // contains a space.
+            foreach (preg_split('/\s+/u', mb_strtolower(trim((string) $name))) ?: [] as $token) {
+                if (mb_strlen($token) >= 3 && str_contains($haystack, $token)) {
+                    $fail('Your password must not contain your name.');
+
+                    return;
+                }
+            }
+
+            $emailLocal = mb_strtolower(Str::before((string) $request->input('email', ''), '@'));
+
+            if (mb_strlen($emailLocal) >= 4 && str_contains($haystack, $emailLocal)) {
+                $fail('Your password must not contain your email address.');
+            }
+        };
     }
 
     /**

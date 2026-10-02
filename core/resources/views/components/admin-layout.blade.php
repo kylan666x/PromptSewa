@@ -34,6 +34,10 @@
                     // T6 (v1.7.3): the trust gate ships with its nav entry in
                     // the same commit (§6.36 watch-out).
                     'admin.security.edit' => ['Security', '🛡'],
+                    // A3 (v1.7.6): the mail rail. Without this pill the mail
+                    // settings exist but nobody can reach them — which is how
+                    // "mail is broken on prod" stays a mystery for a month.
+                    'admin.email.edit' => ['Email', '✉'],
                 ];
             @endphp
             @foreach ($adminNav as $route => [$label, $icon])

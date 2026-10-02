@@ -26,11 +26,19 @@ class UserFactory extends Factory
     {
         $name = fake()->name();
 
+        // Post-v1.4.1 the column is NOT NULL — every user needs a handle.
+        // Unique across the whole users table.
+        //
+        // The handle is TRUNCATED to the app's own 30-character rule: a
+        // long faker name ("Mrs. Elouise Wisozk-Johnson") used to produce a
+        // 34-character username, which the app itself refuses on every
+        // profile save — so any test that round-tripped a factory handle
+        // failed at random, depending on which name Faker rolled.
+        $handle = Str::limit(Str::slug($name), 25, '').'-'.fake()->unique()->numberBetween(1000, 9999);
+
         return [
             'name' => $name,
-            // Post-v1.4.1 the column is NOT NULL — every user needs a handle.
-            // Unique across the whole users table.
-            'username' => Str::slug($name).'-'.fake()->unique()->numberBetween(1000, 9999),
+            'username' => $handle,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),

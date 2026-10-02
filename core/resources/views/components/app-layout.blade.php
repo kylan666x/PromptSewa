@@ -46,6 +46,23 @@
         </div>
     @endif
 
+    {{-- Flash toast (failures). A3 (v1.7.6): controllers have flashed an
+         `error` key since v1.7.3 (RejectBannedUsers) and NOTHING rendered it
+         — a suspended account and a failed mail send both bounced the user
+         home with no explanation. An error you cannot see is a silent lie,
+         so the rose toast lives beside the green one. --}}
+    @if (session('error'))
+        <div class="pointer-events-none fixed inset-x-0 top-20 z-50 flex justify-center px-4" x-data="{ show: true }" x-show="show" x-transition.opacity.duration.500ms x-init="setTimeout(() => show = false, 8000)">
+            <div class="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-rose-700/25 bg-ink px-4 py-2.5 text-sm text-rose-200 shadow-card-hover" role="alert">
+                <svg class="mt-0.5 size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 7.5v5M12 16.5h.01"/>
+                </svg>
+                <span>{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
     <main class="flex-1">
         {{ $slot }}
     </main>

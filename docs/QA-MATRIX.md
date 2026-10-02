@@ -523,3 +523,37 @@ named test; if a test regresses, the row goes red and the release blocks.
 | F2 typeahead dropdown renders official (blue circle) + verified (saffron seal) badges from the JSON badge field | ✅ | `SeoLayoutTest::the typeahead dropdown template renders official and verified badge markup` (data gate from `OfficialIdentityTest::typeahead carries the badge field…`) |
 | F2 badge SVG on identity surfaces | ✅ | `SeoLayoutTest::official badge SVG appears in the served page for the official creator card` |
 | Suite | ✅ | 283 passed / 1221 assertions |
+
+---
+
+# PromptSewa QA Matrix — v1.7.6 "Auth & Mail"
+
+## A-block (v1.7.6)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| A1 forgot-password form renders in the paper world, `noindex, follow` | ✅ | `PasswordResetTest::the request form renders in the paper world with the noindex guard` |
+| A1 request sends a mail whose link REALLY resets the password (old fails, new passes) | ✅ | `PasswordResetTest::requesting a reset sends mail whose link really changes the password` |
+| A1 the REAL mail pipeline hands a rendered message to the transport; the token is read out of the actual payload | ✅ | `PasswordResetTest::the real mail pipeline hands a rendered reset mail to the transport` (array transport, not a facade fake) |
+| A1 unknown address lands on the identical notice — the form is not an account oracle | ✅ | `PasswordResetTest::an unknown address lands on the same notice — the form is not an account oracle` |
+| A1 expired (61 min) token refused; garbage token refused; both leave the old password intact | ✅ | `PasswordResetTest::an expired token is refused and the password is untouched`, `a garbage token is refused` |
+| A1 the link is single use (replay changes nothing) | ✅ | `PasswordResetTest::requesting a reset sends mail whose link really changes the password` (replay assertion) |
+| A1 reset enforces the SAME floor as signup (8+, not-common, confirmed) — one shared `PasswordPolicy::rule()` | ✅ | `PasswordResetTest::the reset enforces the same password floor as signup` |
+| A1 6 requests/minute then **429** — the form is not a mail cannon | ✅ | `PasswordResetTest::six reset requests a minute, then 429 — this form is not a mail cannon` |
+| A1 guest-only: signed-in users are redirected off all three pages | ✅ | `PasswordResetTest::signed-in users have no business on any of the three pages` |
+| A1 a broken mail rail is REPORTED ("we could not send that email"), never swallowed | ✅ | `PasswordResetTest::a broken mail rail is reported, never swallowed` |
+| A1 reset mail never carries the new/old password; branded shell (ink bar + saffron button) + plain-text alternative | ✅ | `PasswordResetTest::requesting a reset sends mail whose link really changes the password` (`#f5c518`/`#171715` + text part assertions) |
+| A1 all three routes joined the permanent SEO crawl in the same commit | ✅ | `SeoRouteCoverageTest::the permanent route list stays in sync — every named GET route is either asserted or explicitly exempted` |
+| A2 eye toggle on every password surface (login, register ×2, reset ×2, admin SMTP) with `aria-pressed` + Show/Hide labels | ✅ | `PasswordVisibilityTest::login, register and the reset form all render the eye toggle` |
+| A2 NO password input ever ships a `value` (plaintext-in-HTML ban; the component strips the attribute defensively) | ✅ | same test (regex over every `type="password"` input), `PasswordVisibilityTest::the component refuses to render a value even if a caller passes one` |
+| A2 a failed login / rejected registration never echoes the attempted secret back | ✅ | `PasswordVisibilityTest::a failed login never echoes the attempted password back into the page`, `a rejected registration never echoes the attempted password back` |
+| A2 the admin SMTP field renders the toggle and shows only the "saved" chip | ✅ | `PasswordVisibilityTest::the admin SMTP password field renders the toggle and never echoes the secret` |
+| A3 shipped default is **sendmail** (`env('MAIL_MAILER','sendmail')` + `.env.example`), so auth mail needs zero config | ✅ | `MailConfigTest::the shipped default is sendmail — auth mail must work with zero configuration` |
+| A3 with no mail settings saved, `apply()` changes nothing | ✅ | `MailConfigTest::with zero mail settings saved, apply() changes nothing` |
+| A3 saved settings land in `config('mail.mailers.smtp.*')` incl. DSN scheme; tls/none leave no stale switch behind | ✅ | `MailConfigTest::saved settings land in the smtp transport, encryption included`, `tls and none map to the right Symfony transport switches — and leave nothing behind` |
+| A3 from-address/name fall back to Brand settings | ✅ | `MailConfigTest::the from address falls back to the Brand contact email and site name` |
+| A3 SMTP password encrypted at rest (`Crypt`), write-only (empty box keeps it), never served back | ✅ | `MailConfigTest::the SMTP password is encrypted at rest and never served back`, `an empty password box keeps the saved one instead of wiping it` |
+| A3 Admin → Email pill in the same commit; moderators/members 403 on page, save and probe | ✅ | `MailConfigTest::the nav pill exists — a settings screen nobody can reach is a missing feature`, `moderators and members are refused the mail settings` |
+| A3 "Send test email" goes to the acting admin on the configured rail | ✅ | `MailConfigTest::the probe sends to the acting admin on the configured rail` |
+| A3 a failed send shows the exception class + first line and scrubs the password (`•••`) | ✅ | `MailConfigTest::a failed send reports the class and one line — never the password` |
+| Suite | ✅ | **511 passed / 14,309 assertions** (chip v1.7.6; Arch suite inside the number — see `--list-tests` proof) |

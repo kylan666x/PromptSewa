@@ -14,11 +14,8 @@
                 @error('email')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
             </div>
 
-            <div>
-                <label for="password" class="mb-1.5 block text-sm font-medium text-ink/80">Password</label>
-                <input id="password" name="password" type="password" required
-                       class="w-full rounded-xl border border-ink/15 bg-white px-3 py-2.5 text-sm text-ink placeholder-creak shadow-sm outline-none transition focus:border-saffron-deep focus:ring-2 focus:ring-saffron/40">
-            </div>
+            {{-- A2 (v1.7.6): view-password toggle (x-password-input). --}}
+            <x-password-input name="password" label="Password" autocomplete="current-password" required/>
 
             <label class="flex items-center gap-2 text-sm text-ink/60">
                 <input type="checkbox" name="remember" class="size-4 rounded border-ink/20 accent-saffron-deep">
@@ -29,6 +26,10 @@
             <x-captcha form="login"/>
 
             <x-button type="submit" class="w-full">Log in</x-button>
+
+            <p class="text-center text-sm text-ink/60">
+                <a href="{{ route('password.request') }}" class="font-medium text-ink/70 underline decoration-saffron decoration-2 underline-offset-4 hover:text-ink">Forgot your password?</a>
+            </p>
 
             <p class="text-center text-sm text-ink/60">
                 New here?

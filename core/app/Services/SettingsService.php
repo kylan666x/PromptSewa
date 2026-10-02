@@ -22,6 +22,9 @@ class SettingsService
         'esewa_sandbox_secret_key',
         // T1 (v1.7.3): bot-challenge secret (Cloudflare Turnstile / reCAPTCHA).
         'captcha_secret',
+        // A3 (v1.7.6): mailbox password. Never echoed back to the admin
+        // form (write-only) and NEVER mirrored into .env on prod.
+        'mail_password',
     ];
 
     /** Well-known settings with defaults. */
@@ -67,6 +70,18 @@ class SettingsService
         // (newline textarea); the curated bundle lives in config/disposable-domains.php.
         'blocked_domains_extra' => '',
         'block_disposable_on_reports' => '0',
+
+        // A3 (v1.7.6): mail rail. The DEFAULT mailer is sendmail (cPanel
+        // Exim), so auth mail works on a fresh install with zero config —
+        // these rows only matter when a host needs SMTP (babal.host and
+        // friends). mail_password is a SECRET_KEY (see above).
+        'mail_mailer' => 'sendmail',
+        'mail_host' => '',
+        'mail_port' => '465',
+        'mail_encryption' => 'ssl',
+        'mail_username' => '',
+        'mail_from_address' => '',
+        'mail_from_name' => '',
     ];
 
     public function get(string $key, ?string $default = null): ?string

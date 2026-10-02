@@ -8,8 +8,10 @@ use App\Http\Controllers\Admin\PromptAdminController;
 use App\Http\Controllers\Admin\BrandSettingsAdminController;
 use App\Http\Controllers\Admin\ToolLogoAdminController;
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\MailSettingsAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CreatorProfileController;
 use App\Http\Controllers\Dashboard\PromptEditController;
@@ -103,6 +105,22 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'store'])->name('register.store');
     Route::get('/login', [AuthController::class, 'loginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+
+    // A1 (v1.7.6): forgot password. 6 attempts a minute per IP — this form
+    // hands out a real email, so it must not become a mail cannon. The
+    // reset POST is on the broker's own 60s per-account resend throttle.
+    Route::get('/forgot-password', [PasswordResetController::class, 'requestForm'])
+        ->middleware('throttle:6,1')
+        ->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:6,1')
+        ->name('password.email');
+    // A1: the enumeration-proof notice. Deliberately its own path, NOT a
+    // third verb on /forgot-password: the POST there must stay a single
+    // route (GET renders the form) so no POST/GET pair can be confused.
+    Route::get('/forgot-password/sent', [PasswordResetController::class, 'sent'])->name('password.sent');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showForm'])->name('password.reset');
+    Route::post('/reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.update');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -299,6 +317,12 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'edit'])->name('security.edit');
     Route::put('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'update'])->name('security.update');
     Route::post('/security/test-email', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'testEmail'])->name('security.test-email');
+
+    // A3 (v1.7.6): Admin → Email — mailer selection, SMTP credentials
+    // (write-only, encrypted at rest) and the send-a-test-mail probe.
+    Route::get('/email', [MailSettingsAdminController::class, 'edit'])->name('email.edit');
+    Route::put('/email', [MailSettingsAdminController::class, 'update'])->name('email.update');
+    Route::post('/email/test', [MailSettingsAdminController::class, 'testEmail'])->name('email.test');
 
     // Release updates via uploaded zip (existing feature).
     Route::get('/update', [ReleaseUpdateController::class, 'form'])->name('update');

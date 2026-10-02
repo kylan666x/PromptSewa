@@ -54,31 +54,9 @@ class AuthController extends Controller
                 'string',
                 'confirmed',
                 Password::min(8),
-                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
-                    if (\App\Support\PasswordPolicy::isCommon((string) $value)) {
-                        $fail('That password is too common — choose something less guessable.');
-                    }
-
-                    $haystack = mb_strtolower((string) $value);
-
-                    // Name containment: check each token ("sita", "sharma")
-                    // so "SitaSharma2026!" is caught even though the raw
-                    // display name contains a space. Read from $request —
-                    // $validated does not exist inside the rule yet.
-                    foreach (preg_split('/\s+/u', mb_strtolower(trim((string) $request->input('name')))) ?: [] as $token) {
-                        if (mb_strlen($token) >= 3 && str_contains($haystack, $token)) {
-                            $fail('Your password must not contain your name.');
-
-                            return;
-                        }
-                    }
-
-                    $emailLocal = mb_strtolower(\Illuminate\Support\Str::before((string) $request->input('email', ''), '@'));
-
-                    if (mb_strlen($emailLocal) >= 4 && str_contains($haystack, $emailLocal)) {
-                        $fail('Your password must not contain your email address.');
-                    }
-                },
+                // A1 (v1.7.6): the floor lives in PasswordPolicy so the
+                // forgot-password reset enforces exactly what signup does.
+                \App\Support\PasswordPolicy::rule($request, (string) $request->input('name')),
             ],
         ]);
 

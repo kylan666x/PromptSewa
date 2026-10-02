@@ -46,12 +46,10 @@
                 @error('email')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
             </div>
 
-            <div>
-                <label for="password" class="mb-1.5 block text-sm font-medium text-ink/80">Password</label>
-                <input id="password" name="password" type="password" required minlength="8"
-                       x-model="password"
-                       autocomplete="new-password"
-                       class="w-full rounded-xl border border-ink/15 bg-white px-3 py-2.5 text-sm text-ink placeholder-creak shadow-sm outline-none transition focus:border-saffron-deep focus:ring-2 focus:ring-saffron/40">
+            {{-- A2 (v1.7.6): view-password toggle; the S4 strength meter rides
+                 in the slot below the field (it needs signupForm's scope). --}}
+            <x-password-input name="password" label="Password" autocomplete="new-password"
+                              required minlength="8" x-model="password">
 
                 {{-- Animated strength meter (S4) --}}
                 <div class="mt-2" x-show="password.length > 0" x-cloak>
@@ -68,16 +66,10 @@
                         <li :class="notNameOrEmail && 'text-emerald-700'">• Not your name or email</li>
                     </ul>
                 </div>
+            </x-password-input>
 
-                @error('password')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
-            </div>
-
-            <div>
-                <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-ink/80">Confirm password</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" required
-                       autocomplete="new-password"
-                       class="w-full rounded-xl border border-ink/15 bg-white px-3 py-2.5 text-sm text-ink placeholder-creak shadow-sm outline-none transition focus:border-saffron-deep focus:ring-2 focus:ring-saffron/40">
-            </div>
+            <x-password-input name="password_confirmation" label="Confirm password"
+                              autocomplete="new-password" required error-key="password"/>
 
             {{-- T3 (v1.7.3): bot check — widget sits above the submit button,
                  visible focus states (WCAG). Renders nothing when disabled. --}}

@@ -42,6 +42,11 @@ function seoExpectedSubjects(): array
         // Auth.
         'login' => ['Sign in', ['guest']],
         'register' => ['Create an account', ['guest']],
+        // A1 (v1.7.6): forgot password. `password.reset` is a bound route
+        // (the token), handled dynamically below.
+        'password.request' => ['Forgot password', ['guest']],
+        'password.sent' => ['Check your email', ['guest']],
+        'password.reset' => ['Choose a new password', ['guest']], // bound route (token)
 
         // Dashboard (member fixtures).
         'dashboard' => ['Your prompts', ['member', 'owner']],
@@ -69,6 +74,7 @@ function seoExpectedSubjects(): array
         'admin.badges.index' => ['Badges', ['admin']],
         'admin.frames.index' => ['Frames', ['admin']],
         'admin.security.edit' => ['Security', ['admin']],
+        'admin.email.edit' => ['Email', ['admin']],
         'admin.comp-grants.create' => ['Comp grants', ['admin']],
         'admin.update' => ['Software update', ['admin']],
     ];
@@ -120,6 +126,7 @@ test('every named GET route renders exactly one x-seo <title> with the expected 
 
     foreach (seoExpectedSubjects() as $routeName => [$subject, $roles]) {
         $url = match ($routeName) {
+            'password.reset' => route($routeName, 'a-token', ['email' => 'nobody@example.test']),
             'library.category' => route($routeName, $category),
             'prompts.show' => route($routeName, $prompt),
             'prompts.versions' => route($routeName, $prompt),
@@ -134,6 +141,7 @@ test('every named GET route renders exactly one x-seo <title> with the expected 
 
         // Resolve the expected subject for dynamic routes.
         $expected = match ($routeName) {
+            'password.reset' => 'Choose a new password',
             'library.category' => $category->name,
             'prompts.show' => 'Crawl Probe Listing',
             'creators.show' => 'Crawl Owner',
@@ -183,6 +191,7 @@ test('the permanent route list stays in sync — every named GET route is either
         'robots',
         'dashboard.update', // redirect shim to admin.update
         'logout', 'register.store', 'login.store', // POST
+        'password.email', 'password.update', // POST (forgot-password flow, PasswordResetTest)
         'checkout.show', // noindex transactional page, covered by CheckoutFlowTest
         'checkout.esewa.pay', // POST-like redirect flow, covered by CheckoutServiceTest
         'purchases.download', // file download — not an HTML page

@@ -58,6 +58,14 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Pack::observe(\App\Observers\PackObserver::class);
         Paginator::defaultView('pagination::tailwind');
 
+        // A3 (v1.7.6): the mail rail is admin-configurable, so config/mail.php
+        // (which says `sendmail` — cPanel Exim, works with zero config) is
+        // only the DEFAULT. Whatever the founder saved in Admin → Email is
+        // applied here, at boot, before any mailer is resolved. No-op when
+        // no mail settings have ever been saved, and never fatal when the
+        // settings table does not exist yet (fresh install / migrate).
+        app(\App\Services\MailConfigService::class)->apply();
+
         // /creators/{creator} binds by the public handle (username) with a
         // display-name fallback for accounts that never picked one. Scoped
         // to this parameter only — admin {user} routes keep id binding.
