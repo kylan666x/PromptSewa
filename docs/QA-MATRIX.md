@@ -1,3 +1,18 @@
+# PromptSewa QA Matrix — v1.7.3-hotfix "Prompt Body Ceiling"
+
+## H-block (v1.7.3-hotfix)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| H1 body ceiling 4,000 → 50,000 (`PromptFormRequest::MAX_BODY_CHARS` single source; blade `maxlength` rendered from the SAME constant) | ✅ | `PromptBodyCeilingTest::create serves the body textarea with the fifty thousand char maxlength and counter`, `…::edit serves the same ceiling…` |
+| H1 character counter under the prompt-body textarea on create AND edit; works with JS off (server-rendered initial count; maxlength still caps input) | ✅ | same two tests (counter markup served on both routes) |
+| H1 30,000-char body (rejected under the old 4,000 rule) now accepted + stored verbatim | ✅ | `PromptBodyCeilingTest::a body between four thousand and fifty thousand chars is accepted now` |
+| H1 >50,000 chars → validation error on `body` | ✅ | `PromptBodyCeilingTest::a body over fifty thousand chars is a validation error` |
+| H1 storage parity: `prompt_versions.body` TEXT → LONGTEXT (migration `2026_09_30_210000` — MySQL explicit MODIFY path included) so no multibyte truncation | ✅ | `PromptBodyCeilingTest::an edit raising the body past four thousand chars persists in full` + migration run in every RefreshDatabase suite |
+| H1 legacy bodies under 4,000 unaffected; parity pipeline (`pv:update`) still green with the new migration in the batch | ✅ | `PromptBodyCeilingTest::a body under the old four thousand ceiling still stores fine`, `DeployParityAcceptanceTest` |
+
+---
+
 # PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"
 
 ## W-block (v1.7.3)
