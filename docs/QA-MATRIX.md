@@ -84,6 +84,21 @@
 | ARCH REVIVAL fallout fixed: two unguarded destructive DDL calls in `up()` (121000 `dropUnique`, 000100 `dropForeign` ×2) — the v1.4.2 incident class | ✅ | `MigrationDropGuardTest::every destructive DDL call in a migration up() is existence-guarded` (+ new `SchemaInspector::hasForeignKey()`) |
 | Release | ✅ | chip v1.7.5 (config single source + builder `APP_VERSION`); suite 480 passed / 14,094 assertions; `ReleaseHygieneTest` builds the real zip |
 
+## I-block (v1.7.5 — fresh-install artifact)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| Fresh-install zip is a DIFFERENT artifact from the update zip: ships production `vendor/`, compiled `public/build`, the docroot allow-list and the storage/bootstrap skeleton | ✅ | `InstallArtifactTest::the install artifact exists and is a self-contained installable tree` |
+| Production `vendor/` (`--no-dev`): no pest/phpunit/mockery/fakerphp/phpstan on a public host | ✅ | `InstallArtifactTest::the install artifact ships no secrets, no host-local state and no dev surface` |
+| Ships NO `.env` (install.php writes it with a fresh APP_KEY), NO `public_html/.update-token` (install.php generates a random one — the repo's token would be a working update panel) | ✅ | same test |
+| Ships no host-local state (`bootstrap/cache` contents, `storage/**` runtime, `database.sqlite`) and no dev surface (`tests/`, `phpunit.xml`, `node_modules`) | ✅ | same test |
+| The builder FAILS ITS BUILD on an audit violation and asserts the required members exist (v1.4.4 lesson) — it caught the dev SQLite leaking in via the pre-composer tree copy | ✅ | `InstallArtifactTest::the install builder keeps its audit rules and its version in lockstep` |
+| Builds are REPRODUCIBLE: staged mtimes are pinned, so the published SHA-256 is verifiable (unstamped builds hashed differently for identical content) | ✅ | `InstallArtifactTest::the install builder keeps its audit rules and its version in lockstep` + two consecutive builds hashed `0043f489…` |
+| **Installer bug fixed:** the wizard created the admin without `username` (`NOT NULL` since v1.4.1), so every fresh install died at step 5 — handle now derived + collision-checked, and reported in the log | ✅ | `InstallArtifactTest::install.php creates the admin WITH a username (users.username is NOT NULL since v1.4.1)` |
+| The installer's seeding log no longer claims success when D4 refuses the seeders in production | ✅ | `InstallArtifactTest::install.php never claims seeding succeeded when D4 refuses it in production` |
+| **End-to-end proof (manual): the artifact was extracted to a clean dir, served with `php -S`, and the real wizard driven over HTTP** — `.env` written, migrations run, admin created `@site-owner`, `storage:link`, caches, assets copied to the docroot, fresh 32-char token written, installer self-locked, home + login **200** with correct titles, `frames.hole_percent` present with default 62 | ✅ | manual gate (a browser/HTTP install cannot be asserted by Pest); invariants above are automated |
+| Release | ✅ | `dist/promptsewa-1.7.5-install.zip` — 6,545 entries, 7.92 MB, hygiene CLEAN, **reproducible** (two builds byte-identical), SHA-256 `0043f489c5c3632bb53888ea551d7ee0e5f767ca80f913ea77177b11c6bce70b` |
+
 ---
 
 # PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"

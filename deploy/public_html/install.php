@@ -241,6 +241,36 @@ function env_value(string $contents, string $key): ?string
     return null;
 }
 
+/**
+ * v1.7.5: a unique public handle for the first (admin) user.
+ *
+ * `users.username` is NOT NULL since v1.4.1 and backs /creators/{handle}.
+ * Slug the admin name, fall back to the email local-part, cap the length
+ * (the column is 191 chars; handles stay short for URLs) and append a
+ * numeric suffix on collision — the same rule the v1.4.1 backfill used.
+ */
+function unique_admin_username(string $name, string $email): string
+{
+    $base = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $name), '-');
+    $base = strtolower($base !== '' ? $base : (string) strstr($email, '@', true));
+    $base = trim($base, '-');
+
+    if ($base === '') {
+        $base = 'admin';
+    }
+
+    $base = substr($base, 0, 40);
+    $candidate = $base;
+    $suffix = 1;
+
+    while (App\Models\User::query()->where('username', $candidate)->exists()) {
+        $suffix++;
+        $candidate = $base.'-'.$suffix;
+    }
+
+    return $candidate;
+}
+
 /* -------------------------------------------------------------------------
  * Run the install (POST handler)
  * ---------------------------------------------------------------------- */
@@ -333,28 +363,59 @@ function run_install(string $core, array $in): array
     $log[] = ['info', 'migrate: '.($output !== '' ? $output : '(nothing to migrate)')];
 
     // 5) Admin account (first user — role: admin)
+    //
+    // v1.7.5 fix: `users.username` became NOT NULL in v1.4.1, and this
+    // installer still created the admin without one — so EVERY fresh
+    // install through this wizard died here with
+    // "NOT NULL constraint failed: users.username" (it never showed up
+    // because install.php last ran before v1.4.1). The handle is derived
+    // from the admin name with the same slug + numeric-suffix rule the
+    // v1.4.1 backfill migration used, so /creators/{handle} resolves.
+    $username = unique_admin_username($in['admin_name'], $in['admin_email']);
+
     $user = App\Models\User::create([
         'name' => $in['admin_name'],
+        'username' => $username,
         'email' => $in['admin_email'],
         'password' => $in['admin_pass'], // hashed automatically by the model cast
         'role' => App\Models\User::ROLE_ADMIN,
         'email_verified_at' => now(),
     ]);
-    $log[] = ['ok', "Admin account created: {$user->email}"];
+    $log[] = ['ok', "Admin account created: {$user->email} (@{$username})"];
 
     // 5b) Seed demo marketplace content (categories, demo prompts, the
     //     JustShipItAI flagship profile and the tool-logo registry).
     //     All seeders are idempotent — safe to re-run on updates.
+    //
+    //     v1.7.5 honesty fix: the .env this wizard just wrote sets
+    //     APP_ENV=production, and D4 makes DemoContentSeeder /
+    //     JustShipItAISeeder / BulkCatalogSeeder HARD-REFUSE in production
+    //     (they only warn and return 0). The old log line claimed
+    //     "Demo content seeded" unconditionally — a silent lie on every
+    //     fresh install. Report what is actually in the database instead.
     if (!empty($in['seed_demo'])) {
         try {
             $output = $artisan('db:seed', ['--force' => true]);
-            $log[] = ['ok', 'Demo content seeded (categories, prompts, JustShipItAI profile)'];
-            $log[] = ['info', 'seed: '.($output !== '' ? $output : '(no output)')];
+            $promptCount = App\Models\Prompt::query()->count();
+            $categoryCount = App\Models\Category::query()->count();
+
+            if (str_contains($output, 'REFUSED')) {
+                $log[] = ['warn', 'Demo seeders REFUSED in production (D4) — expected. '
+                    ."{$promptCount} prompts, {$categoryCount} categories present."];
+                $log[] = ['info', 'seed: '.preg_replace('/\s+/', ' ', substr($output, 0, 400))];
+            } else {
+                $log[] = ['ok', "Content seeded: {$promptCount} prompts, {$categoryCount} categories"];
+                $log[] = ['info', 'seed: '.($output !== '' ? $output : '(no output)')];
+            }
+
+            if ($categoryCount === 0) {
+                $log[] = ['warn', 'No categories yet — add them in Admin -> Categories (the prompt form needs one).'];
+            }
         } catch (Throwable $e) {
             $log[] = ['warn', 'Seeding failed (site still works, but no demo content): '.$e->getMessage()];
         }
     } else {
-        $log[] = ['warn', 'Demo content seeding skipped (empty category dropdown until you add categories in Admin).'];
+        $log[] = ['warn', 'Demo content seeding skipped (add categories in Admin before creating prompts).'];
     }
 
     // 6) Storage link (best effort — .htaccess also maps /storage directly)
