@@ -54,7 +54,7 @@ test('no-frame hero with a photo renders one full-size img and zero saffron plac
     // hard-forced circle wrapper (HOTFIX ADDENDUM: rounded-full +
     // overflow-hidden always; the initials badge is rounded-full itself).
     expect($html)->toContain($avatarUrl)
-        ->and($html)->toContain('rounded-full object-cover')
+        ->and($html)->toContain('size-full object-cover')
         // No frame on THIS creator → no overlay on the hero block. (W1 parity:
         // other avatars elsewhere on the page may legitimately carry one.)
         ->and(heroBlock($html))->not->toContain('pointer-events-none absolute inset-0');
@@ -72,24 +72,31 @@ test('with-frame hero renders photo plus ring', function () {
 
     expect($html)->toContain(Storage::disk('public')->url('avatars/ring.jpg'))
         ->and($html)->toContain(Storage::disk('public')->url($path))
-        // G1 (v1.7.4): frame OUTSIDE the circle — the hero's own class chain
-        // is a caller size (size-28/sm:size-28), the overlay protrudes by the
-        // md/lg inset and stacks with z-10, and the wrapper isolates WITHOUT
-        // clipping (an isolate+overflow-hidden wrapper would eat the ring).
-        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[12%]')
-        ->and($html)->toContain('relative inline-block isolate shrink-0')
-        ->and($html)->toContain('block size-full overflow-hidden rounded-full');
+        // v1.7.5 composite box: the hero's size comes from the PROP (xl), the
+        // frame fills the box at inset-0 with z-10, and the circle is the
+        // photo layer inset to the frame's hole. The v1.7.4 caller-size +
+        // protruding-overlay coupling is gone.
+        ->and($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->toContain('data-avatar-size="xl"')
+        ->and($html)->toMatch('/<span class="absolute overflow-hidden rounded-full"[^>]*style="inset: \d/');
 });
 
-test('preset sizes still apply when no caller size class is present', function () {
+test('the size prop alone drives the wrapper size on every preset', function () {
     Storage::fake('public');
     $creator = User::factory()->create(['name' => 'Preset Hero']);
     Prompt::factory()->for($creator, 'creator')->published()->create();
 
     $html = $this->get(route('home'))->getContent();
 
-    // Cards use the md preset — its size utility must survive the fix.
-    expect($html)->toContain('size-8');
+    // Cards pass size="sm"; the wrapper's size class comes from the prop and
+    // can no longer be suppressed by a caller (the founder's hero bug).
+    foreach (['xs' => 'size-5', 'sm' => 'size-6', 'md' => 'size-8', 'lg' => 'size-11', 'xl' => 'size-24'] as $size => $class) {
+        $markup = view('components.user-avatar', ['user' => $creator, 'size' => $size])->render();
+        expect($markup)->toContain($class)
+            ->and($markup)->toContain('data-avatar-size="'.$size.'"');
+    }
+
+    expect($html)->toContain('size-6');
 });
 
 // ---------------------------------------------------------------------------

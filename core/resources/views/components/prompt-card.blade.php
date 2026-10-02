@@ -90,7 +90,12 @@
             @if ($prompt->creator)
                 <a href="{{ route('creators.show', $prompt->creator) }}" class="group/creator flex items-center gap-2 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-saffron-deep" aria-label="View profile of {{ $prompt->creator->name }}">
                     {{-- W1 (v1.7.3): frame parity — cards carry the creator's frame too. --}}
-                    <x-user-avatar :user="$prompt->creator" size="sm" :frame="$prompt->creator->activeFrame" class="transition group-hover/creator:bg-saffron group-hover/creator:text-ink"/>
+                    {{-- v1.7.5 (R2): no geometry from the caller. The old
+                         `group-hover/creator:bg-saffron` tinted the avatar
+                         BOX on card hover; the composite box paints no
+                         background, and the name beside it already carries
+                         the hover affordance. --}}
+                    <x-user-avatar :user="$prompt->creator" size="sm" :frame="$prompt->creator->activeFrame"/>
                     <span class="flex items-center gap-1 text-xs transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2"><x-user-handle :user="$prompt->creator" size="text-xs"/> <x-verified-badge :user="$prompt->creator" size="xs"/></span>
                 </a>
             @else

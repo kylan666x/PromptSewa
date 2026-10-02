@@ -64,6 +64,13 @@ class SearchController extends Controller
                 'frame_url' => $creator->activeFrame?->image_path
                     ? Storage::disk('public')->url($creator->activeFrame->image_path)
                     : null,
+                // v1.7.5 (R3): the photo inset for that frame's centre hole,
+                // PRE-COMPUTED server-side so the hand-rolled Alpine mirror
+                // can never drift from x-user-avatar's geometry. 0 when the
+                // creator has no frame (the photo then fills the box).
+                'frame_inset' => $creator->activeFrame?->image_path
+                    ? $creator->activeFrame->photoInsetPercent().'%'
+                    : '0%',
             ])
             ->values();
 

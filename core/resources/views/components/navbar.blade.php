@@ -81,14 +81,22 @@
                             <template x-for="(creator, index) in creators" :key="'c'+index">
                                 <a :href="creator.url"
                                    class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
-                                   :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"
-                                   @mouseenter="activeIndex = prompts.length + index">                                        <span class="flex min-w-0 items-center gap-2">
-                                            {{-- W1 (v1.7.3): frame parity — typeahead rows render the
-                                                 creator's equipped frame (absolute overlay, decorative). --}}
-                                            <span class="relative isolate inline-block size-6 shrink-0">
-                                                <span class="block size-full overflow-hidden rounded-full">
+                                   :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"                                    @mouseenter="activeIndex = prompts.length + index">                                        <span class="flex min-w-0 items-center gap-2">
+                                            {{-- v1.7.5 (R1): the typeahead row is a HAND-ROLLED
+                                                 mirror of x-user-avatar's composite box and must
+                                                 stay token-for-token identical to it: wrapper
+                                                 (isolate, no rounding/background), then the frame
+                                                 at inset-0, then the circle inset to that
+                                                 frame's own hole (frame_inset, pre-computed
+                                                 server-side). The v1.7.4 negative inset is
+                                                 gone. --}}
+                                            <span class="relative inline-block isolate size-6 shrink-0">
+                                                <template x-if="creator.frame_url">
+                                                    <img :src="creator.frame_url" alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 z-10 size-full object-contain" loading="lazy">
+                                                </template>
+                                                <span class="absolute overflow-hidden rounded-full" :style="'inset: ' + creator.frame_inset">
                                                     <template x-if="creator.avatar_url">
-                                                        <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full rounded-full object-cover" loading="lazy">
+                                                        <img :src="creator.avatar_url" :alt="'@'+(creator.username || creator.name)" class="size-full object-cover" loading="lazy">
                                                     </template>
                                                     <template x-if="! creator.avatar_url">
                                                         <span class="flex size-full items-center justify-center rounded-full bg-ink font-bold text-saffron">
@@ -96,12 +104,6 @@
                                                         </span>
                                                     </template>
                                                 </span>
-                                                {{-- G1 (v1.7.4): frame OUTSIDE the circle — same
-                                                     size-keyed negative inset + z-10 as the
-                                                     x-user-avatar overlay. --}}
-                                                <template x-if="creator.frame_url">
-                                                    <img :src="creator.frame_url" alt="" aria-hidden="true" class="pointer-events-none absolute z-10 object-contain -inset-[8%]" loading="lazy">
-                                                </template>
                                             </span>
                                         <span class="min-w-0 truncate">
                                             <span x-text="creator.name"></span>
@@ -238,7 +240,12 @@
     @endphp
     @if ($impersonator)
         <div class="flex flex-wrap items-center justify-center gap-2 bg-[#1d9bf0] px-4 py-2 text-sm font-medium text-white">
-            <span>Acting as <strong>@{{ auth()->user()->username ?? auth()->user()->name }}</strong> — returned session restores {{ $impersonator->name }}</span>
+            {{-- The `@` is echoed inside a plain double-brace echo. The
+                 escaped-brace form renders as LITERAL text, so the
+                 impersonation chrome bar used to show the raw expression to
+                 staff. Caught by NoBladeLeakTest when the Arch suite was
+                 finally wired into phpunit.xml (v1.7.5). --}}
+            <span>Acting as <strong>{{ '@'.(auth()->user()->username ?? auth()->user()->name) }}</strong> — returned session restores {{ $impersonator->name }}</span>
             <form method="POST" action="{{ route('impersonation.stop') }}">
                 @csrf
                 <button class="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#1d9bf0] transition hover:bg-blue-50">Return to my account</button>

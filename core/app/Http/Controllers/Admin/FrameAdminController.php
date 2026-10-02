@@ -52,6 +52,9 @@ class FrameAdminController extends Controller
             'image' => ['required', 'image', 'max:2048'],
             'criterion' => ['nullable', 'string', 'in:'.implode(',', \App\Services\CriterionEvaluator::CRITERIA)],
             'animation' => ['nullable', 'string', 'in:'.implode(',', Frame::ANIMATIONS)],
+            // v1.7.5 (R3): the art's transparent centre hole, bounded by the
+            // model's constants — never a hand-copied number.
+            'hole_percent' => ['nullable', 'integer', 'min:'.Frame::HOLE_MIN, 'max:'.Frame::HOLE_MAX],
         ]);
 
         $frame = Frame::query()->create([
@@ -60,6 +63,7 @@ class FrameAdminController extends Controller
             'is_active' => $request->boolean('is_active', true),
             'criterion' => $validated['criterion'] ?? null,
             'animation' => $validated['animation'] ?? 'none',
+            'hole_percent' => $validated['hole_percent'] ?? Frame::HOLE_DEFAULT,
         ]);
 
         return back()->with('success', "Frame \"{$frame->name}\" created.");
@@ -74,6 +78,7 @@ class FrameAdminController extends Controller
             'image' => ['nullable', 'image', 'max:2048'],
             'criterion' => ['nullable', 'string', 'in:'.implode(',', \App\Services\CriterionEvaluator::CRITERIA)],
             'animation' => ['nullable', 'string', 'in:'.implode(',', Frame::ANIMATIONS)],
+            'hole_percent' => ['nullable', 'integer', 'min:'.Frame::HOLE_MIN, 'max:'.Frame::HOLE_MAX],
         ]);
 
         $frame->update([
@@ -84,6 +89,10 @@ class FrameAdminController extends Controller
                 ? $validated['criterion']
                 : ($request->has('criterion') ? null : $frame->criterion),
             'animation' => $validated['animation'] ?? $frame->animation,
+            // v1.7.5: absent = keep the frame's current geometry (the admin's
+            // per-frame edit form always posts it, but a partial PUT from
+            // anywhere else must not reset the hole to the default).
+            'hole_percent' => $validated['hole_percent'] ?? $frame->hole_percent,
         ]);
 
         if ($request->hasFile('image')) {

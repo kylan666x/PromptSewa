@@ -50,7 +50,7 @@
                             <span class="text-sm font-semibold text-ink">{{ $version['changelog'] !== '' ? $version['changelog'] : 'No changelog note' }}</span>
                         </p>
                         <p class="font-mono text-xs text-ink/50">{{ $version['created_at']->format('M j, Y') }} ·
-                            {{-- H2 (v1.5.2): missing/deleted author → "Former creator" chip,
+                            {{-- H2 (v1.5.2): missing/deleted author -> "Former creator" chip,
                                  never a crash or a blank row. --}}
                             @if ($version['author_missing'])
                                 <span class="rounded-full bg-paper-deep px-2 py-0.5 font-mono text-[10px] text-ink/50">Former creator</span>

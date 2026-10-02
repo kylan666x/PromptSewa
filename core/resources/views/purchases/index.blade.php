@@ -11,7 +11,7 @@
             <p class="mt-2 text-sm text-ink/60">Every prompt and pack you own — unlocks forever, including future versions.</p>
         </header>
 
-        {{-- ===== T13 (v1.5.0): order → items → license state, pack rows expand ===== --}}
+        {{-- ===== T13 (v1.5.0): order -> items -> license state, pack rows expand ===== --}}
         <section class="mt-8" aria-label="Orders and licenses">
             <h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-ink/50">Orders</h2>
 

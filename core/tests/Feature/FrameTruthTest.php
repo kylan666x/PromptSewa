@@ -67,10 +67,10 @@ test('the frame overlay renders on every avatar surface', function () {
     $prompt->update(['status' => Prompt::STATUS_PUBLISHED]);
 
     $frameUrl = Storage::disk('public')->url($path);
-    // G1 (v1.7.4) overlay DOM: z-10 + object-contain pulled OUT of the circle
-    // by a size-keyed negative inset (the exact inset token per size is
-    // locked by 'the overlay protrudes by the size-keyed negative inset').
-    $overlayClass = 'pointer-events-none absolute z-10 object-contain';
+    // v1.7.5 composite DOM: the frame fills the box (inset-0 + size-full),
+    // sitting on z-10 over the photo layer. The v1.7.4 negative inset is
+    // gone — nothing protrudes any more.
+    $overlayClass = 'pointer-events-none absolute inset-0 z-10 size-full object-contain';
 
     // Profile hero + versions author + feed actor.
     expect($this->get(route('creators.show', $creator))->getContent())->toContain($frameUrl)
@@ -244,118 +244,222 @@ test('the frame url accessor resolves a usable public URL (the buried-frame repr
     $empty = Frame::query()->create(['name' => 'No image', 'image_path' => '', 'is_active' => true]);
     expect($empty->url)->toBe('');
 
-    // End-to-end: the served overlay carries the resolved URL + z-10 on the
-    // PROTRUDING overlay, and the wrapper isolates its stacking context.
+    // End-to-end: the served overlay carries the resolved URL on the
+    // inset-0 frame layer, and the wrapper isolates its stacking context.
     $creator = User::factory()->for($frame, 'activeFrame')->create();
     $html = $this->get(route('creators.show', $creator))->getContent();
 
     expect($html)->toContain('src="'.$frame->url.'"')
-        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[12%]')
-        ->and($html)->toContain('relative inline-block isolate shrink-0');
+        ->and($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->toContain('relative inline-block isolate');
 });
 
 // ---------------------------------------------------------------------------
-// G1 (v1.7.4) — FRAME OUTSIDE THE CIRCLE
+// v1.7.5 (R1/R3) — THE COMPOSITE BOX
 // ---------------------------------------------------------------------------
 
-test('the wrapper isolates but never clips; the clipper owns the circle', function () {
+test('the wrapper is a bare composite box: isolate, a size class, nothing else', function () {
     Storage::fake('public');
-    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-ring.png');
-    $frame = Frame::query()->create(['name' => 'G1', 'image_path' => $path, 'is_active' => true]);
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'v175-ring.png');
+    $frame = Frame::query()->create(['name' => 'V175', 'image_path' => $path, 'is_active' => true]);
     $creator = User::factory()->for($frame, 'activeFrame')->create();
     Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
 
     $html = $this->get(route('library.index'))->getContent();
 
-    // 1. WRAPPER: isolate stacking context, NO overflow-hidden (a clipping
-    //    wrapper would eat the protruding frame), no rounded-full either —
-    //    the circle belongs to the photo, not the frame.
-    expect($html)->toContain('relative inline-block isolate shrink-0');
+    preg_match('/<span class="(relative inline-block isolate[^"]*)"/', $html, $wrapper);
+    $classes = $wrapper[1] ?? '';
 
-    preg_match('/<span class="relative inline-block isolate[^"]*">/', $html, $wrapper);
-    expect($wrapper[0] ?? 'no-wrapper')->not->toContain('overflow-hidden')
-        ->and($wrapper[0] ?? 'no-wrapper')->not->toContain('rounded-full');
+    // 1. WRAPPER: the stacking context + the size class from the prop, and
+    //    NOTHING that paints or shapes the box. The founder's bug was a
+    //    caller-merged `rounded-3xl border-4 bg-saffron size-24` right here.
+    expect($classes)->toContain('relative inline-block isolate')
+        ->and($classes)->toContain('size-')
+        ->and($classes)->not->toContain('rounded-')
+        ->and($classes)->not->toContain('bg-')
+        ->and($classes)->not->toContain('border')
+        ->and($classes)->not->toContain('overflow-');
 
-    // 2. CLIPPER: the circle is created here and only here.
-    expect($html)->toContain('block size-full overflow-hidden rounded-full');
+    // 2. FRAME: fills the box (inset-0), never protrudes.
+    expect($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->not->toContain('-inset-[');
+
+    // 3. PHOTO LAYER: the circle, absolute + rounded-full + clipping, and its
+    //    inset comes from the frame's own hole (62 → 19%).
+    expect($html)->toMatch('/<span class="absolute overflow-hidden rounded-full"[^>]*style="inset: 19%"/');
 });
 
-test('the overlay protrudes by the size-keyed negative inset', function () {
+test('the photo inset is computed per frame from its own hole', function () {
     Storage::fake('public');
-    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-inset.png');
-    $frame = Frame::query()->create(['name' => 'G1 inset', 'image_path' => $path, 'is_active' => true]);
-    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'v175-holes.png');
+    $creator = User::factory()->create();
 
-    // md + lg = −12%; xs + sm = −8% (a ring would swallow a 20px avatar at
-    // 12%). Both tokens are arbitrary-value utilities, so they only exist in
-    // the compiled CSS once npm build has seen them.
-    $large = view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $frame])->render();
-    expect($large)->toContain('object-contain -inset-[12%]');
+    // Standard shipped art: 62% hole -> (100-62)/2 = 19%.
+    $standard = Frame::query()->create(['name' => 'Std', 'image_path' => $path, 'is_active' => true, 'hole_percent' => 62]);
+    expect(view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $standard])->render())
+        ->toContain('style="inset: 19%"');
 
-    $small = view('components.user-avatar', ['user' => $creator, 'size' => 'xs', 'frame' => $frame])->render();
-    expect($small)->toContain('object-contain -inset-[8%]');
+    // The founder's Abyssal measures 37.5% -> 31.25%. A single hard-coded
+    // geometry could never have drawn it (this is the v1.7.5 tolerance).
+    $abyssal = Frame::query()->create(['name' => 'Abyssal', 'image_path' => $path, 'is_active' => true, 'hole_percent' => 38]);
+    expect(view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $abyssal])->render())
+        ->toContain('style="inset: 31%"');
 
-    // z-10 stays on the overlay (H3 stacking rule survives G1).
-    expect($large)->toContain('pointer-events-none absolute z-10 object-contain');
+    // The top of the range, admin-changed, must move the photo too.
+    $wide = Frame::query()->create(['name' => 'Wide', 'image_path' => $path, 'is_active' => true, 'hole_percent' => 70]);
+    expect(view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $wide])->render())
+        ->toContain('style="inset: 15%"');
+
+    // The initials badge shares the photo's box.
+    $markup = view('components.user-avatar', ['user' => $creator, 'size' => 'md', 'frame' => $abyssal])->render();
+    expect($markup)->toContain('flex size-full items-center justify-center rounded-full bg-ink');
 });
 
-test('no overflow-hidden ancestor clips the protruding frame', function () {
+test('the hole tolerance is one pair of constants and the model enforces it', function () {
+    expect(Frame::HOLE_MIN)->toBe(35)
+        ->and(Frame::HOLE_MAX)->toBe(70)
+        ->and(Frame::HOLE_DEFAULT)->toBe(62);
+
+    // Default on a row that never set it (the 62 backfill).
+    $frame = Frame::query()->create(['name' => 'Backfilled', 'image_path' => 'frames/b.png', 'is_active' => true]);
+    expect($frame->hole_percent)->toBe(Frame::HOLE_DEFAULT)
+        ->and($frame->photoInsetPercent())->toBe(19.0);
+
+    // Out of range is refused loudly, not stored.
+    $frame->hole_percent = 12;
+    expect(fn () => $frame->save())->toThrow(InvalidArgumentException::class);
+
+    $frame->hole_percent = 90;
+    expect(fn () => $frame->save())->toThrow(InvalidArgumentException::class);
+});
+
+test('the admin frame form renders the hole input from the same constants', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $html = $this->actingAs($admin)->get(route('admin.frames.index'))->getContent();
+
+    // The create form's bounds come from Frame::HOLE_* — a hand-copied
+    // number in markup is exactly the drift §6 hotfix-43 warns about.
+    expect($html)->toContain('name="hole_percent"')
+        ->and($html)->toContain('min="'.Frame::HOLE_MIN.'"')
+        ->and($html)->toContain('max="'.Frame::HOLE_MAX.'"')
+        ->and($html)->toContain('value="'.Frame::HOLE_DEFAULT.'"')
+        ->and($html)->toContain('transparent hole');
+});
+
+test('an admin can set a per-frame hole and an out-of-range value is refused', function () {
     Storage::fake('public');
-    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-clip.png');
-    $frame = Frame::query()->create(['name' => 'G1 clip', 'image_path' => $path, 'is_active' => true]);
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $frame = Frame::query()->create(['name' => 'Tunable', 'image_path' => 'frames/t.png', 'is_active' => true]);
+
+    $this->actingAs($admin)->put(route('admin.frames.update', $frame), [
+        'name' => 'Tunable',
+        'animation' => 'none',
+        'criterion' => '',
+        'hole_percent' => 44,
+    ])->assertRedirect();
+
+    expect($frame->refresh()->hole_percent)->toBe(44)
+        ->and($frame->photoInsetPercent())->toBe(28.0);
+
+    $this->actingAs($admin)->put(route('admin.frames.update', $frame), [
+        'name' => 'Tunable',
+        'animation' => 'none',
+        'criterion' => '',
+        'hole_percent' => 12,
+    ])->assertSessionHasErrors('hole_percent');
+
+    expect($frame->refresh()->hole_percent)->toBe(44);
+});
+
+test('the hero route serves the avatar with zero geometry overrides', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'v175-hero.png');
+    $frame = Frame::query()->create(['name' => 'Hero', 'image_path' => $path, 'is_active' => true, 'hole_percent' => 40]);
     $creator = User::factory()->for($frame, 'activeFrame')->create();
     Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
 
-    $html = $this->get(route('library.index'))->getContent();
+    $html = $this->get(route('creators.show', $creator))->getContent();
 
-    // The CARD ROOT must not clip — the avatar sits deep inside the card,
-    // so a clipping root would truncate the ornament.
-    preg_match('/<article class="([^"]*)">/', $html, $card);
-    expect($card[1] ?? 'no-card')->not->toContain('overflow-hidden');
+    preg_match('/<span class="(relative inline-block isolate[^"]*)"[^>]*data-avatar-size="xl"/', $html, $hero);
+    $classes = $hero[1] ?? '';
 
-    // The COVER element still clips (full-bleed crop) — the clip moved off
-    // the root, it was not simply deleted.
-    expect($html)->toContain('w-full overflow-hidden');
+    // The founder's screenshot: a saffron squircle tile with the ring and
+    // photo hanging off its top-left. The squircle WAS caller geometry.
+    expect($classes)->not->toBe('')
+        ->and($classes)->toContain('size-24')
+        ->and($classes)->toContain('sm:size-28')
+        ->and($classes)->not->toContain('rounded-3xl')
+        ->and($classes)->not->toContain('bg-saffron')
+        ->and($classes)->not->toContain('border-4')
+        ->and($html)->not->toContain('rounded-3xl border-4 border-paper bg-saffron');
 
-    // Navbar account pill hugs the avatar tightly — it must not clip either.
-    preg_match('/<span class="flex size-8 shrink-0 items-center justify-center">/', $html, $pill);
-    expect($pill[0] ?? 'no-pill')->not->toContain('overflow-hidden');
+    // The hero's composite is the frame's own canvas: art at inset-0, photo
+    // inset to the 40% hole.
+    expect($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->toMatch('/<span class="absolute overflow-hidden rounded-full"[^>]*style="inset: 30%"/');
 });
 
-test('the admin users panel does not clip the avatar frames inside it', function () {
+test('the typeahead mirror uses the same composite tokens as the component', function () {
     Storage::fake('public');
-    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'g1-admin.png');
-    $frame = Frame::query()->create(['name' => 'G1 admin', 'image_path' => $path, 'is_active' => true]);
-    $admin = User::factory()->for($frame, 'activeFrame')->create(['role' => User::ROLE_ADMIN]);
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'v175-mirror.png');
+    $frame = Frame::query()->create(['name' => 'Mirror', 'image_path' => $path, 'is_active' => true, 'hole_percent' => 50]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
 
-    $html = $this->actingAs($admin)->get(route('admin.users.index'))->getContent();
+    $json = $this->get(route('search.preview', ['q' => $creator->name]))->json('creators.0');
 
-    preg_match('/<div class="mt-6 ([^"]*)">/', $html, $panel);
-    expect($panel[1] ?? 'no-panel')->not->toContain('overflow-hidden');
-    expect($html)->toContain($frame->url);
+    // The mirror is hand-rolled Alpine; the inset is pre-computed server-side
+    // so it can never drift from x-user-avatar's geometry.
+    expect($json['frame_url'])->toBe($frame->url)
+        ->and($json['frame_inset'])->toBe('25%');
+
+    $html = $this->get(route('home'))->getContent();
+    expect($html)->toContain('relative inline-block isolate size-6 shrink-0')
+        ->and($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->toContain('absolute overflow-hidden rounded-full" :style="\'inset: \' + creator.frame_inset')
+        ->and($html)->not->toContain('-inset-[');
 });
 
-test('a frameless avatar renders the clipper and photo with zero overlay nodes', function () {
+test('a frameless avatar fills its box with zero frame nodes', function () {
     Storage::fake('public');
     $user = User::factory()->create();
-    Storage::disk('public')->put('avatars/g1.jpg', 'fake-bytes');
-    $user->forceFill(['avatar_path' => 'avatars/g1.jpg'])->save();
-    Prompt::factory()->for($user, 'creator')->hasVersion()->published()->create();
+    Storage::disk('public')->put('avatars/v175.jpg', 'fake-bytes');
+    $user->forceFill(['avatar_path' => 'avatars/v175.jpg'])->save();
 
-    // Rendered COMPONENT markup (page-level HTML also carries the navbar
-    // typeahead template, whose overlay markup would mask a false positive).
     $markup = view('components.user-avatar', ['user' => $user, 'size' => 'md'])->render();
 
-    // Clipper + circular photo present…
-    expect($markup)->toContain('block size-full overflow-hidden rounded-full')
-        ->and($markup)->toContain('size-full rounded-full object-cover');
-    // …and ZERO overlay nodes: no z-10, and exactly ONE img (the photo).
-    expect($markup)->not->toContain('z-10')
+    // Frameless: the photo layer is inset-0 and there is NO frame layer and
+    // no inline inset (a stale inset would shrink the photo inside a frame
+    // that isn't there).
+    expect($markup)->toContain('absolute overflow-hidden rounded-full inset-0')
+        ->and($markup)->not->toContain('style="inset:')
+        ->and($markup)->not->toContain('z-10')
+        ->and($markup)->not->toContain('data-frame-hole')
         ->and(substr_count($markup, '<img'))->toBe(1);
+});
 
-    // And no framed md/lg avatar exists anywhere on that page.
+test('card roots and the admin panel stay un-clipped (harmless, but kept)', function () {
+    Storage::fake('public');
+    $path = Storage::disk('public')->putFileAs('frames', v173FramePng(), 'v175-clip.png');
+    $frame = Frame::query()->create(['name' => 'V175 clip', 'image_path' => $path, 'is_active' => true]);
+    $creator = User::factory()->for($frame, 'activeFrame')->create();
+    Prompt::factory()->for($creator, 'creator')->hasVersion()->published()->create();
+
     $html = $this->get(route('library.index'))->getContent();
-    expect($html)->not->toContain('-inset-[12%]');
+
+    // Nothing protrudes any more, so these are no longer load-bearing for
+    // frames — but the cover still needs its own clip for the full-bleed
+    // crop, and a clipping card root is a trap for the next layout change.
+    preg_match('/<article class="([^"]*)">/', $html, $card);
+    expect($card[1] ?? 'no-card')->not->toContain('overflow-hidden');
+    expect($html)->toContain('w-full overflow-hidden');
+
+    $admin = User::factory()->for($frame, 'activeFrame')->create(['role' => User::ROLE_ADMIN]);
+    $adminHtml = $this->actingAs($admin)->get(route('admin.users.index'))->getContent();
+    preg_match('/<div class="mt-6 ([^"]*)">/', $adminHtml, $panel);
+    expect($panel[1] ?? 'no-panel')->not->toContain('overflow-hidden')
+        ->and($adminHtml)->toContain($frame->url);
 });
 
 test('reduced-motion guard is present in the compiled stylesheet', function () {

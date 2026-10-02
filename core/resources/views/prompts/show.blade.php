@@ -90,7 +90,9 @@
                 <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink/60">
                     @if ($prompt->creator)
                         <a href="{{ route('creators.show', $prompt->creator) }}" class="group/creator flex items-center gap-2 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-saffron-deep" aria-label="View profile of {{ $prompt->creator->name }}">
-                            <x-user-avatar :user="$prompt->creator" size="md" class="transition group-hover/creator:bg-saffron group-hover/creator:text-ink"/>
+                            {{-- v1.7.5 (R2): geometry comes from the size prop
+                                 only — no bg-/rounded-/size- overrides. --}}
+                            <x-user-avatar :user="$prompt->creator" size="md"/>
                             <span class="flex items-center gap-1 font-medium transition group-hover/creator:text-ink group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2"><x-user-handle :user="$prompt->creator" class="text-ink/80"/> <x-verified-badge :user="$prompt->creator" size="md"/></span>
                         </a>
                     @else

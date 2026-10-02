@@ -173,12 +173,15 @@ test('every avatar surface clips the PHOTO, never the frame', function () {
     foreach ($surfaces as $name => $url) {
         $html = $this->get($url)->getContent();
 
-        // The circle is created by the inner clipper…
-        expect($html)->toContain('block size-full overflow-hidden rounded-full');
+        // v1.7.5 composite: the circle is the PHOTO LAYER, which is
+        // absolute + rounded-full + clipping and inset to the frame's hole.
+        expect($html)->toMatch('/<span class="absolute overflow-hidden rounded-full/');
 
-        // …and the wrapper (which holds the protruding frame) does NOT clip.
-        preg_match('/<span class="relative inline-block isolate[^"]*">/', $html, $wrapper);
-        expect($wrapper[0] ?? 'no-wrapper')->not->toContain('overflow-hidden');
+        // …and the wrapper (the composite box) does NOT clip or paint.
+        preg_match('/<span class="relative inline-block isolate[^"]*"/', $html, $wrapper);
+        expect($wrapper[1] ?? 'no-wrapper')->not->toContain('overflow-hidden')
+            ->and($wrapper[1] ?? 'no-wrapper')->not->toContain('rounded-')
+            ->and($wrapper[1] ?? 'no-wrapper')->not->toContain('bg-');
     }
 });
 
@@ -197,13 +200,15 @@ test('the navbar account pill does not clip a framed avatar', function () {
     expect($pill[0] ?? 'no-pill')->not->toContain('overflow-hidden');
 });
 
-test('the typeahead row renders the frame outside the circle with the same inset rule', function () {
+test('the typeahead row mirrors the composite box exactly', function () {
     $html = $this->get(route('home'))->getContent();
 
-    // Hand-rolled Alpine row mirrors the component: isolate wrapper, clipped
-    // photo, protruding overlay with the sm/xs inset token.
-    expect($html)->toContain('relative isolate inline-block size-6 shrink-0')
-        ->and($html)->toContain('pointer-events-none absolute z-10 object-contain -inset-[8%]');
+    // v1.7.5: the hand-rolled Alpine row uses the SAME tokens as
+    // x-user-avatar — isolate wrapper, frame at inset-0, circle inset to the
+    // frame's own hole (the value arrives pre-computed as frame_inset).
+    expect($html)->toContain('relative inline-block isolate size-6 shrink-0')
+        ->and($html)->toContain('pointer-events-none absolute inset-0 z-10 size-full object-contain')
+        ->and($html)->toContain('absolute overflow-hidden rounded-full" :style="\'inset: \' + creator.frame_inset');
 });
 
 

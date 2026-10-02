@@ -54,8 +54,18 @@
         <div class="relative -mt-12 px-1 sm:-mt-16">
             <div class="flex flex-col gap-3 pt-3 sm:flex-row sm:items-end sm:justify-between sm:pt-4">
                 <div class="flex min-w-0 items-end gap-4">
-                    <x-user-avatar :user="$creator" size="md" :frame="$creator->activeFrame"
-                                   class="relative size-24 rounded-3xl border-4 border-paper bg-saffron text-4xl shadow-card-hover sm:size-28"/>
+                    {{-- v1.7.5 (R1/R2): the hero is a SIZE PROP, nothing else.
+                         It used to merge `size-24 rounded-3xl border-4
+                         border-paper bg-saffron shadow-card-hover sm:size-28`
+                         onto the wrapper: the saffron squircle WAS the bug
+                         (a caller-painted background around a composite that
+                         must paint nothing), and the 4px border split the
+                         wrapper's border box from the box the layers
+                         resolved against — the ring and photo ended up
+                         offset up-left inside it. Zero geometry overrides
+                         now; tests/Arch/UserAvatarGeometryTest bans them
+                         repo-wide. --}}
+                    <x-user-avatar :user="$creator" size="xl" :frame="$creator->activeFrame"/>
 
                     {{-- Text block: normal document flow, pt clearance, truncate --}}
                     <div class="min-w-0 flex-1 pb-1">

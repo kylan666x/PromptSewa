@@ -58,6 +58,34 @@
 
 ---
 
+# PromptSewa QA Matrix — v1.7.5 "Frame Composite Box" (supersedes v1.7.4 G1 geometry)
+
+## F-block (v1.7.5)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| R0 REPRO: the v1.7.4 hero served a saffron squircle painted by the WRAPPER (`rounded-3xl border-4 border-paper bg-saffron` merged from `creators/show.blade.php`), with the photo 88px at (+4,+4) and the overlay in a non-square 88×109 letterboxed box | ✅ | reproduced in the browser with the founder's own `Abyssal.png`; now permanently impossible — `UserAvatarGeometryTest::the profile hero declares a size prop and nothing else` |
+| R1 wrapper = `relative inline-block isolate` + a size class from the prop, with NO rounding / background / border / overflow | ✅ | `FrameTruthTest::the wrapper is a bare composite box: isolate, a size class, nothing else` |
+| R1 frame layer = `pointer-events-none absolute inset-0 z-10 size-full object-contain`, rendered only when equipped | ✅ | same test + `FrameTruthTest::the hero route serves the avatar with zero geometry overrides` |
+| R1 photo/badge layer = `absolute overflow-hidden rounded-full`, inset to the frame's hole when framed, `inset-0` when frameless; badge shares the box | ✅ | `FrameTruthTest::the photo inset is computed per frame from its own hole`, `…a frameless avatar fills its box with zero frame nodes` |
+| R1 the v1.7.4 negative inset and the v1.7.3-hotfix inside-clip are GONE from every view | ✅ | `UserAvatarGeometryTest::the v1.7.4 negative-inset frame geometry is gone from every view` |
+| R2 all 13 call sites swept; the hero is `size="xl"` with zero geometry overrides (rendered-HTML, not source) | ✅ | `UserAvatarGeometryTest::no x-user-avatar call site carries geometry attributes`, `…the profile hero declares a size prop and nothing else` |
+| R2 the component also strips geometry tokens before merging (ban is defence-in-depth, not the only wall) | ✅ | `FrameTruthTest::the wrapper is a bare composite box…` (wrapper classes asserted clean per surface) |
+| R3 `frames.hole_percent` (tinyint unsigned, default 62, existing rows backfilled) | ✅ | `FrameTruthTest::the hole tolerance is one pair of constants and the model enforces it` |
+| R3 photo inset computed per frame: 62 → 19%, 38 (Abyssal) → 31%, 70 → 15% | ✅ | `FrameTruthTest::the photo inset is computed per frame from its own hole` |
+| R3 bounds 35–70 / default 62 in ONE place; model throws out of range; admin form renders `min`/`max`/`value` from the constants | ✅ | `FrameTruthTest::the hole tolerance is one pair of constants and the model enforces it`, `…the admin frame form renders the hole input from the same constants` |
+| R3 an admin can set a per-frame hole; an out-of-range value is refused and the stored value survives | ✅ | `FrameTruthTest::an admin can set a per-frame hole and an out-of-range value is refused` |
+| R4 the typeahead mirror uses the SAME composite tokens, with the inset pre-computed server-side (`frame_inset`) | ✅ | `FrameTruthTest::the typeahead mirror uses the same composite tokens as the component` |
+| R4 every preset (xs/sm/md/lg/xl) drives the wrapper size from the prop alone | ✅ | `AvatarFrameCompositionTest::the size prop alone drives the wrapper size on every preset` |
+| R4 browser gate: hero (112px) + card (24px) report frame centre offset 0.00/0.00 and photo centre offset 0.00/0.00 | ✅ | manual browser gate; Pest cannot measure layout — the arithmetic is asserted in the component tests above |
+| R4 card roots + admin panel stay un-clipped (no longer load-bearing for frames; kept as a trap-free default, cover still clips) | ✅ | `FrameTruthTest::card roots and the admin panel stay un-clipped (harmless, but kept)` |
+| ARCH REVIVAL: `tests/Arch` registered in `phpunit.xml` — the suite now runs `BladeFormVerbTest`, `MigrationDropGuardTest`, `NoBladeLeakTest`, `UserAvatarGeometryTest` | ✅ | `artisan test --list-tests` shows `Tests\Arch\…`; §6.49 watch-out |
+| ARCH REVIVAL fallout fixed: navbar impersonation-bar escaped-brace leak (was rendering literally to staff) | ✅ | `NoBladeLeakTest::no blade view contains escaped-brace leaks or raw arrows` |
+| ARCH REVIVAL fallout fixed: two unguarded destructive DDL calls in `up()` (121000 `dropUnique`, 000100 `dropForeign` ×2) — the v1.4.2 incident class | ✅ | `MigrationDropGuardTest::every destructive DDL call in a migration up() is existence-guarded` (+ new `SchemaInspector::hasForeignKey()`) |
+| Release | ✅ | chip v1.7.5 (config single source + builder `APP_VERSION`); suite 480 passed / 14,094 assertions; `ReleaseHygieneTest` builds the real zip |
+
+---
+
 # PromptSewa QA Matrix — v1.7.3 "Frame Truth, Heart Truth & Bot Gates"
 
 ## W-block (v1.7.3)

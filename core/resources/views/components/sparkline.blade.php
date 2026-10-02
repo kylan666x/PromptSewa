@@ -1,5 +1,5 @@
 @props([
-    'series',        // array of values (ints or floats), oldest → newest
+    'series',        // array of values (ints or floats), oldest -> newest
     'label' => '',   // aria-label for accessibility (WCAG 2.1 AA)
     'stroke' => '#f0b429', // saffron-deep; light-world safe
     'fill' => 'rgba(240, 180, 41, 0.12)',
@@ -16,7 +16,7 @@
      */
     $values = array_values($series);
 
-    // Densify: exactly 30 points; missing/null → 0.
+    // Densify: exactly 30 points; missing/null -> 0.
     $points = [];
     for ($i = 0; $i < 30; $i++) {
         $points[] = (float) ($values[$i] ?? 0);

@@ -11,6 +11,16 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- v1.7.5: the Arch suite was NEVER registered here, so
+             BladeFormVerbTest, MigrationDropGuardTest and NoBladeLeakTest
+             had not run once — three guards the handoff cites as
+             permanent repo-wide enforcement. Arch tests need no database;
+             they are static scans. Registering them is what makes the new
+             UserAvatarGeometryTest (the v1.7.5 frame-geometry ban) a real
+             release gate rather than dead code. -->
+        <testsuite name="Arch">
+            <directory>tests/Arch</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

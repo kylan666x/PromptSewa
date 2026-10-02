@@ -66,10 +66,25 @@ return new class extends Migration
             $table->string('payment_reference', 191)->nullable()->after('payment_method'); // gateway txn id / user-supplied proof
         });
 
-        Schema::table('order_items', function (Blueprint $table) {
-            $table->dropForeign(['product_id']);
-            $table->dropForeign(['prompt_id']);
-        });
+        // v1.7.5: guarded drops. This baseline migration re-adds the
+        // order_item columns as nullable, which requires dropping the FKs
+        // first. On a REPLAY after an interrupted run (MySQL DDL autocommits,
+        // so a half-applied schema can carry no `migrations` row) the FKs
+        // may already be gone and the drop would 1091 — the exact v1.4.2
+        // prod incident. Guarded via SchemaInspector::hasForeignKey.
+        $inspector = app(\App\Support\SchemaInspector::class);
+
+        if ($inspector->hasForeignKey('order_items', 'product_id')) {
+            Schema::table('order_items', function (Blueprint $table) {
+                $table->dropForeign(['product_id']);
+            });
+        }
+
+        if ($inspector->hasForeignKey('order_items', 'prompt_id')) {
+            Schema::table('order_items', function (Blueprint $table) {
+                $table->dropForeign(['prompt_id']);
+            });
+        }
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->unsignedBigInteger('product_id')->nullable()->change();

@@ -13,7 +13,7 @@
             </span>
 
             {{-- G3 (v1.7.4): the hero type scale steps DOWN below md
-                 (text-3xl → sm:text-5xl → md:text-6xl) so the h1 never
+                 (text-3xl -> sm:text-5xl -> md:text-6xl) so the h1 never
                  wraps into four lines on a 360px phone. --}}
             <h1 class="mx-auto mt-5 max-w-3xl text-3xl font-bold tracking-tight text-ink sm:mt-6 sm:text-5xl md:text-6xl">
                 <em class="font-bold italic">Version control</em> for your AI prompts

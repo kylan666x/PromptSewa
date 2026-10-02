@@ -40,6 +40,28 @@
                 @endforeach
             </select>
         </div>
+        {{-- v1.7.5 (R3): the photo is inset to the art's own transparent hole,
+             so the hole has to be a per-frame number. The bounds are rendered
+             from Frame::HOLE_MIN/MAX/DEFAULT — the SAME constants the model
+             enforces and the tests assert (§6 hotfix-43 lesson: never hand-copy
+             a bound into markup). --}}
+        <div>
+            <label for="hole_percent" class="block text-xs font-medium text-ink/60">Centre hole %</label>
+            <input
+                type="number"
+                id="hole_percent"
+                name="hole_percent"
+                value="{{ \App\Models\Frame::HOLE_DEFAULT }}"
+                min="{{ \App\Models\Frame::HOLE_MIN }}"
+                max="{{ \App\Models\Frame::HOLE_MAX }}"
+                step="1"
+                class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink"
+            >
+            <p class="mt-1 text-[11px] leading-snug text-ink/50">
+                Match your PNG's transparent hole — {{ \App\Models\Frame::HOLE_DEFAULT }} for the shipped art.
+                The photo is inset to fill it exactly; a wrong value shows the ring sitting off-centre.
+            </p>
+        </div>
         <div class="flex items-end gap-4">
             <label class="flex items-center gap-2 text-sm text-ink/80">
                 <input type="checkbox" name="is_active" value="1" checked class="size-4 rounded border-ink/20 text-saffron-deep">
@@ -68,14 +90,28 @@
                 <p class="mt-2 font-mono text-[10px] text-ink/50">
                     {{ $frame->criterion ? 'Locked · '.str_replace('_', ' ', $frame->criterion) : 'Free' }}
                     @if (($frame->animation ?? 'none') !== 'none') · anim: {{ $frame->animation }} @endif
+                    · hole {{ $frame->hole_percent ?? \App\Models\Frame::HOLE_DEFAULT }}%
                 </p>
 
-                {{-- W4: per-frame criterion edit --}}
+                {{-- W4: per-frame criterion edit + v1.7.5 hole edit. The hole
+                     number is rendered with the SAME min/max constants the
+                     model enforces, and the current value is posted as-is so
+                     saving the criterion never silently resets the geometry. --}}
                 <form method="POST" action="{{ route('admin.frames.update', $frame) }}" class="mt-2 flex items-center gap-1.5">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="name" value="{{ $frame->name }}">
                     <input type="hidden" name="animation" value="{{ $frame->animation ?? 'none' }}">
+                    <input
+                        type="number"
+                        name="hole_percent"
+                        value="{{ $frame->hole_percent ?? \App\Models\Frame::HOLE_DEFAULT }}"
+                        min="{{ \App\Models\Frame::HOLE_MIN }}"
+                        max="{{ \App\Models\Frame::HOLE_MAX }}"
+                        step="1"
+                        aria-label="Centre hole percent for {{ $frame->name }}"
+                        class="w-16 rounded-lg border border-ink/10 bg-paper-deep px-2 py-1 text-xs text-ink"
+                    >
                     <select name="criterion" class="flex-1 rounded-lg border border-ink/10 bg-paper-deep px-2 py-1 text-xs text-ink">
                         <option value="" @selected($frame->criterion === null)>Free</option>
                         @foreach ($criteria as $criterion)

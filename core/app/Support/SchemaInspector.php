@@ -52,6 +52,44 @@ class SchemaInspector
         return Schema::hasColumn($table, $column);
     }
 
+    /**
+     * v1.7.5: does a FOREIGN KEY on this column still exist?
+     *
+     * Added when the (previously dormant) MigrationDropGuardTest was wired
+     * into the suite and flagged two unguarded `dropForeign` calls in
+     * `up()`. MySQL backs every FK with an index named
+     * `<table>_<column>_foreign`; SQLite reports them through
+     * `PRAGMA foreign_key_list`. Without this there is no honest way to
+     * guard a dropForeign against the 1091 replay — and a token-level
+     * workaround in the test would make the guard theatre.
+     */
+    public function hasForeignKey(string $table, string $column): bool
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'mysql' || $driver === 'mariadb') {
+            foreach (DB::select(
+                'SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL',
+                [$this->table($table), $column]
+            ) as $row) {
+                return true;
+            }
+
+            return false;
+        }
+
+        if ($driver === 'sqlite') {
+            foreach (DB::select("PRAGMA foreign_key_list('{$this->table($table)}')") as $row) {
+                if (strtolower((string) $row->from) === strtolower($column)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** @return list<array{name: string, unique: bool, columns: list<string>}> */
     public function indexes(string $table): array
     {
