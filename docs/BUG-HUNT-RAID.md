@@ -101,7 +101,75 @@
 
 ## R3 — Form round-trip inventory
 
-_(pending)_
+- **Test:** `core/tests/Feature/FormRoundTripInventoryTest.php` — 8 tests,
+  44 assertions. `raidFormExtract()` reads the SERVED form (action, verb,
+  `_method` spoof, inputs/selects/textareas — browser semantics: checked
+  boxes only, first option when none is `selected`) and submits it with the
+  minimum overrides a human would type. `raidFormInventory()` is the table
+  below, and the first test scans every Blade `<form>` **action attribute**
+  and fails on any route missing from the inventory, so new forms cannot
+  ship unclassified.
+- **New round-trips shipped here** (all previously untested through the
+  served HTML): badge create/delete, frame create/delete + award/revoke,
+  payout request/cancel, buy-prompt, finance approve/settle/reject, admin
+  security save, purge/adopt preview.
+- **Harness notes (recorded so the next engineer doesn't re-learn them):**
+  1. actions render as absolute URLs (`http://127.0.0.1:8123/...`) — match on
+     the path;  2. update (PUT) and delete (DELETE) share one action URL —
+     `raidFormExtract()` takes a required-verb filter, or it submits the
+     wrong form;  3. the first inventory scan matched `route()` calls inside
+     form **bodies** (links, JS) and "found" login/register/prompts.show —
+     only the `action` attribute counts.
+
+### Inventory (view form → action route → verb → locked by)
+
+| View | Action | Verb | Locked by |
+|---|---|---|---|
+| auth/login | login.store | POST | AuthTest |
+| auth/register | register.store | POST | SignupHardeningTest |
+| auth/forgot-password | password.email | POST | PasswordResetTest |
+| auth/reset-password | password.update | POST | PasswordResetTest |
+| navbar / storefront | library.index | GET | SearchTest |
+| navbar / profile | logout | POST | AuthTest |
+| dashboard/profile | dashboard.profile.update | PUT | SearchPreviewTest |
+| dashboard/prompts/create | dashboard.prompts.store | POST | PromptCreateEditTest |
+| dashboard/prompts/edit | dashboard.prompts.update | PUT | PromptCreateEditTest |
+| dashboard/earnings | dashboard.earnings.request | POST | **FormRoundTripInventoryTest (new)** |
+| dashboard/earnings | dashboard.earnings.cancel | POST | **FormRoundTripInventoryTest (new)** |
+| prompts/show | prompts.rate | POST | AdminFlowsTest |
+| prompts/report | prompts.report.store | POST | PromptReportTest |
+| prompts/versions | prompts.versions.restore | POST | CatalogAndVersionTruthTest |
+| prompts/show | checkout.prompts.buy | POST | **FormRoundTripInventoryTest (new)** |
+| packs/show | checkout.packs.buy | POST | CheckoutFlowTest |
+| checkout/show | checkout.manual.submit | POST | ManualPaymentMethodsTest |
+| _payment-proof-form | orders.proof.store | POST | ManualPaymentMethodsTest |
+| admin/users | admin.users.impersonate | POST | ImpersonationTest |
+| admin/users | admin.users.role | PATCH | CheckoutFlowTest |
+| admin/users | admin.users.verified | PATCH | AdminFlowsTest |
+| admin/users | admin.users.banned | PATCH | UserBanTest |
+| admin/users | admin.users.purge.preview / .run | POST | **FormRoundTripInventoryTest (new, preview)** |
+| admin/users | admin.users.adopt.preview / .run | POST | **FormRoundTripInventoryTest (new, preview)** |
+| admin/prompts | admin.prompts.status | PATCH | AdminReviewTest |
+| admin/reports | admin.reports.status | PATCH | AdminFlowsTest |
+| admin/packs / pack-form | admin.packs.store / .update / .destroy | POST/PUT/DELETE | AdminFlowsTest |
+| admin/tool-logos | admin.tool-logos.store / .update / .destroy | POST/PATCH/DELETE | AdminFlowsTest |
+| admin/payments | admin.payments.update | PUT | CheckoutFlowTest |
+| admin/brand | admin.brand.update | PUT | BrandSettingsTest / BrandLogoTest |
+| admin/security | admin.security.update | PUT | **FormRoundTripInventoryTest (new)** |
+| admin/email | admin.email.update / .test | PUT/POST | MailConfigTest |
+| admin/finance | admin.finance (filter) | GET | FinanceController tests |
+| admin/finance | admin.finance.payouts.approve / .settle / .reject | POST | **FormRoundTripInventoryTest (new)** |
+| admin/badges | admin.badges.store / .award / .destroy | POST/DELETE | **FormRoundTripInventoryTest (new: store/destroy)** / GamificationTest (award) |
+| admin/frames | admin.frames.store / .update / .destroy / .award / .unlocks.revoke | POST/PUT/DELETE | **FormRoundTripInventoryTest (new: store/destroy/revoke)** / FrameTruthTest (update/award) |
+| admin/manual-methods | admin.manual-methods.store / .update / .destroy | POST/PUT/DELETE | ManualPaymentMethodsTest |
+| admin/orders | admin.orders.approve / .reject | PATCH | CheckoutFlowTest / AdminFlowsTest |
+| admin/comp-grants | admin.comp-grants.create (search) / .store | GET/POST | **R5 tests** / CompGrantTest |
+| dashboard/update | admin.update.run | POST | AdminFlowsTest / UpdaterFailureRecordTest |
+| navbar (impersonating) | impersonation.stop | POST | ImpersonationTest |
+
+- Every other form in the tree targets none of these? No — the completeness
+  test is the guard: **every** `<form action="{{ route(...) }}">` in
+  `resources/views` is above, or the suite fails.
 
 ## R4 — Edge-state matrix
 
