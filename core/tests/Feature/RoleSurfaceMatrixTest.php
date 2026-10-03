@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Badge;
 use App\Models\Category;
+use App\Models\Frame;
+use App\Models\ManualPaymentMethod;
 use App\Models\Order;
 use App\Models\Pack;
 use App\Models\Payout;
@@ -8,7 +11,9 @@ use App\Models\Product;
 use App\Models\Prompt;
 use App\Models\PromptReport;
 use App\Models\ToolLogo;
+use App\Models\UserFrameUnlock;
 use App\Models\User;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Route;
@@ -102,6 +107,12 @@ function raidMatrixWorld(): array
     Storage::disk('proofs')->put('raid-matrix-proof.png', 'proof');
     $order->forceFill(['manual_proof_path' => 'raid-matrix-proof.png'])->save();
 
+    // A checkout order with NO payment method yet: this is the page that
+    // renders the manual-submit rail (the pending manual order above shows
+    // the proof form instead). Both rails are matrix surfaces.
+    $openOrder = Order::factory()->create(['buyer_id' => $owner->id, 'status' => Order::STATUS_PENDING]);
+    $openOrder->items()->create(['product_id' => $product->id, 'prompt_id' => $prompt->id, 'price_paisa' => 24_900, 'currency' => 'NPR', 'quantity' => 1]);
+
     $payout = Payout::create([
         'user_id' => $owner->id,
         'amount_paisa' => 10_000,
@@ -114,7 +125,23 @@ function raidMatrixWorld(): array
     PromptReport::factory()->create(['prompt_id' => $prompt->id]);
     ToolLogo::query()->create(['name' => 'Raid Matrix Tool', 'is_active' => true, 'position' => 1]);
 
-    return compact('category', 'owner', 'prompt', 'member', 'mod', 'admin', 'banned', 'pack', 'order', 'payout');
+    // R2 fixture depth: rows that make the per-row admin forms render, so the
+    // dead-action scan can classify update/destroy/revoke/settle shapes too.
+    Badge::query()->create(['name' => 'Raid Badge', 'slug' => 'raid-badge', 'criterion' => 'manual', 'is_active' => true]);
+    $frame = Frame::query()->create(['name' => 'Raid Frame', 'image_path' => 'frames/raid.png', 'is_active' => true]);
+    UserFrameUnlock::query()->create(['user_id' => $owner->id, 'frame_id' => $frame->id, 'source' => 'manual', 'granted_by' => $admin->id, 'reason' => 'raid fixture']);
+    ManualPaymentMethod::query()->create(['name' => 'Raid Method', 'kind' => 'esewa', 'instructions' => 'Send the amount.', 'position' => 1, 'active' => true]);
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
+    Payout::create([
+        'user_id' => $owner->id,
+        'amount_paisa' => 5_000,
+        'status' => Payout::STATUS_APPROVED,
+        'method' => Payout::METHOD_ESEWA_WALLET,
+        'destination_encrypted' => Crypt::encryptString('esewa:9800000001'),
+        'requested_at' => now()->subDay(),
+    ]);
+
+    return compact('category', 'owner', 'prompt', 'member', 'mod', 'admin', 'banned', 'pack', 'order', 'openOrder', 'payout');
 }
 
 /** Resolve a route name to a URL with real bindings; null = not resolvable here. */
@@ -200,6 +227,10 @@ function raidMatrixRoutes(array $w): array
             'guest' => 302, 'member' => 403, 'creator' => 200, 'moderator' => 200, 'admin' => 200, 'banned' => 302, 'impersonator' => 403,
         ]],
         'checkout.show' => ['url' => raidMatrixUrl('checkout.show', $w), 'title' => true, 'roles' => [
+            'guest' => 302, 'member' => 403, 'creator' => 200, 'moderator' => 200, 'admin' => 200, 'banned' => 302, 'impersonator' => 403,
+        ]],
+        // The unpaid-rails checkout page (no method chosen yet) — same gate.
+        'checkout.show.rails' => ['url' => route('checkout.show', $w['openOrder']), 'title' => true, 'roles' => [
             'guest' => 302, 'member' => 403, 'creator' => 200, 'moderator' => 200, 'admin' => 200, 'banned' => 302, 'impersonator' => 403,
         ]],
         // eSewa is OFF by default; the owner is refused 403, not sent off-site.

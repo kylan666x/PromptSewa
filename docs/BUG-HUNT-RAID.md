@@ -61,7 +61,43 @@
 
 ## R2 — Dead-link & dead-action scan
 
-_(pending)_
+- **Test:** `core/tests/Feature/DeadLinkScanTest.php` — 2 tests. For every
+  surface the R1 matrix renders (5 viewer roles): every internal `<a href>`
+  is resolved and fetched as the viewer (403/404/405/419/500 all fail), and
+  every `<form action>` is resolved, verb-checked (POST + `_method` spoof)
+  and checked against a `raidDeadLinkFormViewers()` map — the role the form
+  is shown to must be allowed to submit it. Unclassified form routes fail;
+  classified-but-never-rendered routes fail unless declared out of sweep.
+- **Harness trap recorded:** `route()` emits absolute URLs, so the first
+  scan silently skipped every link (leading-slash check) and reported all
+  forms as unencountered. The normalizer now accepts app-host URLs — noted
+  because "zero failures from a scan that matched nothing" is the exact
+  silent-lie class this raid exists to kill.
+- **Findings (all fixed in this raid):**
+  - **BH-R2-01 (P1)** — admin-layout nav pills for **admin-only** doors
+    (comp grants, badges, frames, security, email) rendered for moderators →
+    five dead links, each 403. Fixed: admin-only pills hidden for non-admins.
+  - **BH-R2-02 (P1)** — Admin → Users purge + catalog-adoption panels shown
+    to moderators; both POST to admin-only routes. Fixed: panels admin-only,
+    staff see an honest notice.
+  - **BH-R2-03 (P1)** — Admin → Orders approve/reject buttons shown to
+    moderators; both PATCH routes are admin-only. Fixed: buttons admin-only,
+    moderators see "Awaiting admin decision".
+  - **BH-R2-04 (P1)** — Admin → Payments / Brand / Manual methods save forms
+    rendered for moderators while the controllers refuse them. Fixed: write
+    forms admin-only (read access stays staff, per ADMIN-AUDIT), notices
+    otherwise.
+  - **BH-R2-05 (P1)** — Admin → Prompts linked `prompts.show` for every row;
+    a non-published prompt 404s **even for staff** (public route is
+    published+public or owner). Fixed: non-public rows link to the
+    moderation preview route — the §6.17 rule.
+  - **BH-R2-06 (P2, exempt) ** — `/update.php` link on Admin → Update matches
+    no Laravel route (it is the docroot script that exists on a real
+    install). Exempted with a reason.
+- **Fixture depth added (shared with R1):** badge + frame + frame unlock +
+  manual method + approved payout + an unpaid-rails order, so every per-row
+  form shape renders and is classified — the completeness check now proves
+  the map is not stale.
 
 ## R3 — Form round-trip inventory
 
@@ -93,3 +129,9 @@ _(pending)_
 |----|---------|----------|---------|-----------|-----|--------|
 | BH-R1-01 | Admin → Comp grants (read door) | P1 | Page served 200 to moderators while the store endpoint 403s them | `RoleSurfaceMatrixTest` (moderator row, admin shape); probe: `admin.comp-grants.create \| moderator \| 200` | `abort_unless(isAdmin)` in `CompGrantController::create` | Fixed — see R7 log |
 | BH-P3-01 | `proofs` disk `serve => true` | P3 | Unused signed-URL framework route (`storage.proofs`) exists alongside the owner/staff proof route | `RoleSurfaceMatrixTest` completeness (exempt with reason); `ServeFile` source | Proposed: drop `serve => true` from the proofs disk (mediator: config) | Open (hardening) |
+| BH-R2-01 | Admin nav pills (moderator view) | P1 | Five admin-only pills rendered for moderators, each a 403 | `DeadLinkScanTest` first run: `moderator \| admin.dashboard \| href /admin/badges → 403` (+4) | Hide admin-only pills for non-admins (`admin-layout`) | Fixed — see R7 log |
+| BH-R2-02 | Admin → Users purge/adopt panels | P1 | Forms visible to moderators, POSTs 403 | `DeadLinkScanTest`: `moderator \| admin.users.index \| form POST /admin/users/purge-demo/run → limited to admin` | `@if(isAdmin)` panels + notice | Fixed — see R7 log |
+| BH-R2-03 | Admin → Orders approve/reject | P1 | Buttons visible to moderators, PATCHes 403 | `DeadLinkScanTest` (2 rows) | Admin-only buttons; moderators see "Awaiting admin decision" | Fixed — see R7 log |
+| BH-R2-04 | Payments / Brand / Manual methods forms | P1 | Save forms visible to moderators, PUT/POST 403 | `DeadLinkScanTest`: `moderator \| admin.payments.edit \| form PUT /admin/payments → limited to admin` (+2) | Write forms admin-only; staff read stays (ADMIN-AUDIT) | Fixed — see R7 log |
+| BH-R2-05 | Admin → Prompts title links | P1 | Non-public prompt rows linked the public route → 404 for staff | `DeadLinkScanTest`: `moderator \| admin.prompts.index \| href /prompts/… → 404` | Non-public rows link the moderation preview | Fixed — see R7 log |
+| BH-R2-06 | Admin → Update `/update.php` link | P2 | Matches no Laravel route (dev); exists on a real install | `DeadLinkScanTest` first run | Exempt with reason (docroot script) | Exempted |
