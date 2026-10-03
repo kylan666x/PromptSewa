@@ -21,6 +21,11 @@ class CompGrantController extends Controller
 
     public function create(Request $request)
     {
+        // R1 (v1.7.7 raid): the read door must carry the same admin gate as
+        // the write door (§6.36 — badge/frame indexes served 200 to
+        // moderators for exactly this reason). The role matrix locks it.
+        abort_unless($request->user()?->isAdmin(), 403, 'Only admins can issue comp grants.');
+
         $query = trim((string) $request->query('q', ''));
 
         return view('admin.comp-grants', [
