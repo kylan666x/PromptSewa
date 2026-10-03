@@ -173,7 +173,36 @@
 
 ## R4 — Edge-state matrix
 
-_(pending)_
+- **Test:** `core/tests/Feature/EdgeStateMatrixTest.php` — 5 tests,
+  **442 assertions**. Contexts rendered:
+  - **empty fixture** — library (`No prompts found`), packs (`No packs are
+    live yet`), feed (`The feed is quiet`), purchases (`No purchases yet.`),
+    dashboard (`No prompts yet`), creator profile (`Nothing published yet`),
+    plus a 24-URL blank-panel/500 sweep across storefront, dashboard and
+    every admin pill. Finance must print a real `Rs. 0` on an empty ledger.
+  - **overflow/unicode/deleted relations** — a 200-char title (validation
+    caps at 160; the renderer must not care), Devanagari bio (asserted
+    byte-preserved in the body), a force-deleted version author
+    (`Former creator` chip), and a user whose equipped frame was deleted
+    (`nullOnDelete` → frameless, no 500).
+  - **30-row pagination** — page 2 of library, admin prompts/users/reports/
+    orders and purchases (31 rows each).
+  - **checkout both rails** — with manual + eSewa enabled, the checkout page
+    shows both rails and `checkout.esewa.pay` really builds the gateway
+    redirect (200/302, never 403).
+  - **impersonation** — home, library, dashboard, purchases, creator profile
+    all render the chrome bar (`Acting as`, the target `@handle`, `Return to
+    my account`) with no identity leak or 500.
+- **Result: no new defects.** Every listed state rendered honest copy; the
+  two locked truths are the empty-ledger `Rs. 0` and the deleted-relation
+  fallbacks (both were pre-existing strengths).
+- **Harness traps recorded (in-file comments):** (1) Pest `toContain($needle,
+  $message)` treats the message as a second NEEDLE — that produced a
+  phantom "lost its empty-state copy" failure for a page that had the copy;
+  (2) the test client does not carry session cookies between requests, so
+  impersonation state is re-seeded per request with `withSession`; (3) the
+  chrome bar puts the handle inside `<strong>`, so the assertion checks the
+  parts.
 
 ## R5 — BH-001/BH-002 comp grant form redesign
 
