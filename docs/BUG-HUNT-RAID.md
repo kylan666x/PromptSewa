@@ -204,9 +204,59 @@
   chrome bar puts the handle inside `<strong>`, so the assertion checks the
   parts.
 
-## R5 — BH-001/BH-002 comp grant form redesign
+## R5 — BH-001/BH-002 comp grant form redesign (founder-mandated)
 
-_(pending)_
+### BH-001/BH-002 — reproduce, then root cause
+
+- **Repro test:** `core/tests/Feature/CompGrantPickerTest.php` committed
+  failing at `82f7c1b` — 5 failing / 3 passing. The passing three
+  (idempotency, mandatory reason, moderator 403) were held green through
+  the redesign by design.
+- **ROOT CAUSE (the query that filters/limits the prompt list):**
+  `CompGrantController::create()` builds the picker with
+  `Prompt::query()->published()`, and the `published()` scope is
+  `where('status', self::STATUS_PUBLISHED)` — **every draft / pending /
+  rejected prompt is invisible**, which is exactly "cannot see all of my
+  prompts". `store()` re-applied the same scope
+  (`Prompt::query()->published()->findOrFail()`), so a draft id was not
+  grantable even when posted directly (404). The plain stacked `<select>`
+  over 277 rows was the second half of the complaint.
+
+### The redesign
+
+- **`x-searchable-picker`** (`resources/views/components/searchable-picker
+  .blade.php`) — a reusable Alpine combobox: server-rendered options (each
+  with `data-value` / `data-chip` / `data-search`), client-side visibility
+  filter, ArrowUp/Down + Enter + Escape keyboard handling, selected value
+  as a chip with a clear button, a real hidden input the form submits, and
+  a `max-h-56` option list so 277 rows can never stretch the page.
+- **`comboboxPicker`** in `resources/js/app.js` — the one new Alpine data
+  component; no new dependencies. `npm run build` recompiled the bundle.
+- **`admin/comp-grants.blade.php`** — two-column grid (recipient | prompt)
+  with the reason textarea beneath and ONE submit row; option text carries
+  the title, the status chip, and the price through `<x-money>` (money_npr
+  format, e.g. `Rs. 249.00`). The users list is capped at 300 with the
+  server-side Find form retained for the rest of the table.
+- **`CompGrantController`** — serves the FULL prompt list (every status,
+  ordered by title, id/title/status/price) and drops the `published()`
+  scope from both create() and store(). Validation, admin gating,
+  idempotency and the audit trail are unchanged.
+
+### Locks (all in `CompGrantPickerTest`, 8 tests)
+
+1. every prompt id present in the combobox payload (draft + published +
+   pending);
+2. **277 prompts render once** — every id in the served HTML,
+   `role="option"` count ≥ 277;
+3. option text carries title + status chip + `money_npr` price (`Rs. 249.00`,
+   not the legacy `priceLabel`);
+4. a draft and a published prompt are both grantable by an admin;
+5. idempotent at the HTTP boundary (double submit → one grant + error);
+6. reason still mandatory;
+7. moderator 403 on page and store;
+8. served structure: no `<select name="prompt_id">`, two-up
+   `sm:grid-cols-2` grid, `role="combobox"` + `role="listbox"`, bounded
+   `max-h` list, exactly one submit button in the grant form.
 
 ## R6 — Browser gate
 
@@ -232,3 +282,4 @@ _(pending)_
 | BH-R2-04 | Payments / Brand / Manual methods forms | P1 | Save forms visible to moderators, PUT/POST 403 | `DeadLinkScanTest`: `moderator \| admin.payments.edit \| form PUT /admin/payments → limited to admin` (+2) | Write forms admin-only; staff read stays (ADMIN-AUDIT) | Fixed — see R7 log |
 | BH-R2-05 | Admin → Prompts title links | P1 | Non-public prompt rows linked the public route → 404 for staff | `DeadLinkScanTest`: `moderator \| admin.prompts.index \| href /prompts/… → 404` | Non-public rows link the moderation preview | Fixed — see R7 log |
 | BH-R2-06 | Admin → Update `/update.php` link | P2 | Matches no Laravel route (dev); exists on a real install | `DeadLinkScanTest` first run | Exempt with reason (docroot script) | Exempted |
+| BH-001/BH-002 | Admin → Comp grants prompt picker | P1 (founder) | `published()` scope hid every non-published prompt and blocked granting one; stacked select over 277 rows | `CompGrantPickerTest` failing at `82f7c1b` (5 failures) | Full prompt list + `x-searchable-picker` combobox; `published()` dropped from create+store | Fixed — see R7 log |

@@ -12,6 +12,17 @@ use Illuminate\Http\Request;
  * A5: complimentary license grants. Admin picks a user and a prompt,
  * writes a reason, and the account owns the prompt for free. Every comp
  * lands in the license ledger marked tier `comp` with issuer + reason.
+ *
+ * R5 (v1.7.7 Bug Hunt Raid) — BH-001/BH-002 root cause and redesign.
+ * The picker used to be built with `Prompt::query()->published()`: the
+ * `published()` scope is `where('status', STATUS_PUBLISHED)`, so every
+ * draft/pending/rejected prompt was invisible (the founder's "cannot see
+ * all of my prompts"), and `store()` re-applied it so a draft 404'd even
+ * when posted by id. The page now server-renders the FULL prompt list
+ * into a searchable Alpine combobox (277 rows render once; filter is
+ * client-side), and both create() and store() treat every prompt as
+ * grantable. Validation, admin gating, idempotency and audit are
+ * unchanged.
  */
 class CompGrantController extends Controller
 {
@@ -35,12 +46,13 @@ class CompGrantController extends Controller
                     ->orWhere('name', 'like', "%{$query}%")
                     ->orWhere('username', 'like', "%{$query}%")))
                 ->orderBy('name')
-                ->limit(25)
+                ->limit(300)
                 ->get(['id', 'name', 'username', 'email']),
+            // Every prompt, every status — the founder ruling. The list is
+            // server-rendered once; the combobox filters client-side.
             'prompts' => Prompt::query()
-                ->published()
                 ->orderBy('title')
-                ->get(['id', 'title', 'price_cents']),
+                ->get(['id', 'title', 'status', 'price_cents']),
             'search' => $query,
         ]);
     }
@@ -56,7 +68,9 @@ class CompGrantController extends Controller
         ]);
 
         $user = User::query()->findOrFail($validated['user_id']);
-        $prompt = Prompt::query()->published()->findOrFail($validated['prompt_id']);
+        // R5: any prompt is grantable — drafts included. The old
+        // `published()` scope here was half of BH-001/BH-002.
+        $prompt = Prompt::query()->findOrFail($validated['prompt_id']);
 
         $grant = $this->comps->grant($user, $prompt, $request->user(), $validated['reason']);
 

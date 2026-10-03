@@ -504,4 +504,77 @@ Alpine.data('promptForm', (config) => ({
     },
 }));
 
+/**
+ * R5 (v1.7.7 Bug Hunt Raid) — the admin combobox picker.
+ *
+ * The option list is SERVER-RENDERED once (277 prompts render once, per the
+ * founder ruling) and this only filters visibility client-side. Keyboard:
+ * ArrowUp/Down move the highlight, Enter picks, Escape closes; the value
+ * lands in the hidden input the form submits. The selected item shows as a
+ * chip with a clear button. No dependencies beyond Alpine.
+ */
+Alpine.data('comboboxPicker', (config) => ({
+    open: false,
+    query: '',
+    value: config.value ?? '',
+    chip: config.chip ?? '',
+
+    options() {
+        return Array.from(this.$refs.list?.querySelectorAll('[role="option"]') ?? []);
+    },
+
+    filter() {
+        const q = this.query.trim().toLowerCase();
+
+        this.options().forEach((option) => {
+            option.hidden = q !== '' && ! (option.dataset.search || '').includes(q);
+            option.classList.remove('bg-paper-deep');
+        });
+    },
+
+    move(delta) {
+        const visible = this.options().filter((option) => ! option.hidden);
+        if (visible.length === 0) {
+            return;
+        }
+
+        const current = visible.findIndex((option) => option.classList.contains('bg-paper-deep'));
+        const next = Math.max(0, Math.min(visible.length - 1, current === -1 ? 0 : current + delta));
+
+        visible.forEach((option) => option.classList.remove('bg-paper-deep'));
+        visible[next].classList.add('bg-paper-deep');
+        visible[next].scrollIntoView({ block: 'nearest' });
+    },
+
+    pick() {
+        const visible = this.options().filter((option) => ! option.hidden);
+        const active = visible.find((option) => option.classList.contains('bg-paper-deep')) ?? visible[0];
+
+        if (active) {
+            this.choose(active);
+        }
+    },
+
+    choose(option) {
+        this.value = option.dataset.value ?? '';
+        this.chip = option.dataset.chip ?? '';
+        this.query = '';
+        this.open = false;
+        this.filter();
+        this.focusInput();
+    },
+
+    clear() {
+        this.value = '';
+        this.chip = '';
+        this.query = '';
+        this.filter();
+        this.focusInput();
+    },
+
+    focusInput() {
+        this.$nextTick(() => this.$refs.input?.focus());
+    },
+}));
+
 Alpine.start();

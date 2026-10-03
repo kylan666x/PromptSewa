@@ -170,6 +170,17 @@ test('the form is a bounded two-column combobox grid, not a stacked mega-select'
         || preg_match('/\bmax-h-[^"]*"[^>]*role="listbox"/', $html) === 1)
         ->toBeTrue('the option list must carry a max-height so the form fits one screen');
 
-    // A single submit row: exactly one submit button on the page.
-    expect(substr_count($html, 'type="submit"'))->toBe(1);
+    // A single submit row INSIDE the grant form (the navbar legitimately has
+    // its own logout submit, so scope the count to the form carrying reason).
+    preg_match_all('/<form\b([^>]*)>(.*?)<\/form>/is', $html, $forms, PREG_SET_ORDER);
+    $grantForm = null;
+    foreach ($forms as $form) {
+        if (str_contains($form[2], 'name="reason"')) {
+            $grantForm = $form;
+            break;
+        }
+    }
+
+    expect($grantForm)->not->toBeNull('the grant form must be present');
+    expect(substr_count($grantForm[2], 'type="submit"'))->toBe(1);
 });
