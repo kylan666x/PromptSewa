@@ -39,6 +39,9 @@
                     </div>
                 </div>
 
+                {{-- R2 (v1.7.7 raid): management is admin-only; staff read the
+                     list but get no forms their POSTs would 403. --}}
+                @if (auth()->user()->isAdmin())
                 <details class="mt-3">
                     <summary class="cursor-pointer font-mono text-xs font-semibold text-saffron-deep">Edit method</summary>
                     <form method="POST" action="{{ route('admin.manual-methods.update', $method) }}" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2">
@@ -98,6 +101,7 @@
                         </button>
                     </form>
                 </details>
+                @endif
             </div>
         @empty
             <p class="rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">No manual methods yet — create the first one below.</p>
@@ -105,6 +109,7 @@
     </div>
 
     {{-- Create form --}}
+    @if (auth()->user()->isAdmin())
     <div class="mt-8 rounded-2xl border border-saffron-deep/30 bg-white p-6 shadow-sm">
         <h3 class="font-semibold text-ink">Add a method</h3>
         <form method="POST" action="{{ route('admin.manual-methods.store') }}" enctype="multipart/form-data" class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -150,4 +155,9 @@
             </div>
         </form>
     </div>
+    @else
+        <p class="mt-8 rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">
+            Manual payment methods are admin-managed. Ask an admin to add or change a method.
+        </p>
+    @endif
 </x-admin-layout>

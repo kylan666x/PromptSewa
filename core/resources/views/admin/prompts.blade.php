@@ -39,7 +39,14 @@
                 @forelse ($prompts as $prompt)
                     <tr class="transition hover:bg-paper-deep">
                         <td class="px-5 py-3.5 font-medium text-ink">
-                            <a href="{{ route('prompts.show', $prompt) }}" class="hover:text-saffron-deep">{{ $prompt->title }}</a>
+                            {{-- R2 (v1.7.7 raid): the public detail route 404s for
+                                 anything not published+public, even for staff. The
+                                 moderation preview is the honest door for those rows. --}}
+                            @if ($prompt->status === \App\Models\Prompt::STATUS_PUBLISHED && $prompt->visibility === \App\Models\Prompt::VISIBILITY_PUBLIC)
+                                <a href="{{ route('prompts.show', $prompt) }}" class="hover:text-saffron-deep">{{ $prompt->title }}</a>
+                            @else
+                                <a href="{{ route('admin.prompts.preview', $prompt) }}" class="hover:text-saffron-deep">{{ $prompt->title }}</a>
+                            @endif
                         </td>
                         <td class="px-5 py-3.5 text-ink/60">{{ $prompt->creator?->name ?? '—' }}</td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $prompt->category?->name ?? '—' }}</td>

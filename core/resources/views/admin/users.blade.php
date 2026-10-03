@@ -118,6 +118,10 @@
 
     <div class="mt-6">{{ $users->links() }}</div>
 
+    {{-- R2 (v1.7.7 raid): both operational panels are admin-only. A
+         moderator who could see them would be looking at forms whose POSTs
+         403 — a dead action. Read access to the user table stays staff. --}}
+    @if (auth()->user()->isAdmin())
     {{-- T10 (v1.5.0): demo purge panel — dry-run preview + force. Shells
          pv:purge-demo so the runbook logic and this UI never drift. --}}
     <div class="mt-10 rounded-2xl border border-rose-700/20 bg-rose-50/60 p-6">
@@ -168,4 +172,9 @@
             <pre class="mt-4 max-h-72 overflow-auto rounded-xl bg-ink p-4 font-mono text-[11px] leading-relaxed text-sky-200">{{ session('adoption_preview') }}</pre>
         @endif
     </div>
+    @else
+        <p class="mt-10 rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">
+            Demo purge and catalog adoption are admin-only operations.
+        </p>
+    @endif
 </x-admin-layout>

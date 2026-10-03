@@ -14,33 +14,39 @@
 
         <nav class="mt-6 flex flex-wrap gap-2" aria-label="Admin sections">
             @php
+                // R2 (v1.7.7 raid): the third tuple slot marks an admin-only
+                // door. A pill that 403s for the moderator seeing it is a dead
+                // action — the pills are hidden for non-admins, and the role
+                // matrix + dead-link scan lock both directions.
+                $isAdmin = auth()->user()?->isAdmin() ?? false;
                 $adminNav = [
-                    'admin.dashboard' => ['Overview', '▦'],
-                    'admin.prompts.index' => ['Prompts', '✦'],
-                    'admin.orders.index' => ['Orders', 'Rs'],
-                    'admin.users.index' => ['Users', '👤'],
-                    'admin.reports.index' => ['Reports', '⚑'],
-                    'admin.packs.index' => ['Packs', '📦'],
-                    'admin.payments.edit' => ['Payments', '💳'],
-                    'admin.brand.edit' => ['Brand', '◆'],
-                    'admin.tool-logos.index' => ['Tool logos', '✦'],
-                    'admin.update' => ['Software update', '⬆'],
-                    'admin.comp-grants.create' => ['Comp grants', '🎁'],
+                    'admin.dashboard' => ['Overview', '▦', false],
+                    'admin.prompts.index' => ['Prompts', '✦', false],
+                    'admin.orders.index' => ['Orders', 'Rs', false],
+                    'admin.users.index' => ['Users', '👤', false],
+                    'admin.reports.index' => ['Reports', '⚑', false],
+                    'admin.packs.index' => ['Packs', '📦', false],
+                    'admin.payments.edit' => ['Payments', '💳', false],
+                    'admin.brand.edit' => ['Brand', '◆', false],
+                    'admin.tool-logos.index' => ['Tool logos', '✦', false],
+                    'admin.update' => ['Software update', '⬆', false],
+                    'admin.comp-grants.create' => ['Comp grants', '🎁', true],
                     // P1b (v1.7.1): gamification doors — a feature without a nav
                     // entry is a missing feature (§6 watch-out). Controllers/routes
                     // existed since v1.7.0; these pills are the acceptance criterion.
-                    'admin.badges.index' => ['Badges', '🏅'],
-                    'admin.frames.index' => ['Frames', '◯'],
+                    'admin.badges.index' => ['Badges', '🏅', true],
+                    'admin.frames.index' => ['Frames', '◯', true],
                     // T6 (v1.7.3): the trust gate ships with its nav entry in
                     // the same commit (§6.36 watch-out).
-                    'admin.security.edit' => ['Security', '🛡'],
+                    'admin.security.edit' => ['Security', '🛡', true],
                     // A3 (v1.7.6): the mail rail. Without this pill the mail
                     // settings exist but nobody can reach them — which is how
                     // "mail is broken on prod" stays a mystery for a month.
-                    'admin.email.edit' => ['Email', '✉'],
+                    'admin.email.edit' => ['Email', '✉', true],
                 ];
             @endphp
-            @foreach ($adminNav as $route => [$label, $icon])
+            @foreach ($adminNav as $route => [$label, $icon, $adminOnly])
+                @continue($adminOnly && ! $isAdmin)
                 <a href="{{ route($route) }}"
                    @class([
                        'rounded-full border px-3.5 py-2 text-sm font-medium transition',

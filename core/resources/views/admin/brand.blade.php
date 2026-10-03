@@ -8,6 +8,9 @@
         /** @var string $faviconPath */
     @endphp
 
+    {{-- R2 (v1.7.7 raid): read stays staff (audit ladder); the save form is
+         admin-only because the controller refuses moderators. --}}
+    @if (auth()->user()->isAdmin())
     <form method="POST" action="{{ route('admin.brand.update') }}" enctype="multipart/form-data" class="max-w-3xl space-y-6">
         @csrf
         @method('PUT')
@@ -109,4 +112,9 @@
             <span class="text-xs text-ink0">Changes apply immediately.</span>
         </div>
     </form>
+    @else
+        <p class="mt-6 rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">
+            Brand settings are admin-managed. Ask an admin to change the site identity.
+        </p>
+    @endif
 </x-admin-layout>

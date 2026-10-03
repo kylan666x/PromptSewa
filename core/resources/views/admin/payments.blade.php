@@ -27,6 +27,9 @@
         <span class="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition hover:bg-ink-soft">Manage methods &rarr;</span>
     </a>
 
+    {{-- R2 (v1.7.7 raid): read stays staff (audit ladder); the save form is
+         admin-only because the controller refuses moderators. No dead button. --}}
+    @if (auth()->user()->isAdmin())
     <form method="POST" action="{{ route('admin.payments.update') }}" class="max-w-3xl space-y-6">
         @csrf
         @method('PUT')
@@ -139,4 +142,9 @@
             <span class="text-xs text-ink0">Changes apply immediately.</span>
         </div>
     </form>
+    @else
+        <p class="mt-6 rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">
+            Payment settings are admin-managed. Ask an admin to change the checkout rails.
+        </p>
+    @endif
 </x-admin-layout>

@@ -77,7 +77,7 @@
                             </span>
                         </td>
                         <td class="px-5 py-3.5">
-                            @if ($order->isPending())
+                            @if ($order->isPending() && auth()->user()->isAdmin())
                                 <div class="flex items-center justify-end gap-1.5">
                                     <form method="POST" action="{{ route('admin.orders.approve', $order) }}">
                                         @csrf
@@ -90,6 +90,10 @@
                                         <button class="rounded-lg border border-rose-700/30 bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-200">Reject</button>
                                     </form>
                                 </div>
+                            @elseif ($order->isPending())
+                                {{-- R2 (v1.7.7 raid): moderators read the queue; approval
+                                     and rejection are admin-only, so no dead buttons. --}}
+                                <span class="text-xs text-ink/50">Awaiting admin decision</span>
                             @else
                                 <span class="text-xs text-ink/40">—</span>
                             @endif
