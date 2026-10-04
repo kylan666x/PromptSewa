@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Frame;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserFrameUnlock;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * G3 (v1.7.0) / W3+W4 (v1.7.3) — frame CRUD, animation select, criterion
@@ -130,14 +132,30 @@ class FrameAdminController extends Controller
         $user = User::query()->findOrFail($validated['user_id']);
         $frame = Frame::query()->findOrFail($validated['frame_id']);
 
-        $created = UserFrameUnlock::query()->firstOrCreate(
-            ['user_id' => $user->id, 'frame_id' => $frame->id],
-            [
-                'source' => UserFrameUnlock::SOURCE_MANUAL,
-                'granted_by' => $request->user()->id,
-                'reason' => trim($validated['reason']),
-            ],
-        );
+        // F6 (v1.7.8): the unlock row and its bell notification commit
+        // together; an idempotent re-award writes no second row and no
+        // second notification.
+        $created = DB::transaction(function () use ($user, $frame, $request, $validated) {
+            $unlock = UserFrameUnlock::query()->firstOrCreate(
+                ['user_id' => $user->id, 'frame_id' => $frame->id],
+                [
+                    'source' => UserFrameUnlock::SOURCE_MANUAL,
+                    'granted_by' => $request->user()->id,
+                    'reason' => trim($validated['reason']),
+                ],
+            );
+
+            if ($unlock->wasRecentlyCreated) {
+                Notification::emit(
+                    $user,
+                    Notification::TYPE_FRAME_UNLOCKED,
+                    "The \"{$frame->name}\" frame was unlocked for your profile.",
+                    $frame,
+                );
+            }
+
+            return $unlock;
+        });
 
         $message = $created->wasRecentlyCreated
             ? "Frame \"{$frame->name}\" granted to {$user->name}."

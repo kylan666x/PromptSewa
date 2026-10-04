@@ -243,6 +243,7 @@ function raidFormInventory(): array
         'checkout.packs.buy' => 'CheckoutFlowTest',
         'checkout.manual.submit' => 'ManualPaymentMethodsTest',
         'orders.proof.store' => 'ManualPaymentMethodsTest',
+        'notifications.read-all' => 'NotificationTest',
         'admin.users.impersonate' => 'ImpersonationTest',
         'admin.users.role' => 'CheckoutFlowTest (role change)',
         'admin.users.verified' => 'AdminFlowsTest',

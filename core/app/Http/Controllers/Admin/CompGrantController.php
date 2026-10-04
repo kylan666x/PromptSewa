@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Prompt;
 use App\Models\User;
 use App\Services\CompGrantService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A5: complimentary license grants. Admin picks a user and a prompt,
@@ -72,7 +74,22 @@ class CompGrantController extends Controller
         // `published()` scope here was half of BH-001/BH-002.
         $prompt = Prompt::query()->findOrFail($validated['prompt_id']);
 
-        $grant = $this->comps->grant($user, $prompt, $request->user(), $validated['reason']);
+        // F6 (v1.7.8): the grant row and its bell notification commit
+        // together; an idempotent replay notifies nobody.
+        $grant = DB::transaction(function () use ($user, $prompt, $request, $validated) {
+            $grant = $this->comps->grant($user, $prompt, $request->user(), $validated['reason']);
+
+            if ($grant !== null) {
+                Notification::emit(
+                    $user,
+                    Notification::TYPE_COMP_GRANT,
+                    "A complimentary copy of \"{$prompt->title}\" was added to your library.",
+                    $prompt,
+                );
+            }
+
+            return $grant;
+        });
 
         if ($grant === null) {
             return back()->withErrors([

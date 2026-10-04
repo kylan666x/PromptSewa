@@ -140,6 +140,12 @@
             </label>
         </form>
 
+        {{-- F6 (v1.7.8): the mobile navbar row keeps the bell one tap away
+             (the bottom dock stays exactly five slots). --}}
+        <div class="order-4 md:hidden">
+            <x-notification-bell />
+        </div>
+
         {{-- Desktop links --}}
         <div class="hidden items-center gap-1 md:flex">
             <a href="{{ route('packs.index') }}" class="rounded-full px-3 py-2 text-sm font-medium text-ink/80 transition hover:bg-ink/5 hover:text-ink">Packs</a>
@@ -167,6 +173,10 @@
         <div class="hidden shrink-0 items-center gap-2 md:flex">
             @auth
                 <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">+ Add prompt</a>
+
+                {{-- F6 (v1.7.8): desktop notifications bell (same component as
+                     the mobile navbar row). --}}
+                <x-notification-bell />
 
                 {{-- Account menu (X-style): avatar opens profile/library/settings links.
                      P4 (v1.7.1): the dropdown keeps DISTINCT "My profile" (public)

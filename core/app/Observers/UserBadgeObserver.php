@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\FeedEvent;
+use App\Models\Notification;
 use App\Models\UserBadge;
 use App\Services\GamificationService;
 
@@ -24,6 +25,15 @@ class UserBadgeObserver
         }
 
         app(GamificationService::class)->grantXp($user, 'badge_earned');
+
+        // F6 (v1.7.8): the bell row rides the award transaction (auto,
+        // manual and backfill awards all pass through this observer once).
+        Notification::emit(
+            $user,
+            Notification::TYPE_BADGE_AWARDED,
+            "You earned the \"{$badge->name}\" badge.",
+            $badge,
+        );
 
         $dedupeKey = "badge_earned:{$user->id}:{$badge->id}";
 

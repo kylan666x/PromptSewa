@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\Payout;
 use App\Models\WalletTransaction;
@@ -10,6 +11,7 @@ use App\Services\SettingsService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * M5 (v1.6.0) — Admin → Finance desk.
@@ -105,12 +107,24 @@ class FinanceController extends Controller
         abort_unless($payout->status === Payout::STATUS_APPROVED, 422, 'Only approved payouts can be settled.');
 
         // Settled inserts NOTHING financial — the hold was the debit; the
-        // payout row carries the settlement state.
-        $payout->transitionTo(Payout::STATUS_SETTLED);
-        $payout->fill([
-            'decided_by' => $request->user()->id,
-            'decided_at' => now(),
-        ])->save();
+        // payout row carries the settlement state. F6 (v1.7.8): the
+        // creator's bell row commits with the decision.
+        DB::transaction(function () use ($payout, $request) {
+            $payout->transitionTo(Payout::STATUS_SETTLED);
+            $payout->fill([
+                'decided_by' => $request->user()->id,
+                'decided_at' => now(),
+            ])->save();
+
+            if ($payout->user !== null) {
+                Notification::emit(
+                    $payout->user,
+                    Notification::TYPE_PAYOUT_SETTLED,
+                    'Your payout of Rs '.number_format(intdiv($payout->amount_paisa, 100)).' was settled.',
+                    $payout,
+                );
+            }
+        });
 
         return back()->with('success', "Payout #{$payout->id} marked settled.");
     }
@@ -122,12 +136,23 @@ class FinanceController extends Controller
 
         $validated = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
 
-        app(WalletService::class)->releasePayout(
-            $payout,
-            $request->user(),
-            Payout::STATUS_REJECTED,
-            $validated['note'] ?? null,
-        );
+        DB::transaction(function () use ($payout, $request, $validated) {
+            app(WalletService::class)->releasePayout(
+                $payout,
+                $request->user(),
+                Payout::STATUS_REJECTED,
+                $validated['note'] ?? null,
+            );
+
+            if ($payout->user !== null) {
+                Notification::emit(
+                    $payout->user,
+                    Notification::TYPE_PAYOUT_REJECTED,
+                    'Your payout of Rs '.number_format(intdiv($payout->amount_paisa, 100)).' was rejected — the funds are back in your balance.',
+                    $payout,
+                );
+            }
+        });
 
         return back()->with('success', "Payout #{$payout->id} rejected — funds released back to the creator's balance.");
     }

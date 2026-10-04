@@ -7,6 +7,35 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 /**
+ * F6 (v1.7.8) — navbar notification bell.
+ *
+ * cPanel has no websockets, so the dropdown polls the unread endpoint
+ * every 60 seconds. First paint is server-rendered; the poll refreshes
+ * count + list from the same JSON shape. The product word is
+ * "Notifications" — no live-delivery vocabulary anywhere.
+ */
+Alpine.data('notificationBell', (config) => ({
+    open: false,
+    count: config.count,
+    items: config.items,
+
+    init() {
+        setInterval(() => this.poll(), 60000);
+    },
+
+    poll() {
+        fetch(config.url, { headers: { Accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (!data) return;
+                this.count = data.count;
+                if (data.items) this.items = data.items;
+            })
+            .catch(() => {});
+    },
+}));
+
+/**
  * Creator "Add/Edit Prompt" form state (God of Prompt pattern).
  *
  * Choosing a prompt type rewrites the form context: body placeholder,

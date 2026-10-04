@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\User;
 use App\Services\GamificationService;
 use Illuminate\Http\Request;
@@ -80,6 +81,13 @@ class UserAdminController extends Controller
             if ($granting) {
                 app(GamificationService::class)->evaluateCriteria($user, 'verified');
             }
+
+            // F6 (v1.7.8): the bell row commits with the flag flip.
+            Notification::emit(
+                $user,
+                $granting ? Notification::TYPE_VERIFIED_GRANTED : Notification::TYPE_VERIFIED_REVOKED,
+                $granting ? 'Your account is now verified.' : 'Your verified check was revoked.',
+            );
         });
 
         $state = $user->is_verified ? 'verified ✓' : 'unverified';

@@ -47,6 +47,11 @@ function raidMatrixExemptRoutes(): array
         // proofs stream ONLY through orders/{order}/proof. `storage.local`
         // still registers its framework route.
         'storage.local' => 'Framework signed-URL file route (local private disk).',
+        // F6 (v1.7.8): the bell's two non-page GET doors — the JSON poll and
+        // the owner-bound mark-read redirect. NotificationTest sweeps their
+        // auth gates (guest 302, stranger 403, owner 302) directly.
+        'notifications.unread' => 'JSON poll endpoint (auth + throttle:30,1) — NotificationTest.',
+        'notifications.open' => 'Mark-read click-through redirect (owner-bound) — NotificationTest.',
     ];
 }
 

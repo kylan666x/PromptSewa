@@ -155,6 +155,12 @@ class User extends Authenticatable
         return $this->hasMany(Order::class, 'buyer_id');
     }
 
+    /** F6 (v1.7.8): the navbar bell rows (newest first at query time). */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function licenseGrants(): HasMany
     {
         return $this->hasMany(LicenseGrant::class);

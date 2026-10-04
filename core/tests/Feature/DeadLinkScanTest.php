@@ -59,6 +59,7 @@ function raidDeadLinkFormViewers(): array
         'checkout.packs.buy' => $auth,
         'checkout.manual.submit' => $auth,
         'orders.proof.store' => $auth,
+        'notifications.read-all' => $auth,
 
         // Staff-tier admin mutations (controller permits moderators).
         'admin.packs.store' => $staff,

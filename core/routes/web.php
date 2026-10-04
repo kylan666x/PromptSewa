@@ -163,6 +163,16 @@ Route::put('/dashboard/prompts/{prompt:slug}', [PromptEditController::class, 'up
 // --- Buyer library + checkout (PAY-001) ---------------------------------
 
 Route::middleware('auth')->group(function () {
+    // F6 (v1.7.8): the navbar bell. unread() is the 60s poll (throttled),
+    // read-all is the panel button, open() is the mark-read click-through.
+    Route::get('/notifications/unread', [\App\Http\Controllers\NotificationController::class, 'unread'])
+        ->middleware('throttle:30,1')
+        ->name('notifications.unread');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
+    Route::get('/notifications/{notification}/open', [\App\Http\Controllers\NotificationController::class, 'open'])
+        ->name('notifications.open');
+
     Route::get('/purchases', [CheckoutController::class, 'purchases'])->name('purchases.index');
 
     Route::get('/checkout/{order}', [CheckoutController::class, 'show'])->name('checkout.show');
