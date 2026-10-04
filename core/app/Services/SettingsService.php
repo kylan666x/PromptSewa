@@ -82,6 +82,23 @@ class SettingsService
         'mail_username' => '',
         'mail_from_address' => '',
         'mail_from_name' => '',
+
+        // S1 (v1.8.0): Sikka economy. sikka_enabled is the kill-switch —
+        // OFF until the founder flips it; while off no Sikka surface renders
+        // and the NPR rails behave exactly as in v1.7.8.
+        'sikka_enabled' => '0',
+        'sikka_buy_paisa_per_token' => '100',
+        'sikka_cashout_paisa_per_token' => '80',
+        'engage_daily_sikka' => '1',
+        'engage_publish_sikka' => '2',
+        'engage_rating_sikka' => '1',
+        'engage_daily_cap_sikka' => '5',
+        'sikka_cashout_min' => '500',
+
+        // S9 (v1.8.0): Sikka icon brand assets (admin-managed, shipped by
+        // upload — never in the release zip).
+        'sikka-icon-path' => '',
+        'sikka-icon-mono-path' => '',
     ];
 
     public function get(string $key, ?string $default = null): ?string

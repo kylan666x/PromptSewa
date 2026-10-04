@@ -104,7 +104,15 @@ class PromptFactory extends Factory
 
     public function priced(int $paisa): static
     {
+        // S1 (v1.8.0): the model's saving hook mirrors price_sikka from the
+        // paisa side — factories never need to set both.
         return $this->state(fn () => ['price_cents' => $paisa]);
+    }
+
+    /** Sikka price of record; price_cents is derived by the model hook. */
+    public function sikkaPriced(int $sikka): static
+    {
+        return $this->state(fn () => ['price_sikka' => $sikka]);
     }
 
     public function commercial(): static

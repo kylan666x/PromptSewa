@@ -47,6 +47,11 @@ class Payout extends Model
         self::METHOD_BANK,
     ];
 
+    /** S1 (v1.8.0): which ledger funded this withdrawal — npr | sikka. */
+    final public const SOURCE_NPR = 'npr';
+
+    final public const SOURCE_SIKKA = 'sikka';
+
     protected $fillable = [
         'user_id',
         'amount_paisa',
@@ -57,15 +62,26 @@ class Payout extends Model
         'decided_by',
         'decided_at',
         'note',
+        'source_currency',
+        'sikka_amount',
+        'settled_npr_paisa',
     ];
 
     protected function casts(): array
     {
         return [
             'amount_paisa' => 'integer',
+            'sikka_amount' => 'integer',
+            'settled_npr_paisa' => 'integer',
             'requested_at' => 'datetime',
             'decided_at' => 'datetime',
         ];
+    }
+
+    /** True when this payout spent Sikka (amount_paisa is 0, sikka_amount holds the value). */
+    public function isSikkaSource(): bool
+    {
+        return $this->source_currency === self::SOURCE_SIKKA;
     }
 
     protected static function booted(): void

@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\File;
  *
  * Skips cleanly when no local MySQL is reachable (SQLite-only CI machines).
  */
-
 function parityMysqlConfig(): ?array
 {
     $host = getenv('DB_PARITY_HOST') ?: '127.0.0.1';
@@ -38,7 +37,7 @@ function parityMysqlConfig(): ?array
     }
 }
 
-test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and keeps rows', function () {
+test('v1.4.3-schema database migrates the legacy trio plus every v1.8.0 migration via pv:update and keeps rows', function () {
     $mysql = parityMysqlConfig();
 
     if ($mysql === null) {
@@ -101,6 +100,18 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
             // excluded from the schema build because manual_payment_methods
             // does not exist yet at v1.4.3 state.
             '2026_09_30_190000_add_kind_to_manual_payment_methods',
+            // v1.8.0 (S1/S8): the whole Sikka batch — the base schema is
+            // "prod before the v1.8.0 release", so every Sikka migration
+            // must ride the update, not the build.
+            '2026_10_04_160000_create_sikka_transactions_table',
+            '2026_10_04_161000_add_price_sikka_to_prompts_table',
+            '2026_10_04_162000_add_sikka_rail_to_orders_table',
+            '2026_10_04_163000_create_sikka_packs_table',
+            '2026_10_04_164000_create_membership_plans_table',
+            '2026_10_04_165000_create_memberships_table',
+            '2026_10_04_166000_add_sikka_to_payouts_table',
+            '2026_10_04_167000_add_membership_plan_id_to_order_items_table',
+            '2026_10_04_168000_add_sikka_settings',
         ];
 
         DB::statement('CREATE TABLE migrations (id int unsigned not null auto_increment primary key, migration varchar(255) not null, batch int not null)');
@@ -139,7 +150,7 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
         $exit = Artisan::call('pv:update', ['--no-extract' => true]);
         $output = trim(Artisan::output());
 
-        // Exactly the two pending migrations ran — nothing replayed,
+        // Exactly the pending migrations ran — nothing replayed,
         // nothing from-zero.
         $ran = DB::table('migrations')->whereIn('migration', $pending)->pluck('migration')->all();
         expect($exit)->toBe(Command::SUCCESS, 'pipeline failed: '.$output)
@@ -147,7 +158,7 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
 
         $batchMax = DB::table('migrations')->max('batch');
         $latestBatchCount = DB::table('migrations')->where('batch', $batchMax)->count();
-        expect($latestBatchCount)->toBe(3, 'exactly 130000+130100+190000 in the latest batch');
+        expect($latestBatchCount)->toBe(count($pending), 'exactly the legacy trio + the v1.8.0 Sikka batch in the latest batch');
 
         // Sample rows: the buyer's row SURVIVES with its exact identity —
         // count may grow only if test-env seeding ran (local machines);
@@ -160,7 +171,16 @@ test('v1.4.3-schema database migrates exactly 130000+130100 via pv:update and ke
         // New schema objects exist.
         expect(DB::getSchemaBuilder()->hasTable('manual_payment_methods'))->toBeTrue()
             ->and(DB::getSchemaBuilder()->hasColumn('orders', 'manual_txn_id'))->toBeTrue()
-            ->and(DB::getSchemaBuilder()->hasColumn('manual_payment_methods', 'kind'))->toBeTrue();
+            ->and(DB::getSchemaBuilder()->hasColumn('manual_payment_methods', 'kind'))->toBeTrue()
+            // v1.8.0 S1 objects ride the same batch.
+            ->and(DB::getSchemaBuilder()->hasTable('sikka_transactions'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasTable('sikka_packs'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasTable('membership_plans'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasTable('memberships'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasColumn('prompts', 'price_sikka'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasColumn('orders', 'sikka_amount'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasColumn('payouts', 'source_currency'))->toBeTrue()
+            ->and(DB::getSchemaBuilder()->hasColumn('order_items', 'membership_plan_id'))->toBeTrue();
 
         // D4 gate: on a production deploy the demo/bulk/flagship seeders
         // hard-refuse (locked by ReleaseHygieneTest); on this test-env run

@@ -20,9 +20,20 @@ class OrderFactory extends Factory
             'subtotal_paisa' => 50_000,
             'tax_paisa' => 0,
             'total_paisa' => 50_000,
-            'currency' => 'NPR',
+            // S1 (v1.8.0): the rail marker — lowercase npr | sikka.
+            'currency' => Order::CURRENCY_NPR,
+            'sikka_amount' => 0,
             'idempotency_key' => Str::uuid()->toString(),
         ];
+    }
+
+    /** Order riding the Sikka rail: balance IS the payment. */
+    public function sikka(int $amount): static
+    {
+        return $this->state(fn () => [
+            'currency' => Order::CURRENCY_SIKKA,
+            'sikka_amount' => $amount,
+        ]);
     }
 
     public function paid(): static

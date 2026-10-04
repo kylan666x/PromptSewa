@@ -17,6 +17,7 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'pack_id',
+        'membership_plan_id',
         'prompt_id',
         'price_paisa',
         'currency',
@@ -54,6 +55,12 @@ class OrderItem extends Model
     public function pack(): BelongsTo
     {
         return $this->belongsTo(Pack::class);
+    }
+
+    /** S5 (v1.8.0): membership plan lines ride the ordinary order pipeline. */
+    public function membershipPlan(): BelongsTo
+    {
+        return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
     }
 
     /** Line total in paisa (integer math only). */

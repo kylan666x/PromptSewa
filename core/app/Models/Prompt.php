@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\SettingsService;
 use Database\Factories\PromptFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -60,14 +61,61 @@ class Prompt extends Model
         'visibility',
         'search_text',
         'license_tier',
+        'price_sikka',
         'price_cents',
         'status',
         'type',
     ];
 
+    /**
+     * S1 (v1.8.0): Sikka is the price of record, price_cents is the derived
+     * NPR mirror. The pair is kept consistent at save: when exactly one
+     * side is being written it derives the other — legacy paisa writers
+     * (factories, seeders, pre-Sikka code) land a coherent price_sikka, the
+     * Sikka authoring form lands a coherent price_cents, and both-dirty
+     * writes are honored as-is (the backfill). free with no decimals.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Prompt $prompt): void {
+            $sikkaDirty = $prompt->isDirty('price_sikka');
+            $centsDirty = $prompt->isDirty('price_cents');
+
+            if (! $sikkaDirty && ! $centsDirty) {
+                return;
+            }
+
+            $buy = $prompt->buyRatePaisa();
+
+            if ($sikkaDirty && ! $centsDirty) {
+                // The prescribed direction: price_cents = price_sikka × buy.
+                $prompt->price_cents = max(0, (int) $prompt->price_sikka) * $buy;
+            } elseif ($centsDirty && ! $sikkaDirty) {
+                // Mirror direction: never let a paid paisa price look free.
+                $paisa = max(0, (int) $prompt->price_cents);
+                $prompt->price_sikka = $paisa === 0 ? 0 : intdiv($paisa + $buy - 1, $buy);
+            }
+        });
+    }
+
+    /** The configured buy rate in paisa per Sikka (default 100 = NPR 1). */
+    public function buyRatePaisa(): int
+    {
+        $value = (int) app(SettingsService::class)->get('sikka_buy_paisa_per_token', '100');
+
+        return max(1, min(500, $value));
+    }
+
+    /** True when this listing is free in Sikka (the price of record). */
+    public function isFree(): bool
+    {
+        return (int) $this->price_sikka === 0;
+    }
+
     protected function casts(): array
     {
         return [
+            'price_sikka' => 'integer',
             'price_cents' => 'integer',
             'download_count' => 'integer',
             'fork_count' => 'integer',

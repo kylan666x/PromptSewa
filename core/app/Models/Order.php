@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Order extends Model
 {
@@ -21,6 +22,11 @@ class Order extends Model
 
     final public const STATUS_REFUNDED = 'refunded';
 
+    /** S1 (v1.8.0): the rail marker in `currency` — npr | sikka. */
+    final public const CURRENCY_NPR = 'npr';
+
+    final public const CURRENCY_SIKKA = 'sikka';
+
     protected $fillable = [
         'buyer_id',
         'status',
@@ -28,6 +34,8 @@ class Order extends Model
         'tax_paisa',
         'total_paisa',
         'currency',
+        'sikka_amount',
+        'meta',
         'idempotency_key',
         'payment_method',
         'payment_reference',
@@ -44,9 +52,17 @@ class Order extends Model
             'subtotal_paisa' => 'integer',
             'tax_paisa' => 'integer',
             'total_paisa' => 'integer',
+            'sikka_amount' => 'integer',
+            'meta' => 'array',
             'paid_at' => 'datetime',
             'manual_submitted_at' => 'datetime',
         ];
+    }
+
+    /** True when this order rides the Sikka rail (balance IS the payment). */
+    public function isSikkaRail(): bool
+    {
+        return $this->currency === self::CURRENCY_SIKKA;
     }
 
     public function buyer(): BelongsTo
@@ -62,6 +78,12 @@ class Order extends Model
     public function isPaid(): bool
     {
         return $this->status === self::STATUS_PAID;
+    }
+
+    /** Membership plan ids carried by this order's lines (S5 rail). */
+    public function membershipPlanIds(): Collection
+    {
+        return $this->items()->whereNotNull('membership_plan_id')->pluck('membership_plan_id');
     }
 
     public function isPending(): bool
