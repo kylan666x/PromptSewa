@@ -52,6 +52,11 @@
                             @endif
                             {{-- C3 (v1.4.4): TXN id + submitted-at + proof preview
                                  (staff-only private route — never a raw storage URL). --}}
+                            @if ($order->manual_note)
+                                {{-- F5: the buyer's note is its own desk line — it
+                                     never replaces the Method · Reference above. --}}
+                                <p class="max-w-[200px] truncate text-xs text-ink/70" title="{{ $order->manual_note }}">Note: {{ $order->manual_note }}</p>
+                            @endif
                             @if ($order->manual_txn_id)
                                 <p class="mt-1 font-mono text-[11px] text-ink/70">TXN: {{ $order->manual_txn_id }}</p>
                             @endif

@@ -196,7 +196,7 @@ test('the permanent route list stays in sync — every named GET route is either
         'checkout.esewa.pay', // POST-like redirect flow, covered by CheckoutServiceTest
         'purchases.download', // file download — not an HTML page
         'orders.proof.show', // private proof image — not an HTML page
-        'storage.proofs', // private proof static file route
+        'storage.local', // framework signed-URL file route for the local private disk (surfaces by name now that the proofs disk no longer serves)
         'prompts.versions.restore', // POST
         'dashboard.prompts.store', 'dashboard.prompts.update', 'dashboard.profile.update', // POST/PUT
         'dashboard.earnings.request', 'dashboard.earnings.cancel', // POST

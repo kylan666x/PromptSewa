@@ -42,13 +42,10 @@ function raidMatrixExemptRoutes(): array
 {
     return [
         'up' => 'Framework health endpoint (Laravel-generated name, no app session).',
-        // Laravel registers file-serving routes for every local disk with
-        // `serve => true`. The proofs disk (B2 in RA1) is `private`
-        // visibility, so the route 404s without a valid signed URL in
-        // production — it is not an open leak, but the raid catalog records
-        // it as a hardening item (proofs are promised to stream ONLY through
-        // orders/{order}/proof).
-        'storage.proofs' => 'Framework signed-URL file route (private proofs disk) — catalog BH-P3-01.',
+        // F5 (v1.7.8): the proofs disk no longer sets `serve => true`, so the
+        // framework `storage.proofs` route (BH-P3-01) no longer exists —
+        // proofs stream ONLY through orders/{order}/proof. `storage.local`
+        // still registers its framework route.
         'storage.local' => 'Framework signed-URL file route (local private disk).',
     ];
 }

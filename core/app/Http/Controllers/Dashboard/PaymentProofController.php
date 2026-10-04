@@ -56,11 +56,14 @@ class PaymentProofController extends Controller
             'manual_txn_id' => trim($validated['txn_id']),
             'manual_proof_path' => $newPath,
             'manual_submitted_at' => now(),
-            // Keep the optional note readable next to the proof (plain text
-            // column). Absent/empty note preserves the existing reference.
-            'payment_reference' => trim((string) ($validated['note'] ?? '')) !== ''
-                ? mb_substr(trim((string) $validated['note']), 0, 180)
-                : $order->payment_reference,
+            // F5 (v1.7.8): the note lives in its OWN column (manual_note).
+            // Before this, a non-empty note overwrote payment_reference and
+            // the admin desk lost the Method · Reference line. The reference
+            // is the order's historical record — never rewritten here.
+            // Absent/empty note preserves the existing one.
+            'manual_note' => trim((string) ($validated['note'] ?? '')) !== ''
+                ? mb_substr(trim((string) $validated['note']), 0, 500)
+                : $order->manual_note,
         ])->save();
 
         if ($oldPath !== null && $oldPath !== $newPath) {

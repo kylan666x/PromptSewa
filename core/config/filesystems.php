@@ -50,10 +50,12 @@ return [
         // C3 (v1.4.4): payment proof screenshots are quasi-financial data —
         // stored OUTSIDE the public disk and served exclusively through an
         // owner/staff controller route. Never referenced via Storage::url().
+        // F5 (v1.7.8): `serve => true` DROPPED (BH-P3-01) — it registered an
+        // unauthenticated PUT storage/{path} upload route for this private
+        // disk. Proofs stream ONLY through orders.proof.show.
         'proofs' => [
             'driver' => 'local',
             'root' => storage_path('app/proofs'),
-            'serve' => true,
             'throw' => false,
             'report' => false,
         ],

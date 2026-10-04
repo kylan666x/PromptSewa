@@ -241,8 +241,50 @@ test('buyer submits TXN id + proof screenshot on their pending manual order', fu
         ->and($order->manual_proof_path)->not->toBeNull()
         ->and($order->manual_submitted_at)->not->toBeNull()
         ->and(Storage::disk('proofs')->exists($order->manual_proof_path))->toBeTrue()
+        // F5 (v1.7.8): the note lands in its OWN column — payment_reference
+        // (Method · Reference) is the order's historical record and survives.
+        ->and($order->payment_reference)->toBe('First · TXN-1')
+        ->and($order->manual_note)->toBe('sent from eSewa mobile')
         // Submission grants NOTHING — approval is the only grant path.
         ->and(LicenseGrant::where('user_id', $buyer->id)->count())->toBe(0);
+});
+
+// F5 (v1.7.8): mediator ruling — before this, a non-empty proof note was
+// written into payment_reference, so the admin desk lost the Method ·
+// Reference line. The note is now its own column and its own desk line.
+test('the proof note is its own admin desk line and never rewrites the reference', function () {
+    Storage::fake('proofs');
+    $buyer = User::factory()->create();
+    $order = buyerOrder($buyer);
+    $order->fill(['payment_method' => 'manual', 'payment_reference' => 'eSewa · TXN-ORIGINAL'])->save();
+
+    $this->actingAs($buyer)
+        ->post(route('orders.proof.store', $order), [
+            'txn_id' => '9F3K2L8Q',
+            'proof' => proofFile(),
+            'note' => 'Paid via eSewa batch 42',
+        ])
+        ->assertRedirect();
+
+    $fresh = $order->refresh();
+
+    expect($fresh->payment_reference)->toBe('eSewa · TXN-ORIGINAL')
+        ->and($fresh->manual_note)->toBe('Paid via eSewa batch 42');
+
+    // The admin desk serves BOTH lines — the reference line is not replaced.
+    $html = $this->actingAs(mpAdmin())->get(route('admin.orders.index'))->assertOk()->getContent();
+
+    expect(str_contains($html, 'eSewa · TXN-ORIGINAL'))->toBeTrue()
+        ->and(str_contains($html, 'Note: Paid via eSewa batch 42'))->toBeTrue()
+        ->and(str_contains($html, 'Note: eSewa · TXN-ORIGINAL'))->toBeFalse();
+
+    // Resubmitting without a note preserves the existing note and reference.
+    $this->actingAs($buyer)
+        ->post(route('orders.proof.store', $order), ['txn_id' => '9F3K2L8Q-2', 'proof' => proofFile()])
+        ->assertRedirect();
+
+    expect($order->refresh()->manual_note)->toBe('Paid via eSewa batch 42')
+        ->and($order->payment_reference)->toBe('eSewa · TXN-ORIGINAL');
 });
 
 // R6 (v1.7.7 raid): BH-R6-01 — the browser gate found the proof form was

@@ -34,6 +34,7 @@ class Order extends Model
         'manual_txn_id',
         'manual_proof_path',
         'manual_submitted_at',
+        'manual_note',
         'paid_at',
     ];
 

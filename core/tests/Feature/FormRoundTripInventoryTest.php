@@ -217,7 +217,7 @@ function raidWriteRouteExemptions(): array
         'admin.badges.update' => 'No rendered edit form (badge edits ship as store/destroy only) — audited against the served HTML.',
         'checkout.esewa.verify' => 'eSewa gateway success_url POST — the gateway posts here, never a browser form.',
         'payments.esewa.webhook' => 'External gateway webhook POST — no browser surface; settlement mutations are locked by WalletServiceTest.',
-        'storage.proofs.upload' => 'Framework signed-URL upload route from `serve => true` on the proofs disk (BH-P3-01) — removed by the F5 config fix.',
+        'storage.local.upload' => 'Framework signed-URL upload route for the local private disk (`serve => true`) — framework-owned, never app-advertised (the F5 proofs fix exposed it: same-URI framework routes shadow each other).',
     ];
 }
 
