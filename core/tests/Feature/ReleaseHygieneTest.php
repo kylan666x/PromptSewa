@@ -172,6 +172,26 @@ test('pv:update purges bootstrap caches and reloads config so view:cache succeed
 });
 
 // ---------------------------------------------------------------------------
+// BH-R9-04 (v1.7.8) — the suite must not leak testing bootstrap caches
+// ---------------------------------------------------------------------------
+
+test('the suite guardian removes testing bootstrap caches so dev boots stay clean', function () {
+    // Simulate what an in-test pv:update run leaves behind: a config cache
+    // with the TESTING environment baked in (sqlite :memory:, array mail).
+    File::put(base_path('bootstrap/cache/config.php'), "<?php return ['environment' => 'testing', 'database' => ['default' => 'sqlite']];");
+    File::put(base_path('bootstrap/cache/routes-v7.php'), '<?php return [];');
+
+    expect(File::exists(base_path('bootstrap/cache/config.php')))->toBeTrue();
+
+    // The guardian is what Pest.php's afterEach runs for every test; proving
+    // it here keeps the cleanup itself from silently rotting.
+    removeTestingBootstrapCaches();
+
+    expect(File::exists(base_path('bootstrap/cache/config.php')))->toBeFalse()
+        ->and(File::exists(base_path('bootstrap/cache/routes-v7.php')))->toBeFalse();
+});
+
+// ---------------------------------------------------------------------------
 // H3 — cache rebuild contract (post-deploy hotfix 2)
 // ---------------------------------------------------------------------------
 

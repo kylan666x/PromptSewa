@@ -172,7 +172,7 @@
                      P4 (v1.7.1): the dropdown keeps DISTINCT "My profile" (public)
                      and "Edit profile" entries — mobile's You slot also lands on
                      the public profile now. --}}
-                <div x-data="{ open: false }" class="relative">
+                <div x-data="{ open: false, lightbox: false }" class="relative">
                     <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-ink/5" aria-label="Account menu" :aria-expanded="open">
                         {{-- G1 (v1.7.4): no overflow-hidden here — the frame
                              protrudes past the avatar and this pill hugs it. --}}
@@ -192,6 +192,25 @@
                             </p>
                             <x-user-handle :user="auth()->user()" size="text-xs" class="block"/>
                         </div>
+                        {{-- F2 (v1.7.8): the founder's three profile-picture
+                             entries — the same menu the hero avatar opens,
+                             reachable from the navbar dropdown too. Server-
+                             rendered markup; Alpine only toggles it. --}}
+                        <button type="button" role="menuitem" @click="open = false; lightbox = true" data-testid="nav-avatar-view"
+                                class="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                            View profile picture
+                        </button>
+                        <a role="menuitem" href="{{ route('dashboard.profile.edit') }}#avatar" data-testid="nav-avatar-upload"
+                           class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"/></svg>
+                            Upload / edit picture
+                        </a>
+                        <a role="menuitem" href="{{ route('dashboard.profile.edit') }}#avatar-frame" data-testid="nav-avatar-frame"
+                           class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/></svg>
+                            Edit frame
+                        </a>
                         <a href="{{ route('creators.show', auth()->user()) }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink" data-testid="nav-view-profile">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
                             My profile
@@ -224,6 +243,11 @@
                             </form>
                         </div>
                     </div>
+
+                    {{-- F2 (v1.7.8): lightbox shares the dropdown's Alpine
+                         scope, so "View profile picture" works from the
+                         navbar as well as the hero menu. --}}
+                    <x-avatar-lightbox :user="auth()->user()"/>
                 </div>
             @endauth
             @guest

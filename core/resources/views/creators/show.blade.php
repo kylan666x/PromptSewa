@@ -65,7 +65,15 @@
                          offset up-left inside it. Zero geometry overrides
                          now; tests/Arch/UserAvatarGeometryTest bans them
                          repo-wide. --}}
-                    <x-user-avatar :user="$creator" size="xl" :frame="$creator->activeFrame"/>
+                    {{-- F2 (v1.7.8): your own hero avatar opens the
+                         profile-picture menu (view lightbox / upload /
+                         frame). Strangers get the plain avatar — the menu
+                         markup is owner-only by construction. --}}
+                    @if ($isOwner)
+                        <x-avatar-menu :user="$creator" :frame="$creator->activeFrame" size="xl"/>
+                    @else
+                        <x-user-avatar :user="$creator" size="xl" :frame="$creator->activeFrame"/>
+                    @endif
 
                     {{-- Text block: normal document flow, pt clearance, truncate --}}
                     <div class="min-w-0 flex-1 pb-1">

@@ -72,6 +72,12 @@ class User extends Authenticatable
             'is_official' => 'boolean',
             'banned_at' => 'datetime',
             'xp' => 'integer',
+            // F2 (v1.7.8): the frame picker pre-checks radios with a STRICT
+            // comparison (`$user->active_frame_id === $frame->id`). Without
+            // the cast a MySQL driver that hands back "2" instead of 2
+            // silently unchecks the equipped frame — the picker then looks
+            // like the frame was never saved. SQLite happened to return ints.
+            'active_frame_id' => 'integer',
         ];
     }
 

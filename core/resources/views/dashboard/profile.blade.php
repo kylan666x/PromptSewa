@@ -53,8 +53,9 @@
                 </div>
             </section>
 
-            {{-- Images --}}
-            <section class="rounded-2xl border border-ink/10 bg-white p-6">
+            {{-- Images — F2 (v1.7.8): #avatar is the anchor the
+                 profile-picture menu links to. --}}
+            <section id="avatar" class="rounded-2xl border border-ink/10 bg-white p-6">
                 <h2 class="text-sm font-semibold text-ink">Photos</h2>
                 <p class="mt-1 text-xs text-ink/50">JPG/PNG/WebP. Files are compressed automatically — no need to shrink them first.</p>
 
@@ -104,7 +105,8 @@
             {{-- G3 (v1.7.0) + W4 (v1.7.3): profile frame picker — emerald
                  unlocked / ink locked chips with honest {have}/{need} progress;
                  equipping a locked frame 422s server-side. --}}
-            <section class="rounded-2xl border border-ink/10 bg-white p-6">
+            {{-- F2 (v1.7.8): #avatar-frame is the anchor "Edit frame" links to. --}}
+            <section id="avatar-frame" class="rounded-2xl border border-ink/10 bg-white p-6">
                 <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Avatar frame</h2>
                 <p class="mt-1 text-xs text-ink/50">Optional decorative ring shown on your profile, the navbar and the feed. Locked frames unlock with their criterion.</p>
                 <div class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
