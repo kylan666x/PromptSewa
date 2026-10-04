@@ -52,15 +52,24 @@
                 @if ($order->manual_txn_id)
                     <p class="mt-1 font-mono text-xs text-ink/60">TXN: {{ $order->manual_txn_id }} · proof submitted {{ $order->manual_submitted_at?->format('M j, Y H:i') }}</p>
                 @endif
-                @if ($order->manual_proof_path)
+                @if (! $order->isPending() && $order->manual_proof_path)
+                    {{-- Decided orders keep a read-only proof preview; the
+                         upload/replace form below is for pending orders. --}}
                     <a href="{{ route('orders.proof.show', $order) }}" target="_blank" class="mt-3 inline-block">
                         <img src="{{ route('orders.proof.show', $order) }}" alt="Your payment proof" class="mx-auto max-h-40 rounded-xl border border-ink/10 object-contain">
                     </a>
-                @else
-                    {{-- Proof not yet uploaded — the pending-order page offers the form. --}}
                 @endif
                 <a href="{{ route('purchases.index') }}" class="mt-3 inline-block font-mono text-xs font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Go to my library &rarr;</a>
             </div>
+
+            {{-- BH-R6-01 (v1.7.7 raid): the upload form is part of THIS state.
+                 It used to render only for manual + no-reference — a state the
+                 buyer flow never reaches — so the advertised proof upload was
+                 a dead action. Pending orders always carry the form now; it
+                 previews/replaces the current proof when one exists. --}}
+            @if ($order->isPending())
+                @include('dashboard._payment-proof-form', ['order' => $order])
+            @endif
         @elseif ($order->payment_method === 'manual' && $order->isPending())
             @include('dashboard._payment-proof-form', ['order' => $order])
         @else
