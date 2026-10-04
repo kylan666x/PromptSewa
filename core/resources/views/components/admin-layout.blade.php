@@ -27,6 +27,10 @@
                     'admin.reports.index' => ['Reports', '⚑', false],
                     'admin.packs.index' => ['Packs', '📦', false],
                     'admin.payments.edit' => ['Payments', '💳', false],
+                    // F1 (v1.7.8): the Finance desk existed since v1.6.0 but had
+                    // no pill — reachable only by typing the URL (BH-R9-01).
+                    // Admin-only: FinanceController::index 403s moderators.
+                    'admin.finance' => ['Finance', '∑', true],
                     'admin.brand.edit' => ['Brand', '◆', false],
                     'admin.tool-logos.index' => ['Tool logos', '✦', false],
                     'admin.update' => ['Software update', '⬆', false],
