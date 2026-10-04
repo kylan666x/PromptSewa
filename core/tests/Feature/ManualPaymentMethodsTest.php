@@ -245,6 +245,25 @@ test('buyer submits TXN id + proof screenshot on their pending manual order', fu
         ->and(LicenseGrant::where('user_id', $buyer->id)->count())->toBe(0);
 });
 
+// R6 (v1.7.7 raid): BH-R6-01 — the browser gate found the proof form was
+// only rendered for a state the buyer flow never produces (manual method set
+// but NO reference). After checkout.manual.submit stores the reference, the
+// page swaps to the "reference received" box and the upload form vanishes —
+// so the advertised "upload your payment proof" step was unreachable in the
+// real UI. This test pins the served page: reference box AND upload form.
+test('a pending manual order with a reference still offers the proof upload form (BH-R6-01)', function () {
+    $buyer = User::factory()->create();
+    $order = buyerOrder($buyer);
+    $order->fill(['payment_method' => 'manual', 'payment_reference' => 'eSewa — 98 · TXN-1'])->save();
+
+    $response = $this->actingAs($buyer)->get(route('checkout.show', $order))->assertOk();
+
+    $response->assertSee('Payment reference received')
+        ->assertSee(route('orders.proof.store', $order), false)
+        ->assertSee('name="txn_id"', false)
+        ->assertSee('name="proof"', false);
+});
+
 test('proof form enforces required fields and length limits', function () {
     Storage::fake('proofs');
     $buyer = User::factory()->create();
