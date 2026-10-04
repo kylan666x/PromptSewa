@@ -79,6 +79,7 @@ function raidDeadLinkFormViewers(): array
         'admin.badges.store' => $admin,
         'admin.badges.award' => $admin,
         'admin.badges.destroy' => $admin,
+        'admin.badges.scan' => $admin,
         'admin.brand.update' => $admin,
         'admin.email.update' => $admin,
         'admin.email.test' => $admin,

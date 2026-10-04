@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Badge;
 use App\Models\User;
+use App\Services\CriterionEvaluator;
 use App\Services\GamificationService;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
@@ -31,6 +32,10 @@ class BadgeAdminController extends Controller
         return view('admin.badges', [
             'badges' => Badge::query()->withCount('userBadges')->orderBy('name')->get(),
             'users' => User::query()->orderBy('name')->limit(200)->get(['id', 'name']),
+            // F3 (v1.7.8): all evaluator criteria + "manual only", each with
+            // a one-line description (single source: CriterionEvaluator).
+            'criteria' => CriterionEvaluator::CRITERIA,
+            'criterionDescriptions' => CriterionEvaluator::DESCRIPTIONS,
         ]);
     }
 
@@ -104,13 +109,28 @@ class BadgeAdminController extends Controller
             : back()->with('success', "\"{$badge->name}\" awarded to {$user->name}.");
     }
 
+    /**
+     * F3 (v1.7.8): the idempotent backfill behind the "Scan now" button —
+     * same service call as pv:award-scan, so the two doors never drift.
+     */
+    public function scan(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $stats = $this->gamification->scanAll();
+
+        return back()->with('success', "Award scan complete: {$stats['users']} user(s) checked, {$stats['awarded']} badge(s) awarded.");
+    }
+
     private function validateBadge(Request $request, ?Badge $badge = null): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:80'],
             'slug' => ['required', 'alpha_dash', 'max:100', Rule::unique('badges', 'slug')->ignore($badge?->id)],
             'description' => ['nullable', 'string', 'max:255'],
-            'criterion' => ['required', Rule::in(Badge::CRITERIA)],
+            // F3: every evaluator criterion (manual included) is a valid
+            // badge criterion — manual/top_rated simply never auto-award.
+            'criterion' => ['required', Rule::in(CriterionEvaluator::CRITERIA)],
             'image' => ['nullable', 'image', 'max:2048'], // 2 MB ceiling (G1)
         ]);
     }

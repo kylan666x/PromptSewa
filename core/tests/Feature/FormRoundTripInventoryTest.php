@@ -193,6 +193,7 @@ function raidFormInventory(): array
         'admin.badges.store' => 'FormRoundTripInventoryTest (R3)',
         'admin.badges.award' => 'GamificationTest',
         'admin.badges.destroy' => 'FormRoundTripInventoryTest (R3)',
+        'admin.badges.scan' => 'BadgeCriteriaTest (F3)',
         'admin.frames.store' => 'FormRoundTripInventoryTest (R3)',
         'admin.frames.update' => 'FrameTruthTest',
         'admin.frames.destroy' => 'FormRoundTripInventoryTest (R3)',

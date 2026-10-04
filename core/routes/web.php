@@ -302,6 +302,9 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'update'])->name('badges.update');
     Route::delete('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'destroy'])->name('badges.destroy');
     Route::post('/badges/award', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'award'])->name('badges.award');
+    // F3 (v1.7.8): idempotent award backfill (admin-only in the controller,
+    // throttled — a human clicking twice must not queue a second scan).
+    Route::post('/badges/scan', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'scan'])->middleware('throttle:6,1')->name('badges.scan');
 
     // G3 (v1.7.0): frame CRUD.
     Route::get('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'index'])->name('frames.index');

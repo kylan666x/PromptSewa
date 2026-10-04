@@ -30,6 +30,21 @@ class CriterionEvaluator
         'manual',
     ];
 
+    /**
+     * F3 (v1.7.8) — one-line, human descriptions for the admin criterion
+     * selects. Staff-judged and manual criteria say so outright, so an
+     * admin never wonders why a badge never auto-awards.
+     */
+    public const DESCRIPTIONS = [
+        'first_publish' => 'Auto: first published listing goes live.',
+        'first_sale' => 'Auto: first paid sale settles.',
+        'sales_10' => 'Auto: 10 total sales across published listings.',
+        'sales_50' => 'Auto: 50 total sales across published listings.',
+        'verified' => 'Auto: an admin grants the verified check.',
+        'top_rated' => 'Staff-judged: never auto-awards - award it by hand.',
+        'manual' => 'Manual only: never auto-awards - grant it by hand.',
+    ];
+
     /** Real trigger values per automatic criterion. */
     public const GOALS = [
         'first_publish' => 1,

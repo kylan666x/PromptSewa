@@ -33,3 +33,7 @@ Schedule::command('queue:prune-batches --hours=48')->dailyAt('03:10');
 // 4. Recalculate leaderboards from XP (PRD §3.4) — cheap on indexed tables,
 //    cached afterwards so visitors never trigger the query themselves.
 Schedule::command('promptsewa:recompute-leaderboards')->dailyAt('04:00');
+
+// 5. F3 (v1.7.8): backfill auto-award badge criteria. Idempotent — awards
+//    users who met a criterion before its badge existed, then no-ops daily.
+Schedule::command('pv:award-scan')->dailyAt('04:15')->description('Backfill missed badge criterion awards');

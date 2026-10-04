@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\GamificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Admin user management: search, inspect, change roles.
@@ -66,7 +68,19 @@ class UserAdminController extends Controller
     {
         abort_unless($request->user()?->isAdmin(), 403, 'Only admins can issue verified badges.');
 
-        $user->fill(['is_verified' => ! $user->is_verified])->save();
+        $granting = ! $user->is_verified;
+
+        // F3 (v1.7.8): verified has no natural event observer, so granting
+        // the check awards verified-criterion badges HERE — inside the same
+        // transaction as the flag flip (revoking keeps earned rows: badges
+        // are history, never clawed back).
+        DB::transaction(function () use ($user, $granting) {
+            $user->fill(['is_verified' => $granting])->save();
+
+            if ($granting) {
+                app(GamificationService::class)->evaluateCriteria($user, 'verified');
+            }
+        });
 
         $state = $user->is_verified ? 'verified ✓' : 'unverified';
 

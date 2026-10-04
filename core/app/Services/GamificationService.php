@@ -130,4 +130,43 @@ class GamificationService
             ->get()
             ->each(fn (Badge $badge) => $this->awardBadge($user, $badge));
     }
+
+    /**
+     * F3 (v1.7.8) — backfill scan: evaluates every automatic criterion for
+     * every user and awards matching active badges. Safe to run any time:
+     * `awardBadge` skips existing rows (and re-checks the UNIQUE gate), so a
+     * second run is a no-op. Used by `pv:award-scan` and the admin "Scan
+     * now" button — one implementation, two doors.
+     *
+     * @return array{users: int, awarded: int}
+     */
+    public function scanAll(): array
+    {
+        $users = 0;
+        $awarded = 0;
+
+        User::query()->chunkById(200, function ($chunk) use (&$users, &$awarded) {
+            foreach ($chunk as $user) {
+                $users++;
+
+                foreach (Badge::CRITERIA as $criterion) {
+                    if (! CriterionEvaluator::isMet($user, $criterion)) {
+                        continue;
+                    }
+
+                    Badge::query()
+                        ->where('criterion', $criterion)
+                        ->where('is_active', true)
+                        ->get()
+                        ->each(function (Badge $badge) use ($user, &$awarded) {
+                            if ($this->awardBadge($user, $badge, null, 'Backfill scan (pv:award-scan)') !== null) {
+                                $awarded++;
+                            }
+                        });
+                }
+            }
+        });
+
+        return ['users' => $users, 'awarded' => $awarded];
+    }
 }
