@@ -35,7 +35,90 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.7.6 — Auth & Mail (this release)
+### v1.7.7 — Bug-Hunt Raid (this release)
+
+Full-catalog raid (R0–R8) on branch `raid/v1.7.7`, cut from the v1.7.6
+release commit `5550630`. Every finding carries a failing repro commit, a
+fix commit, and a locking test — the single record of truth is
+[docs/BUG-HUNT-RAID.md](docs/BUG-HUNT-RAID.md).
+
+- **R0 — freeze & baseline.** Suite 511 passed / 14,309 assertions; update
+  zip byte-reproduced from the v1.7.6 handoff (SHA-256 `8c56f0da…`).
+  **Hygiene finding: no `v1.7.6` tag exists** (local or origin — tags stop
+  at v1.7.2); `main`'s release commit is the artifact of record. Retagging
+  is a release-process action → mediator.
+- **R1 — route × role matrix.** `RoleSurfaceMatrixTest`: every named GET
+  route × 7 fixtures (364 responses) asserted against its gate's promised
+  outcome, zero 500s, exactly one `<title>` per HTML 200, no Blade leaks,
+  distinct IPs so throttles can't poison the sweep. Found **BH-R1-01 (P1)**
+  — `/admin/comp-grants` served **200 to moderators** while its store
+  endpoint is admin-only; fixed with `abort_unless(isAdmin)` (`f63b55d`).
+  Also caught `storage.proofs` (see BH-P3-01 below).
+- **R2 — dead-link & dead-action scan.** `DeadLinkScanTest` resolves every
+  internal `href` and every form action in each surface **as the role that
+  sees it**. Found five P1s, all fixed in `102c924`: admin-only nav pills
+  rendered for moderators (5 dead 403 links), Users purge/adopt panels,
+  Orders approve/reject buttons, Payments/Brand/Manual-methods save forms,
+  and admin Prompts title links 404ing for staff on non-public rows.
+  `/update.php` exempted with a reason (docroot script).
+- **R3 — form round-trip inventory.** `FormRoundTripInventoryTest` reads
+  the **served** form (action, verb spoof, browser semantics for
+  inputs/selects/checkboxes) and submits it; a completeness scan fails the
+  suite if any Blade form action is missing from the inventory. New
+  round-trips: badge create/delete, frame CRUD + award/revoke, payout
+  request/cancel, buy-prompt, finance approve/settle/reject, security save,
+  purge/adopt preview.
+- **R4 — edge-state matrix.** `EdgeStateMatrixTest`: empty fixtures,
+  200-char title, Devanagari bio, deleted relations (`nullOnDelete`),
+  30-row pagination, checkout with both rails, impersonation chrome across
+  5 pages — **no new defects**; every state rendered honest copy.
+- **R5 — comp-grant form redesign (BH-001/BH-002, founder-mandated).**
+  Root cause: `CompGrantController` used the `published()` scope for the
+  picker, so drafts/pending/rejected prompts were invisible and not
+  grantable — "cannot see all of my prompts". Fix (`2bc402f`): full prompt
+  list (all statuses) + a new reusable `x-searchable-picker` Alpine
+  combobox (keyboard nav, chips, bounded list over 277 rows, no new
+  dependencies), two-column editor, money via `money_npr`. Repro locked at
+  `82f7c1b` (5 failing / 3 passing).
+- **R6 — browser gate** (real clicks/keys under `artisan serve`; screenshot
+  capture unavailable in this environment, so every step is DOM/a11y +
+  server state). Eight flows PASS: comp grant end-to-end, impersonate → act
+  → return, ban → login bounce, reset-mail (enumeration-proof notice, weak
+  password, bogus token; reset deliberately not completed on shared
+  fixtures), frame equip at two hole percents (19% / 31% insets = exactly
+  (100−hole)/2), mobile dock tabs at 390×844, typeahead verified seal, and
+  the **financial chain**: manual rail ON + method + pack (Rs. 599 = two
+  Maya prompts) + buyer (Dorje) checkout via manual reference + proof +
+  admin approve + creator payout request → reject/release → approve/settle,
+  ledger verified insert-only end to end. Found **BH-R6-01 (P1)**: the
+  proof upload form was a dead action (rendered only for "manual + no
+  reference"); repro `0337c4f`, fixed `28ff793` — pending manual orders keep
+  the form.
+- **R7 — fix & lock log.** All fixed findings re-verified: the six R1–R6
+  lock files → **40 passed / 1,678 assertions**.
+- **R8 — release.** Chip v1.7.7 in `core/config/app.php` **and both
+  builders** in lockstep; QA-MATRIX BH-block with locking test names;
+  `npm run build` + `view:clear` before zipping. Final suite **536 passed /
+  15,896 assertions** (2 skipped: the two install-artifact tests, because
+  the v1.7.7 **install** zip is not built yet — they skip by design when
+  the artifact is absent, while the source-level version-lockstep test
+  still ran; Arch suite inside the number). `dist/promptsewa-1.7.7-update.zip` — **452 entries**
+  (448 core + 4 docroot), **0.84 MB**, hygiene audit **CLEAN (0 forbidden
+  entries)**, **SHA-256 `16a1cbe83874f3520d74911ad227795a14aaa1500c08aa46a02e903d98860dc3`**
+  (rebuild is byte-identical — reproducible).
+- **Arch-suite proof (`--list-tests`, the §6.49 release gate).** **538**
+  tests enumerated, **6** of them Arch: `BladeFormVerbTest` (1),
+  `MigrationDropGuardTest` (1), `NoBladeLeakTest` (1),
+  `UserAvatarGeometryTest` (3) — all discovered, none fiction.
+- **Deliberately left open (mediator calls).** **BH-P3-01**: `proofs` disk
+  sets `serve => true`, registering an unused signed-URL `storage.proofs`
+  route alongside the owner/staff proof route — not a leak (private
+  visibility 404s without a signature), but surface worth removing in
+  `config/filesystems.php`. The **missing `v1.7.6` tag**. And a copy/UX
+  note: submitting a proof with a non-empty note replaces the visible
+  `payment_reference` with that note (by design, no money effect).
+
+### v1.7.6 — Auth & Mail (previous release)
 
 - **A1 — forgot password, complete flow.** `GET/POST /forgot-password` (`throttle:6,1`), `GET /forgot-password/sent`, `GET/POST /reset-password/{token}`, all inside the existing `guest` group. Tokens come from Laravel's Password broker against the baseline `password_reset_tokens` table (no new migration), 60-minute expiry from `config/auth.php`. Three paper-world views (`auth/forgot-password`, `auth/check-email`, `auth/reset-password`), all with `x-seo` noindex, all added to the permanent SEO crawl **in the same commit** (`SeoRouteCoverageTest` map + the POST exemptions). The reset form honours `captcha_form_reset` through `<x-captcha form="reset"/>` (`BotChallengeService::FORMS` already listed `reset`).
   - **Enumeration-proof**: an unknown address lands on the *identical* "Check your email" page as a real one, and `Notification::assertNothingSent()` locks it.
@@ -668,5 +751,9 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.7.6 (2026-10-02) | **Every `error` flash since v1.7.3 was invisible.** `app-layout` rendered `session('success')` and nothing else, so a suspended account was bounced to the home page with no explanation — and the new mail probe's honest failure report would have been swallowed the same way | The flash key was written by controllers but never read by a view; nothing asserted on the rendered layout for it | v1.7.6 (rose `role="alert"` toast beside the green one; the same §6.45 “silent lies are banned” rule that governs the bookmark fetch) |
 | v1.7.4 (2026-10-02) | **Saved heart lost its state on every refresh** (home, image gallery, search, creator profile, detail). Invisible to Pest: every functional test posts the toggle and asserts the row, and CSRF is skipped in tests, so nothing ever looked at what the ROUTE rendered. Browser-first repro under `artisan serve` as a plain member: `POST /bookmarks/{slug}` → **200** with the row written, then `aria-pressed="false"` after F5 — the toggle worked, the RENDER lied. Follow-on defect found only by looking at computed styles after a tap: the heart turned rose but stayed an OUTLINE (the SSR pair and Alpine's `:class` pair fought in the cascade), and the detail save button reverted a 419 in complete silence | `saved` lived only in Alpine — only the library grid passed `:saved` into `x-prompt-card`, so every other surface rendered the component's `false` default and the next page load undid the optimistic flip. Two secondary causes: the fetch sent no `X-CSRF-TOKEN` (419 was one expired session away, and non-OK responses were swallowed) and the failed-save toast existed on the card only | v1.7.4-H4 (`BookmarkedIds` per-request parity set + `ForgetPerRequestState`; `saved` server-rendered everywhere; hardened fetch contract with revert + rose toast on every heart surface; collision-free `x-show` icon pair; `SavedHeartParityTest` 12 locks; browser check is now a release gate — see §6.45–§6.46) |
 | v1.7.3 (2026-10-02) | Prompt body capped at 4,000 chars — creators of long system/agentic prompts hit the wall (feature request); latent prod risk: `prompt_versions.body` was still TEXT (65,535 BYTES) on techadda_main, so any future ceiling raise without a column widen would silently truncate multibyte bodies | validation-only ceiling from v1.0; the 2026_09_29 snapshot migration's `change()` had only taken effect on SQLite dev — MySQL prod never got the LONGTEXT | v1.7.3-hotfix (MAX_BODY_CHARS 50,000 constant + TEXT→LONGTEXT migration in the SAME release + rendered-route ceiling tests; see §9 watch-out 43) |
+| v1.7.7 (2026-10-04) | Admin → Comp grants served **200 to moderators** while its store endpoint was admin-only — a write-gated feature with an ungated read door (found pre-release by the raid's route × role matrix, never exploited) | only `store()` carried the admin gate; nothing swept read doors per role | v1.7.7 (BH-R1-01: `abort_unless(isAdmin)` + `RoleSurfaceMatrixTest`; repro/fix `ef2fc01`/`f63b55d`) |
+| v1.7.7 (2026-10-04) | Moderators saw **seven dead admin actions** — admin-only nav pills (5, each a 403), Users purge/adopt panels, Orders approve/reject buttons, Payments/Brand/Manual-methods save forms | write-route policies were enforced server-side but never mirrored into the views; nothing swept dead links/forms per role | v1.7.7 (BH-R2-01..05: role-aware rendering + `DeadLinkScanTest`; `a5fd871`/`102c924`) |
+| v1.7.7 (2026-10-04) | Founder: **“I cannot see all of my prompts”** in the comp-grant picker — drafts/pending/rejected prompts invisible and un-grantable | `published()` scope applied to both the picker and the store lookup — a filter nobody intended as a gate became one (same class as the v1.4.4 key mismatch) | v1.7.7 (BH-001/BH-002: full-status list + `x-searchable-picker` combobox; `82f7c1b`/`2bc402f`) |
+| v1.7.7 (2026-10-04) | **Buyers could not upload a payment proof** — the form rendered only for “manual + no reference”, a state `checkout.manual.submit` never leaves, so the advertised “upload your payment proof” step was a dead action (`orders.proof.store` unreachable from the served UI) | the checkout Blade's “manual + reference exists” branch pre-empted the branch that included the proof form; no test rendered the page in that state | v1.7.7 (BH-R6-01: the form renders for every pending manual order; repro/fix `0337c4f`/`28ff793`) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

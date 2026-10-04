@@ -260,15 +260,240 @@
 
 ## R6 — Browser gate
 
-_(pending)_
+Run under `php artisan serve` (`http://127.0.0.1:8123`) with the admin
+session, via the browser panel. Screenshot capture is unavailable in this
+environment (`webview not composited`), so every step is verified through
+DOM/a11y state plus server state, using real clicks and real key events.
+
+### 1. Comp grant end-to-end — **PASS**
+
+- `/admin/comp-grants` renders the redesigned form: two `role="combobox"`
+  pickers (recipient = 4 accounts, prompt = 26 prompts incl. draft,
+  rejected, archived), two-column grid, one submit.
+- Real click opens the prompt listbox (`display:block`, 26 options, capped
+  224px list). Real typing `arch` filters to 3 options and the list stays
+  open. Real ArrowDown + Enter picks: chip shows the title, hidden input
+  `prompt_id=26`, search box cleared, list closed.
+- Recipient picker same: `user_id=3` (Maya Tamang), chip renders.
+- Submit → redirect back with flash "Comp grant issued — Maya Tamang now
+  owns \"Archived — Twitter Thread Reformatter\" (ledger tier: comp)."
+- Ledger row (tinker): `license_grants` #1, user `maya@promptsewa.test`,
+  prompt 26, `license_tier=comp`, `issued_by=1`, reason recorded verbatim,
+  `status=active`, grant code issued.
+- A rejected-status prompt was grantable in the real UI — BH-001/BH-002 is
+  dead in the browser, not just in the locks. Clear button works.
+- Note: this gate issued one real comp grant in the dev DB; the ledger is
+  insert-only by design, so the row is kept.
+
+### 2. Impersonate → act → return — **PASS**
+
+- `/admin/users` → "Switch" on Maya (POST `/admin/users/3/impersonate`)
+  → chrome bar "Acting as @maya-tamang — returned session restores Aasha
+  Gurung" with a "Return to my account" form.
+- Acted as Maya: Alpine bookmark heart on the homepage → `POST
+  /bookmarks/follow-up-sequence-that-doesnt-stalk → 200`, `aria-pressed`
+  flips; DB row attributes to `maya@promptsewa.test` (not the admin);
+  toggling back removes it.
+- "Return to my account" (POST `/impersonation/stop`) lands back on
+  `/admin/users`, bar gone, admin nav restored.
+- Audit row: `impersonations` #1 admin → maya, started 08:20:35, ended
+  08:22:31. (This also covers the Alpine `bookmarkHeart` mutation.)
+
+### 3. Ban → login bounce — **PASS**
+
+- Admin → Users → Ban on Dorje: flash "Dorje Lama is now banned.", row
+  shows the "Banned — lift" button.
+- Incognito tab, login as `dorje@promptsewa.test` → lands on the homepage
+  unauthenticated with "This account has been suspended. Contact support if
+  you believe this is a mistake." (`RejectBannedUsers` logs the session out
+  and bounces to home by design — documented in the middleware).
+- Ban lifted: flash "Dorje Lama is now unbanned.", row back to "Ban".
+
+### 4. Reset-mail flow — **PASS**
+
+- `/forgot-password` → submit `maya@promptsewa.test` → `/forgot-password/sent`
+  with the enumeration-proof notice ("If that address belongs to an account…").
+- Mail (log driver) contains the signed link
+  `…/reset-password/<64-hex>?email=maya%40promptsewa.test`.
+- The link renders "Choose a new password" with the email prefilled and the
+  token hidden.
+- Submitting the weak literal `password` is rejected: "That password is too
+  common — choose something less guessable" (same on both fields).
+- A bogus token rejects on POST: "This password reset token is invalid."
+  (the GET form renders regardless — stock Laravel behaviour).
+- Deliberately did NOT complete a reset: the policy cannot restore the
+  shared fixture password, and changing a documented dev login would break
+  other threads. Verified no change: `Hash::check('password')` still true
+  and a fresh sign-in as Maya succeeds.
+
+### 5. Frame equip at two hole percents — **PASS**
+
+- Impersonated Maya → `/dashboard/profile`; both frames show "unlocked"
+  chips (empty criterion = free for everyone).
+- Equipped "x" (hole 62): flash "Profile updated.", both avatars in the
+  composite box carry `data-frame-hole="62"` and the circle is
+  `inset: 19%` — exactly (100−62)/2.
+- Equipped "Abyssal" (hole 38): `data-frame-hole="38"`, circle
+  `inset: 31%` (= (100−38)/2), Abyssal art in the frame layer.
+- Reset to "None": composite returns frameless (`data-frame-hole`
+  absent), flash "Profile updated.". Returned to admin.
+
+### 6. Dock tabs — **PASS**
+
+At 390×844 the mobile dock renders `fixed` with five tabs. Clicked through
+all five: Home → `/`, Library → `/prompts`, Add prompt →
+`/dashboard/prompts/create`, My library → `/purchases`, You →
+`/creators/aasha` (the signed-in account's profile). Every click navigated
+and `aria-current="page"` moved to the matching tab (the Add prompt action
+tab deliberately has no `aria-current`).
+
+### 7. Typeahead badges — **PASS**
+
+- Verified Bibek through the real admin Users button (flash "Bibek
+  Shrestha is now verified ✓").
+- Navbar search `bibek` → predictive dropdown row: name, @handle, prompt
+  count, his seeded Abyssal frame ring (W1 frame parity), and the saffron
+  verified seal (`aria-label="Verified creator"`).
+- Unverified him again (flash "Bibek Shrestha is now unverified.") and
+  re-ran the search: same row, frame ring still there, **zero** seals —
+  the badge is real data, not decoration.
+
+### 8. Financial chain — manual rail → pack → proof → approve → payout — **PASS**
+
+Walked entirely through served pages (admin session in the browser panel,
+buyer in an incognito tab as Dorje 4 **so the seller and the approver are
+never the same account**). One P1 found and fixed mid-flow (BH-R6-01).
+
+- **Rail setup (admin UI):** `/admin/payments` → _Enable checkout_ +
+  _Accept manual payments_ + instructions, saved → `payments_enabled=1`,
+  `manual_payment_enabled=1` (canonical runtime key — the C2 lesson holds),
+  instructions persisted. `/admin/manual-methods` → method
+  **"eSewa — 9800000000"** (kind `esewa`, active, position 0, instructions)
+  created with the success flash; 0 → 1 configured.
+- **Pack (admin UI):** `/admin/packs/create` → **Creator Growth Pack**,
+  Rs. 599, prompts 14 + 18 (both Maya's paid published prompts). The
+  storefront page renders the two contents, "Rs. 648" contents value and
+  "Save Rs. 49 vs buying individually" — arithmetic checks (399+249=648,
+  648−599=49).
+- **Buyer checkout:** Dorje → `/packs/creator-growth-pack` → _Buy pack_ →
+  order **#1** (Rs. 599) → manual method card shows the method name +
+  instructions → reference `TXN-PACK-0001` → flash "Payment reference
+  received — an admin will verify it shortly", pending page shows
+  `Reference: eSewa — 9800000000 · TXN-PACK-0001`.
+- **BH-R6-01 (P1, fixed):** the proof upload form was unreachable — the
+  checkout Blade only rendered `_payment-proof-form` for `manual + NO
+  reference`, a state `checkout.manual.submit` can never leave behind, so
+  the advertised "upload your payment proof" step was a dead action
+  (`orders.proof.store`; 0 proof forms / 0 file inputs in the served DOM).
+  Repro locked at `0337c4f`, fixed at `28ff793`: every pending manual order
+  keeps the form (it previews/replaces an existing proof); decided orders
+  keep a read-only preview. After the fix, a real 1×1 PNG was attached and
+  submitted through the served form → `manual_txn_id` + `manual_proof_path`
+  written, file exists on the **private** `proofs` disk (stored as
+  `proofs/….jpg` via the image pipeline).
+- **Admin desk:** `/admin/orders` shows per order the method · reference,
+  `TXN: …`, `proof Oct 4, 06:40` and the thumbnail served from
+  `orders.proof.show` (staff-visible, private disk). Approve buttons render
+  for the admin (R2 lock).
+- **Two more manual orders** as Dorje: prompt **#3** (Rs. 499, order #2) and
+  prompt **#12** (Rs. 299, order #3), references + proofs submitted. Then
+  all three approved from the desk:
+  - **Pack #1 → 2 commercial grants** to the buyer (prompts 14, 18),
+    **zero wallet rows** — pack lines are platform revenue by design
+    (`WalletService::creatorIdForItem`); observed, not just asserted.
+  - **Orders #2/#3 → Maya credited** `sale:2:2` +Rs. 399.20 and `sale:3:3`
+    +Rs. 239.20 (commission 2000 bps; 49900→39920, 29900→23920). Available
+    balance Rs. 638.40; grants flow only inside the approval transaction.
+  - Buyer library: order rows paid, pack expands to both granted prompts
+    with _Re-download_, owned-prompt list shows ACTIVE chips + creator
+    attribution.
+- **Payout life-cycle (Maya via impersonation → admin desk):** request
+  Rs. 500 (min Rs. 500 default) → hold row `withdrawal_hold:1` −Rs. 500,
+  available 638.40 → 138.40, request form disables below minimum. Finance
+  queue #1 → **Reveal destination** decrypts `9800000000` on the desk →
+  **Reject** → flash + `withdrawal_release:1` +Rs. 500, available restored
+  to Rs. 638.40, queue clear, payout `rejected` (`decided_by` admin).
+  Request #2 → **Approve** (`approved`, "awaiting settlement") → **Mark
+  settled** → `settled`, final available Rs. 138.40. Ledger browser shows
+  the insert-only trail (`sale:2:2`, `sale:3:3`, `withdrawal_hold:1`,
+  `withdrawal_release:1`, `withdrawal_hold:2`) and the derived platform
+  net **Rs. 758.60 = 1,397.00 gross − 638.40 credits** (gross matches the
+  three paid orders; packs included).
+- Note (by design, not a bug): submitting a proof with a non-empty `note`
+  replaces the visible `payment_reference` with that note — the method
+  snapshot survives in the order's method field/txn line, but the desk
+  then shows the note instead of "method · reference". Flagged for the
+  mediator as copy/UX, no money effect.
 
 ## R7 — Fix & lock log
 
-_(pending)_
+Every fixed bug: the failing repro commit, the fix commit, the test that now
+locks it, and where the lock was proven. "Repro" commits were run failing
+before the fix landed (R5/R6) or are the first run of the new sweep (R1/R2).
+
+| ID | Repro commit | Fix commit | Locking test | Verified |
+|----|--------------|------------|--------------|----------|
+| BH-R1-01 | `ef2fc01` (matrix first run: moderator 200) | `f63b55d` | `RoleSurfaceMatrixTest` — moderator row, admin shape | 40-test lock run, 1,678 assertions green (this raid) |
+| BH-R2-01..05 | `a5fd871` (scan first run: 403/404 rows) | `102c924` | `DeadLinkScanTest` — per-viewer href/form sweep | same lock run |
+| BH-001/BH-002 | `82f7c1b` (5 failing / 3 passing) | `2bc402f` | `CompGrantPickerTest` — 8 tests (payload, 277 options, draft grant, structure) | same lock run |
+| BH-R6-01 | `0337c4f` (proof form absent from served page) | `28ff793` | `ManualPaymentMethodsTest` — reference + upload form on the same page | same lock run |
+
+- **Not fixable in-raid (mediator calls):** **BH-P3-01** — drop
+  `serve => true` from the `proofs` disk in `config/filesystems.php`
+  (removes the unused `storage.proofs` signed-URL route); config change →
+  release process. **BH-R2-06** — `/update.php` exempt (docroot script that
+  exists on a real install). **Missing `v1.7.6` tag** — history stops at
+  `v1.7.2`; `main`'s release commit `5550630` is the artifact of record.
+- **Lock run:** the six R1–R6 lock files together → **40 passed / 1,678
+  assertions** (~26 s). Full-suite gate is R8 below.
 
 ## R8 — Release
 
-_(pending)_
+- **Version lockset:** `core/config/app.php` → `'1.7.7'`; both builders in
+  lockstep — `deploy/build-update-zip.php` and `deploy/build-install-zip.php`
+  (the install builder is held to config by
+  `InstallArtifactTest::the install builder pins APP_VERSION to the chip`).
+- **Docs:** QA-MATRIX got the v1.7.7 BH-block (every row names its locking
+  test); `handoff.md` §4 gained the v1.7.7 release entry and §9 the four
+  P1 incident rows (comp-grants read door, moderator dead actions, the
+  founder's picker, the unreachable proof form).
+- **Build:** `npm run build` + `view:clear` + `config:clear` before zipping
+  — bundle `app-BBSwSIP8.js` / `app-BfufQNeY.css` (the R5 combobox build).
+- **Full suite (final gate):** `php artisan test` → **536 passed / 15,896
+  assertions / 2 skipped** (~203 s). The two skips are the
+  `InstallArtifactTest` artifact locks — the v1.7.7 **install** zip is not
+  built (both skip by design when the artifact is absent; the
+  source-level `the install builder keeps its audit rules and its version
+  in lockstep` test **ran and passed**, and the v1.4.4 incident lock ran
+  green). Baseline was 511 / 14,309 with none skipped: +27 added locks − 2
+  now-skipped install tests = 536 passed. Evidence:
+  `dist/raid-final-suite.txt`.
+- **Arch proof (§6.49 gate):** `php artisan test --list-tests` → **538 tests
+  enumerated, 6 Arch** (`BladeFormVerbTest`, `MigrationDropGuardTest`,
+  `NoBladeLeakTest`, `UserAvatarGeometryTest` ×3) — all discovered, none
+  fiction.
+- **Artifact:** `dist/promptsewa-1.7.7-update.zip` — **452 entries** (448 core
+  + 4 docroot), **0.84 MB**, hygiene audit **CLEAN (0 forbidden entries)**,
+  **SHA-256 `16a1cbe83874f3520d74911ad227795a14aaa1500c08aa46a02e903d98860dc3`**.
+  A second build is byte-identical (16a1cbe8… again) — reproducible, same
+  standard as v1.7.6. Entry growth vs v1.7.6's 446: +5 raid test files, +1
+  `x-searchable-picker` component.
+- **Mediator calls still open:** retag `v1.7.6` (no tag exists — release
+  hygiene); BH-P3-01 config change (drop `proofs` disk `serve => true`);
+  the proof-note-overwrites-reference copy question (§R6.8).
+
+### Commit trail
+
+| Commit | What |
+|---|---|
+| `38c1bb8` | R0 baseline freeze |
+| `ef2fc01`, `f63b55d` | R1 matrix + BH-R1-01 fix |
+| `a5fd871`, `102c924` | R2 dead-link scan + BH-R2-01..05 fix |
+| `a7d3527` | R3 form round-trip inventory |
+| `8b2918b` | R4 edge-state matrix |
+| `82f7c1b`, `2bc402f` | R5 BH-001/002 repro + combobox fix |
+| `0337c4f`, `28ff793` | R6 BH-R6-01 repro + proof-form fix |
+| _(this commit)_ | R8 — version lockset, catalog, QA-MATRIX, handoff |
 
 ## Bug ledger (severity summary)
 
@@ -283,3 +508,4 @@ _(pending)_
 | BH-R2-05 | Admin → Prompts title links | P1 | Non-public prompt rows linked the public route → 404 for staff | `DeadLinkScanTest`: `moderator \| admin.prompts.index \| href /prompts/… → 404` | Non-public rows link the moderation preview | Fixed — see R7 log |
 | BH-R2-06 | Admin → Update `/update.php` link | P2 | Matches no Laravel route (dev); exists on a real install | `DeadLinkScanTest` first run | Exempt with reason (docroot script) | Exempted |
 | BH-001/BH-002 | Admin → Comp grants prompt picker | P1 (founder) | `published()` scope hid every non-published prompt and blocked granting one; stacked select over 277 rows | `CompGrantPickerTest` failing at `82f7c1b` (5 failures) | Full prompt list + `x-searchable-picker` combobox; `published()` dropped from create+store | Fixed — see R7 log |
+| BH-R6-01 | Buyer checkout — manual proof upload | P1 | `orders.proof.store` was a dead action: the upload form rendered only for "manual + no reference", a state `checkout.manual.submit` never leaves behind, while checkout copy promises "upload your payment proof" | Repro test at `0337c4f`; served page had 0 proof forms / 0 file inputs; `checkout.show` branch order (`payment_reference` branch wins) | Form renders for every pending manual order (preview/replace when a proof exists); decided orders keep the read-only preview | Fixed — see R7 log |

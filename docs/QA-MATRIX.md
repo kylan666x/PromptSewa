@@ -557,3 +557,24 @@ named test; if a test regresses, the row goes red and the release blocks.
 | A3 "Send test email" goes to the acting admin on the configured rail | ✅ | `MailConfigTest::the probe sends to the acting admin on the configured rail` |
 | A3 a failed send shows the exception class + first line and scrubs the password (`•••`) | ✅ | `MailConfigTest::a failed send reports the class and one line — never the password` |
 | Suite | ✅ | **511 passed / 14,309 assertions** (chip v1.7.6; Arch suite inside the number — see `--list-tests` proof) |
+
+---
+
+# PromptSewa QA Matrix — v1.7.7 "Bug-Hunt Raid"
+
+## BH-block (v1.7.7)
+
+| Item | Status | Locking test(s) |
+|---|---|---|
+| R1 every named GET route × 7 fixtures asserted against its gate's outcome (200/302/403/404), zero 500s, one `<title>` per HTML 200, no Blade leaks; a new route cannot skip the sweep silently | ✅ | `RoleSurfaceMatrixTest::every named GET route is in the matrix or exempted with a reason` + the sweep itself (364 responses) |
+| R1 BH-R1-01: `/admin/comp-grants` was 200 to moderators while store is admin-only | ✅ | `RoleSurfaceMatrixTest` (moderator row, admin shape; repro first run at `ef2fc01`, fix `f63b55d`) |
+| R2 no dead links / dead form actions for five viewer roles: hrefs fetched as the viewer (403/404/405/419/500 fail), form actions verb-spoofed and matched to the role that sees them | ✅ | `DeadLinkScanTest` (2 tests; fix `102c924`) |
+| R2 BH-R2-01..05: admin-only pills, purge/adopt panels, approve/reject buttons, save forms, and non-public prompt links rendered for moderators/staff | ✅ | `DeadLinkScanTest` rows (per-role map; no re-appearance when views change) |
+| R2 BH-R2-06: `/update.php` matches no Laravel route (docroot script on a real install) | ➖ exempt | `DeadLinkScanTest` exempt map, with reason |
+| R3 form round-trip inventory: every served form replayed with browser semantics; completeness scan fails on any un-inventoried Blade form action | ✅ | `FormRoundTripInventoryTest` (8 tests; 44 assertions) |
+| R4 edge-state matrix: empty fixtures, overflow/unicode, deleted relations, 30-row pagination, both checkout rails, impersonation chrome | ✅ | `EdgeStateMatrixTest` (5 tests, 442 assertions) |
+| R5 BH-001/BH-002: comp-grant picker hid every non-published prompt (root cause `published()` scope); redesigned as a searchable combobox with the full status list | ✅ | `CompGrantPickerTest` (8 tests; repro `82f7c1b` 5 failing/3 passing, fix `2bc402f`) |
+| R6 browser gate — 8 flows pass under `artisan serve` (comp grant e2e, impersonate→act→return, ban bounce, reset-mail, frame equip at two hole percents, mobile dock, typeahead seal, manual financial chain → payout settle/reject) | ✅ | browser evidence in `docs/BUG-HUNT-RAID.md` §R6 + the suites below |
+| R6 BH-R6-01: manual payment proof form was unreachable (`orders.proof.store` a dead action after reference submit) | ✅ | `ManualPaymentMethodsTest::a pending manual order with a reference still offers the proof upload form (BH-R6-01)` (repro `0337c4f`, fix `28ff793`) |
+| R6 financial chain invariants: pack lines credit NO creator; prompt lines credit the creator at 10000−bps; holds/releases are new insert-only ledger rows; approve/settle/reject gated to admin | ✅ | `WalletServiceTest` (both rails, over‑available refused, below-minimum refused, comp grants create zero ledger rows, destination encrypted) + `ManualPaymentMethodsTest::admin approves after proof and grants issue atomically` + `FormRoundTripInventoryTest` payout round-trips |
+| Suite | ✅ | **536 passed / 15,896 assertions, 2 skipped** (skips: the two install-artifact tests — the v1.7.7 install zip is not built, they skip by design when absent; Arch suite inside the number — `--list-tests` enumerates **538 tests / 6 Arch**) |
