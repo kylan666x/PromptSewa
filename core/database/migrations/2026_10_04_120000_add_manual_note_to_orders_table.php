@@ -19,7 +19,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->string('manual_note', 500)->nullable()->after('manual_submitted_at');
+            // No `after()` — the v1.4.3 parity replay builds the schema with
+            // 130100 (which adds manual_submitted_at) still PENDING, so a
+            // positional add would 1054 on MySQL. Column order is cosmetic.
+            $table->string('manual_note', 500)->nullable();
         });
     }
 
