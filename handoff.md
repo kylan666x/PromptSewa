@@ -35,7 +35,94 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.7.7 — Bug-Hunt Raid (this release)
+### v1.7.8 — Raid Fallout, Repairs & Notifications (this release)
+
+Follow-up directive on the v1.7.7 raid fallout — F1–F6 only (the token
+economy and social surface are separate releases). Branch `raid/v1.7.8`,
+cut from the v1.7.7 release commit `c2d3755`.
+
+- **F1 — Finance pill + orphan-route sweep (BH-R9-01).** The admin-only
+  Finance pill now sits after Payments in the admin nav; more importantly,
+  `OrphanAdminRouteTest` makes an unlinked admin door structurally
+  impossible: every named `admin.*` GET route must appear in the served
+  HTML of at least one authorized fixture (nav pill, card link, table
+  action) or be listed in a reasoned exempt map — and stale exemptions
+  fail the suite. Commit `cbffe78`.
+- **F2 — frame round-trip + profile-picture menu (BH-R9-02).** Repro
+  first, in the browser under `artisan serve`: equip/change persisted and
+  overlays rendered on hero + cards + navbar, so no blocking regression
+  existed — two latent defects were fixed instead: `active_frame_id` was
+  not int-cast (string drivers would fail the picker precheck), and
+  in-test `pv:update` runs wrote testing-flavoured
+  `bootstrap/cache/config.php` (`:memory:` sqlite), poisoning the next
+  dev boot (BH-R9-04; guarded in `tests/Pest.php` + `ReleaseHygieneTest`).
+  Shipped the founder's click menu: a server-rendered Alpine menu on your
+  own avatar (hero + navbar dropdown) with **View profile picture**
+  (lightbox, full-size), **Upload / edit picture** (`#avatar`) and **Edit
+  frame** (`#avatar-frame`); strangers and guests get nothing. Commit
+  `32e1d08`.
+- **F3 — badge criteria admin + backfill (BH-R9-03).** Repro found the
+  evaluator chain healthy end-to-end (a matching badge + a real event →
+  award + XP + feed). The real holes were: `verified` had no emitter,
+  `manual` was not selectable for badges, criteria had no descriptions,
+  and pre-existing eligibility had no backfill path. Now the form offers
+  every `CriterionEvaluator` criterion (manual-only included) with a
+  one-line description, the list shows a criterion chip + awarded count,
+  granting verified awards inside the flag-flip transaction (revoking
+  never claws back), and `pv:award-scan` (idempotent, unique-constraint
+  deduped) + a throttled admin "Scan now" button share one
+  `GamificationService::scanAll()` path, scheduled daily at 04:15. Commit
+  `59cde41`.
+- **F4 — advertised-action reachability sweep (the BH-R6-01 class).**
+  `FormRoundTripInventoryTest` gained the orphan-write rule: every
+  POST/PUT/PATCH/DELETE route in the router must be reachable from a
+  served Blade form, a documented fetch, or a reasoned exemption — stale
+  exemptions fail. Building the rule immediately exposed a scanner bug
+  (`[^>]*` truncated form tags at the `>` inside `$pack->exists`, so the
+  pack forms had never been inventoried) and the F2 avatar menu carried
+  raw U+2192 arrows. Commit `13c556a`.
+- **F5 — mediator rulings landed.** The proofs disk dropped
+  `serve => true` (BH-P3-01): the framework signed-URL storage routes for
+  it no longer exist and proofs stream ONLY through `orders.proof.show`
+  (the F4 sweep caught the same-URI framework-route shadowing —
+  `storage.local` now owns the signed-URL pair). The buyer's proof note
+  lands in a new additive `manual_note` column and renders as its own
+  admin desk line — it can never replace the Method · Reference line
+  again. Commit `559609e` (+ `d85e296`: the column add must not anchor to
+  a still-pending migration — the v1.4.3 parity replay 1054'd on MySQL).
+  **Retagging v1.7.3–v1.7.7 on their release commits is a mediator action
+  after merge+push** (tags still stop at v1.7.2).
+- **F6 — live notifications v1.** New `notifications` table (user_id,
+  type, subject morph nullable, message, read_at nullable, created_at;
+  index user+read; immutable except read_at). Seven events emit exactly
+  one row inside their own transaction: order approved/rejected, verified
+  granted/revoked, badge awarded, frame unlocked, payout settled/rejected,
+  report resolved/dismissed, comp grant issued. The navbar bell (desktop
+  + mobile navbar row) renders the newest 20 with mono timestamps, an
+  unread count chip, "Mark all read", and owner-only click-through that
+  marks read before landing on the subject; `GET /notifications/unread`
+  is `auth` + `throttle:30,1` and Alpine refreshes it every 60 seconds.
+  cPanel has no websockets, so the copy says "Notifications" — no
+  live-delivery vocabulary (source-locked). The F6 browser gate caught
+  one real bug before ship: item links pointed straight at the subject
+  URL and never hit the mark-read route. Commit `ec926d0`.
+- **F7 — release facts.** Chip v1.7.8 in `core/config/app.php` **and both
+  builders** in lockstep; QA-MATRIX F-block with locking test names;
+  `npm run build` + `view:clear` before zipping. Final suite **562 passed
+  / 16,148 assertions** (3 skipped: the two install-artifact tests — no
+  v1.7.8 **install** zip is built, they skip by design when absent; one
+  v1.4.4 incident lock, artifact absent; the Arch suite is inside the
+  number). `dist/promptsewa-1.7.8-update.zip` — **464 entries** (460 core
+  + 4 docroot), **0.86 MB**, hygiene audit **CLEAN (0 forbidden
+  entries)**, **SHA-256
+  `6b28fcf308006563a8400d0f0226dbe4acec275a736eaa101724a397c3247074`**
+  (rebuild is byte-identical — reproducible).
+- **Arch-suite proof (`--list-tests`, the §6.49 release gate).** **565**
+  tests enumerated, **6** of them Arch: `BladeFormVerbTest` (1),
+  `MigrationDropGuardTest` (1), `NoBladeLeakTest` (1),
+  `UserAvatarGeometryTest` (3) — all discovered, none fiction.
+
+### v1.7.7 — Bug-Hunt Raid (previous release)
 
 Full-catalog raid (R0–R8) on branch `raid/v1.7.7`, cut from the v1.7.6
 release commit `5550630`. Every finding carries a failing repro commit, a
@@ -755,5 +842,9 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.7.7 (2026-10-04) | Moderators saw **seven dead admin actions** — admin-only nav pills (5, each a 403), Users purge/adopt panels, Orders approve/reject buttons, Payments/Brand/Manual-methods save forms | write-route policies were enforced server-side but never mirrored into the views; nothing swept dead links/forms per role | v1.7.7 (BH-R2-01..05: role-aware rendering + `DeadLinkScanTest`; `a5fd871`/`102c924`) |
 | v1.7.7 (2026-10-04) | Founder: **“I cannot see all of my prompts”** in the comp-grant picker — drafts/pending/rejected prompts invisible and un-grantable | `published()` scope applied to both the picker and the store lookup — a filter nobody intended as a gate became one (same class as the v1.4.4 key mismatch) | v1.7.7 (BH-001/BH-002: full-status list + `x-searchable-picker` combobox; `82f7c1b`/`2bc402f`) |
 | v1.7.7 (2026-10-04) | **Buyers could not upload a payment proof** — the form rendered only for “manual + no reference”, a state `checkout.manual.submit` never leaves, so the advertised “upload your payment proof” step was a dead action (`orders.proof.store` unreachable from the served UI) | the checkout Blade's “manual + reference exists” branch pre-empted the branch that included the proof form; no test rendered the page in that state | v1.7.7 (BH-R6-01: the form renders for every pending manual order; repro/fix `0337c4f`/`28ff793`) |
+
+| v1.7.8 (2026-10-04) | **The admin Finance desk had no door** — no Finance pill existed anywhere, so the v1.6.0 ledger/payout desk was unreachable from the nav (found pre-release by the raid-fallout sweep) | The desk shipped with its route and tests but no nav entry, and nothing proved an admin GET route was linked from any served page | v1.7.8 (F1: pill after Payments + `OrphanAdminRouteTest` — every named `admin.*` GET route must be linked from a served page or exempt with a reason; `cbffe78`) |
+| v1.7.8 (2026-10-04) | Founder-requested: clicking your own profile avatar did nothing — no view/upload/frame shortcuts anywhere. The repro also surfaced two latent defects: `active_frame_id` not int-cast (string drivers fail the picker precheck) and in-test `pv:update` runs leaving a testing-flavoured `bootstrap/cache/config.php` behind (BH-R9-04 — the next `artisan serve`/tinker boot talked to an empty DB) | The feature was never built; the cast relied on the driver's returned type; nothing removed config caches written inside the test process | v1.7.8 (F2: owner-only avatar menu on hero + navbar with lightbox/anchors, int cast, Pest `afterEach` cache purge + hygiene lock; `32e1d08`) |
+| v1.7.8 (2026-10-04) | **“Badge criteria not working”** — met tiers never produced badges. The repro cleared the evaluator (real event → award + XP + feed); the actual holes: `verified` had no emitter, `manual` was not selectable for badges, criteria had no descriptions, and historical eligibility had no backfill path (BH-R9-03) | No observer covered the verified flip; `Badge::CRITERIA` excluded manual; no scan existed | v1.7.8 (F3: verified emitter inside the flag-flip transaction, full criterion select + descriptions, `pv:award-scan` + admin “Scan now” on one idempotent path, daily 04:15; `59cde41`) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.
