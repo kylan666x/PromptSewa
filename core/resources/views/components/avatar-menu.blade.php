@@ -3,11 +3,9 @@
 {{--
     F2 (v1.7.8) — the founder's profile-picture click menu.
 
-    Clicking your own profile avatar opens a server-rendered Alpine menu:
-
-      1. View profile picture  → lightbox modal (full-size)
-      2. Upload / edit picture → profile editor (#avatar)
-      3. Edit frame            → profile editor frame picker (#avatar-frame)
+    Clicking your own profile avatar opens a server-rendered Alpine menu:       1. View profile picture  &rarr; lightbox modal (full-size)
+       2. Upload / edit picture &rarr; profile editor (#avatar)
+       3. Edit frame            &rarr; profile editor frame picker (#avatar-frame)
 
     OWNER-ONLY BY CONSTRUCTION: the component is only invoked on surfaces
     where the viewer IS the avatar's owner (the hero of their own public

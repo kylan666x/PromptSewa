@@ -15,6 +15,7 @@ use App\Models\WalletTransaction;
 use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -38,7 +39,9 @@ uses(RefreshDatabase::class);
  */
 function raidFormExtract(string $html, string $needle, ?string $requireVerb = null): array
 {
-    preg_match_all('/<form\b([^>]*)>(.*?)<\/form>/is', $html, $forms, PREG_SET_ORDER);
+    // Quoted attribute values may contain `>` (e.g. `$pack->exists` in a
+    // Blade expression) — consuming whole quoted strings keeps the tag open.
+    preg_match_all('/<form\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>(.*?)<\/form>/is', $html, $forms, PREG_SET_ORDER);
 
     foreach ($forms as $form) {
         $attrs = $form[1];
@@ -143,6 +146,81 @@ function raidFormSubmit($test, ?User $user, array $form, array $overrides = [], 
     };
 }
 
+/**
+ * Every route targeted by a Blade `<form action="route('…')">`, with the
+ * view files that serve it. Shared by the inventory completeness test and
+ * the F4 orphan-write rule, so both read the same source of truth.
+ *
+ * @return array<string, list<string>> route name => view files
+ */
+function raidBladeFormTargets(): array
+{
+    $found = [];
+
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(resource_path('views')));
+    foreach ($files as $file) {
+        if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php')) {
+            continue;
+        }
+
+        $content = (string) file_get_contents($file->getPathname());
+
+        // Quoted attribute values may contain `>` (e.g. `$pack->exists` in a
+        // Blade expression); `[^>]*` truncated the tag there and silently
+        // skipped the pack forms — the F4 rule caught it.
+        if (! preg_match_all('/<form\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>/is', $content, $tags)) {
+            continue;
+        }
+
+        // Only the ACTION attribute is inventoried. Routes that appear inside
+        // a form body (links, JS data) are not form targets — the first run of
+        // this test "found" login/register/prompts.show inside other forms.
+        foreach ($tags[1] as $attrs) {
+            if (! preg_match('/action="([^"]*)"/i', $attrs, $actionAttr)) {
+                continue; // GET form posting to the current URL
+            }
+            if (! preg_match_all("/route\\(\\s*'([^']+)'/", $actionAttr[1], $routes)) {
+                continue; // dynamic action (e.g. the external eSewa gateway form)
+            }
+            foreach ($routes[1] as $routeName) {
+                $found[$routeName][] = str_replace(resource_path('views').DIRECTORY_SEPARATOR, '', $file->getPathname());
+            }
+        }
+    }
+
+    return $found;
+}
+
+/**
+ * F4 (v1.7.8) — write routes with no `<form>` but a documented fetch.
+ * Each entry names the owning test that exercises the endpoint.
+ *
+ * @return array<string, string>
+ */
+function raidDocumentedFetches(): array
+{
+    return [
+        'bookmarks.toggle' => 'Alpine bookmarkHeart() fetch on every heart surface — BookmarkTest.',
+        'admin.security.test-email' => 'Alpine fetch() (JSON) in admin/security.blade.php — DisposableEmailTest.',
+    ];
+}
+
+/**
+ * F4 (v1.7.8) — write routes with no browser surface by design. Every
+ * exemption carries a reason; a stale entry fails the rule.
+ *
+ * @return array<string, string>
+ */
+function raidWriteRouteExemptions(): array
+{
+    return [
+        'admin.badges.update' => 'No rendered edit form (badge edits ship as store/destroy only) — audited against the served HTML.',
+        'checkout.esewa.verify' => 'eSewa gateway success_url POST — the gateway posts here, never a browser form.',
+        'payments.esewa.webhook' => 'External gateway webhook POST — no browser surface; settlement mutations are locked by WalletServiceTest.',
+        'storage.proofs.upload' => 'Framework signed-URL upload route from `serve => true` on the proofs disk (BH-P3-01) — removed by the F5 config fix.',
+    ];
+}
+
 /** The catalog inventory: every form action route and what locks it. */
 function raidFormInventory(): array
 {
@@ -212,41 +290,47 @@ function raidFormInventory(): array
 }
 
 test('every route targeted by a Blade form is classified in the form inventory', function () {
-    $inventory = raidFormInventory();
-    $found = [];
-
-    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(resource_path('views')));
-    foreach ($files as $file) {
-        if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php')) {
-            continue;
-        }
-
-        $content = (string) file_get_contents($file->getPathname());
-
-        if (! preg_match_all('/<form\b([^>]*)>/is', $content, $tags)) {
-            continue;
-        }
-
-        // Only the ACTION attribute is inventoried. Routes that appear inside
-        // a form body (links, JS data) are not form targets — the first run of
-        // this test "found" login/register/prompts.show inside other forms.
-        foreach ($tags[1] as $attrs) {
-            if (! preg_match('/action="([^"]*)"/i', $attrs, $actionAttr)) {
-                continue; // GET form posting to the current URL
-            }
-            if (! preg_match_all("/route\(\s*'([^']+)'/", $actionAttr[1], $routes)) {
-                continue; // dynamic action (e.g. the external eSewa gateway form)
-            }
-            foreach ($routes[1] as $routeName) {
-                $found[$routeName][] = str_replace(resource_path('views').DIRECTORY_SEPARATOR, '', $file->getPathname());
-            }
-        }
-    }
+    $found = raidBladeFormTargets();
 
     expect($found)->not->toBeEmpty();
 
-    $unclassified = array_diff(array_keys($found), array_keys($inventory));
+    $unclassified = array_diff(array_keys($found), array_keys(raidFormInventory()));
     expect($unclassified)->toBe([], 'forms target routes missing from the inventory: '.implode(', ', $unclassified));
+});
+
+test('every write route is reachable from a served form or documented as a fetch/exemption', function () {
+    $formTargets = raidBladeFormTargets();
+    $fetches = raidDocumentedFetches();
+    $exemptions = raidWriteRouteExemptions();
+
+    // The full write surface, straight from the router: a new POST/PUT/
+    // PATCH/DELETE route is unclassified until it names its reachability —
+    // the BH-R6-01 class (an advertised action with no reachable door) can
+    // no longer ship silently.
+    $writeRoutes = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== [])
+        ->map(fn ($route) => (string) $route->getName())
+        ->reject(fn (string $name) => $name === '' || str_starts_with($name, 'generated::'))
+        ->unique()
+        ->values();
+
+    expect($writeRoutes)->not->toBeEmpty();
+
+    $unclassified = $writeRoutes
+        ->reject(fn (string $name) => array_key_exists($name, $formTargets)
+            || array_key_exists($name, $fetches)
+            || array_key_exists($name, $exemptions))
+        ->values();
+
+    expect($unclassified->all())->toBe([], 'write routes with no reachable door — serve a form, document the fetch, or exempt with a reason: '.$unclassified->implode(', '));
+
+    // Stale classifications are as dangerous as missing ones: an exemption
+    // for a route that no longer exists would silently rot.
+    $stale = collect(array_keys($fetches + $exemptions))
+        ->reject(fn (string $name) => $writeRoutes->contains($name))
+        ->values();
+
+    expect($stale->all())->toBe([], 'fetch/exemption map entries with no matching write route: '.$stale->implode(', '));
 });
 
 test('badge create + delete round-trips through the served forms', function () {
