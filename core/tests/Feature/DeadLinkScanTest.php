@@ -98,6 +98,16 @@ function raidDeadLinkFormViewers(): array
         'admin.manual-methods.destroy' => $admin,
         'admin.orders.approve' => $admin,
         'admin.orders.reject' => $admin,
+        // S6 (v1.8.0): the Sikka desk renders its full form set for admins on
+        // one page — ledger filter (GET), rates (PUT) and the store forms.
+        // The per-row pack/plan update + destroy forms are not classified
+        // here: the sweep's world has no pack/plan rows, so those forms never
+        // render (classifying them would trip the stale-map check).
+        'admin.sikka.index' => $admin,
+        'admin.sikka.settings' => $admin,
+        'admin.sikka.packs.store' => $admin,
+        'admin.sikka.plans.store' => $admin,
+        'admin.sikka.grants.store' => $admin,
         'admin.payments.update' => $admin,
         'admin.security.update' => $admin,
         'admin.users.role' => $admin,
@@ -264,6 +274,7 @@ test('every internal href on every rendered surface resolves and is viewable by 
                     $route = Route::getRoutes()->match(Request::create($raw, 'GET'));
                 } catch (NotFoundHttpException) {
                     $failures[] = "{$role} | {$name} | href {$raw} matches NO route";
+
                     continue;
                 }
 
@@ -316,6 +327,7 @@ test('every form action resolves, matches its verb, and is submittable by the ro
                     $route = Route::getRoutes()->match(Request::create($action, $verb));
                 } catch (NotFoundHttpException) {
                     $failures[] = "{$role} | {$name} | form {$verb} {$action} matches NO route";
+
                     continue;
                 }
 
@@ -328,6 +340,7 @@ test('every form action resolves, matches its verb, and is submittable by the ro
 
                 if (! isset($viewers[$routeName])) {
                     $failures[] = "{$role} | {$name} | form {$verb} {$action} → route [{$routeName}] is unclassified in raidDeadLinkFormViewers()";
+
                     continue;
                 }
 

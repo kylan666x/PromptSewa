@@ -68,9 +68,33 @@ test('no code path calls update or delete on SikkaTransaction repo-wide', functi
             continue; // the guard itself
         }
 
-        foreach (['->update(', '->delete()', 'updateOrCreate(', '->decrement(', '->increment('] as $call) {
-            if (str_contains($content, $call)) {
-                $violations[] = "{$relative}: '{$call}' appears in a file touching SikkaTransaction — ledger rows are insert-only";
+        // LEDGER-RECEIVER scan (S6 refinement): the Sikka desk legitimately
+        // updates/deletes its PACK/PLAN rows in a file that also READS the
+        // ledger, so a file-level string scan flags unrelated CRUD. The ban
+        // is therefore exact about the RECEIVER: a mutator is a violation
+        // only when the ledger itself is mutated — directly, through the
+        // query builder, through the raw table, or through a variable alias
+        // of a SikkaTransaction expression.
+        if (preg_match('/SikkaTransaction::(?:(?!;).){0,600}?->\s*(update|updateOrCreate|delete|forceDelete|increment|decrement)\s*\(/s', $content, $m)) {
+            $violations[] = "{$relative}: '->{$m[1]}(' is called on SikkaTransaction — ledger rows are insert-only";
+        }
+
+        if (preg_match('/SikkaTransaction::(destroy|forceDestroy)\s*\(/', $content)) {
+            $violations[] = "{$relative}: a static destroy call targets SikkaTransaction — ledger rows are insert-only";
+        }
+
+        // The raw table is the same ledger — DB::table mutators are banned too.
+        if (str_contains($content, 'sikka_transactions')
+            && preg_match('/->\s*(update|updateOrCreate|delete|forceDelete|increment|decrement)\s*\(/', $content)) {
+            $violations[] = "{$relative}: a mutator runs in a file touching the sikka_transactions table — ledger rows are insert-only";
+        }
+
+        // Alias guard: `$row = SikkaTransaction::…` must never be mutated later.
+        if (preg_match_all('/(\$[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*SikkaTransaction::/', $content, $aliases)) {
+            foreach (array_unique($aliases[1]) as $var) {
+                if (preg_match('/'.preg_quote($var, '/').'\s*->\s*(update|updateOrCreate|delete|forceDelete|increment|decrement)\s*\(/', $content)) {
+                    $violations[] = "{$relative}: alias {$var} of SikkaTransaction is mutated — ledger rows are insert-only";
+                }
             }
         }
     }

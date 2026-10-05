@@ -35,7 +35,91 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.7.8 — Raid Fallout, Repairs & Notifications (this release)
+### v1.8.0 — Sikka Economy & Membership (this release)
+
+The founder's S1–S9 directive on branch `raid/v1.8.0`, cut from the v1.7.8
+release commit. Sikka is a **credit, not a currency**: an insert-only
+integer ledger whose every movement goes through ONE service, a bounded
+earn loop, a cash-out machine that settles at a spread, and NPR-rail
+memberships that unlock perks. The kill-switch (`sikka_enabled`) ships
+OFF — while off, every buyer surface renders exactly the v1.7.8 NPR
+experience.
+
+- **S1 — schema (11 append-only migrations).** `sikka_transactions`
+  (signed BIGINT `amount_sikka`, `cashout_eligible`, UNIQUE
+  `idempotency_key`, `created_at` only; model boot throws on update/delete,
+  arch-banned repo-wide), `prompts.price_sikka` (price of record; the
+  legacy `price_cents` mirror is recomputed at save so the NPR rail is
+  byte-identical), `orders.currency` + `sikka_amount` (buy-rate snapshot in
+  meta — history never re-prices), `sikka_packs`, `membership_plans`,
+  `memberships`, payouts `source_currency`/`sikka_amount`/`settled_npr_paisa`,
+  order-item plan/pack FKs, license-grant `source`, and the Sikka settings
+  block with bounds (`sikka_buy_paisa_per_token` 50–500, cash-out 10…buy).
+- **S2 — `SikkaService`, the single choke point.** `spendableAvailable` is
+  the PLAIN SUM (hold rows live inside it); `cashoutableAvailable` sums
+  `cashout_eligible = true` rows only; both `(int)`-cast, `lockForUpdate()`
+  inside the transaction. `spendSikka()` is atomic (spend + order paid +
+  license grant + creator `sale_credit` in one transaction), 422 on
+  shortfall with zero trace, and an active `unlimited_unlock` membership
+  bypasses the balance with **zero spend rows** (`source =
+  membership_unlimited`). `SikkaFormat` is a PSR-4 class — no
+  `autoload.files` (the v1.6.1 trap); `ReleaseHygieneTest` still hash-locks
+  the file list to `[app/Support/money.php]`.
+- **S3 — earn loop (bounded, idempotent, spend-only).** Observers emit
+  `engagement_reward` for publish / rating-received and the daily-visit
+  middleware credits the first authenticated GET of the day;
+  `engage:{user}:{type}:{date}` plus the same-day SUM bound cap every
+  emitter, and all engagement Sikka is `cashout_eligible = false`
+  (spend-only). `pv:stipend-scan` (daily 04:20) grants every elapsed
+  membership period once (`stipend:{membership}:{period}`), flips lapsed
+  memberships to expired, and is replay-safe forever.
+- **S4 — cash-out (Sikka → NPR at the spread).** Request parks a
+  `payout_hold` row (inside the SUM, the v1.6.0 design) + a payouts row
+  tagged `source_currency = sikka`; ≤ cashoutable and ≥
+  `sikka_cashout_min`, else 422 with zero trace. Approve → Settle stores
+  `settled_npr_paisa = S × cashout_rate` **once** by integer multiply;
+  Reject/Cancel writes `payout_release`. Legacy NPR wallet payouts are
+  untouched; the Finance desk shows both queues with currency chips.
+- **S5 — memberships.** Purchased on the NPR rail (eSewa or manual);
+  approval activates exactly one membership row (idempotent via
+  `(source_order_id, plan_id)`), the first stipend period, and the perks
+  through existing choke points (badge via `GamificationService`, frame via
+  `UserFrameUnlock`, verified toggle) — each with its own bell row only
+  when actually created.
+- **S6 — surfaces.** Earnings tab: two cards + the Sikka ledger browser.
+  Authoring form: integer Sikka price 0–100000 with a live NPR preview;
+  cards/detail lead with `<x-sikka>` and keep NPR in parentheses (Free
+  chip unchanged). Checkout: Sikka rail is the default door when the
+  balance covers the order, otherwise a top-up CTA with the NPR rails
+  still visible. New top-up storefront + **Admin → Sikka desk** (rates +
+  bounds, engagement, packs/plans CRUD with deactivate-on-referenced,
+  ledger browser, audited eligibility flip with mandatory reason) — the
+  nav pill ships in the same commit (§6.36).
+- **S7/S8 — gate + release facts.** 11 new migrations joined
+  `DeployParityAcceptanceTest`'s pending list (S1); SEO crawl and form
+  inventory classify every new route; the full battery is the S-block in
+  [docs/QA-MATRIX.md](docs/QA-MATRIX.md). Final suite **613 passed /
+  17,849 assertions** (3 skipped: the two install-artifact tests — no
+  v1.8.0 install zip is built, they skip by design; one v1.4.4 incident
+  lock, artifact absent). Chip v1.8.0 in `core/config/app.php` and both
+  builders; `dist/promptsewa-1.8.0-update.zip` — **505 entries** (501 core
+  + 4 docroot), **0.94 MB**, hygiene audit **CLEAN**, **SHA-256
+  `0dd3e0b619113e37207fc3a502bb7240a519031d6040ad8ccaf4dba37c5f19c4`**
+  (rebuild byte-identical); `--list-tests` enumerates **616 tests / 6
+  Arch**.
+- **S9 — Sikka icon ingest.** Admin → Brand gains two uploads (color +
+  mono) through the new alpha-preserving `sikka` variant (PNG/WebP only,
+  blending OFF + save-alpha ON, ≤512px, JPEG refused), stored at
+  `sikka-icon-path` / `sikka-icon-mono-path` with live paper + ink preview
+  swatches. `<x-sikka>` renders the color mark at ≥20px, the mono mark on
+  ink/mail, and an honest bordered "Sikka" chip when unset; amounts are
+  integer-only and no blade view may echo a raw Sikka amount outside the
+  component (arch ban mirroring `money_npr`). **The founder's art ships by
+  upload, not in the zip** — the artifact carries only the ingest plumbing
+  and the fallback. The S9 sweep also caught an S4 raw U+2192 arrow in the
+  Finance desk (`NoBladeLeakTest`) before ship.
+
+### v1.7.8 — Raid Fallout, Repairs & Notifications (previous release)
 
 Follow-up directive on the v1.7.7 raid fallout — F1–F6 only (the token
 economy and social surface are separate releases). Branch `raid/v1.7.8`,
@@ -630,6 +714,13 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 32. **Empty ledger is a first-class prod state — every money aggregate must survive zero rows; SUM-null is a 500 until cast (v1.6.1).** Every SUM crosses the service/controller edge as `(int)`. AND: `autoload.files` helpers (app/Support/money.php) do NOT exist on the host after a code-only update zip — the no-composer host cannot refresh vendor/, so money-rendering views MUST use the `function_exists('money_npr')`-guarded `<x-money>` component (the v1.6.1 prod /earnings 500 root cause). If composer.json autoload changes again, the SAME trap applies to any new helper file: either define a guarded fallback or ship a full release zip. The zip builder's composer.lock guard is dead code unless `deploy/promptsewa-main-1-0-0.zip` exists — restore that baseline or add a content-hash check against composer.json.
 22. **MySQL DDL autocommits — never rely on transactions around schema changes (v1.4.3).** An interrupted migration leaves half-applied DDL with NO row in `migrations`; the replay then dies on SQLSTATE 1091 (dropping an object that no longer exists). Every `dropUnique`/`dropIndex`/`dropColumn`/`dropForeign` in a migration MUST be guarded by an existence check from `App\Support\SchemaInspector` (`hasUniqueIndex`/`hasIndex`/`hasColumn`) — `Arch\MigrationDropGuardTest` enforces this repo-wide. To repair a half-migrated schema, add a back-dated repair migration (see 120999) rather than editing a committed migration. If `pv:update` dies, the site STAYS in maintenance mode and `core/storage/logs/update-failed.json` carries the recovery checklist — do NOT simply re-run against a half-state.
 
+56. **The Sikka ledger is INSERT-ONLY — the same boot guard as the wallet, and a harder boundary (v1.8.0).** `SikkaTransaction::updating()`/`deleting()` throw; the arch suite bans `->update(`/`->delete(` on the model repo-wide. No cached balance column may ever be added: `spendableAvailable` is the PLAIN SUM (hold rows are already inside it), `cashoutableAvailable` sums `cashout_eligible = true` rows, both `(int)`-cast under `lockForUpdate()`. **Eligibility is decided AT WRITE TIME** (topup/bonus/sale/stipend = true; engagement/admin_grant = false by default) and is never rewritten — the admin desk's per-grant flip writes the flag on the new row with a mandatory reason, audited in meta + the admin log. Sikka integers only: `App\Support\SikkaFormat` (PSR-4) is the sole renderer inside `<x-sikka>`; `money_npr` remains the sole NPR renderer.
+57. **`SikkaService::spendSikka` is the only path that moves Sikka for a purchase — one controller call site (v1.8.0).** The checkout Sikka rail calls it; the arch test fails on a second call site. Inside one `DB::transaction`: unlimited-membership bypass (entitlement, zero rows) → balance check vs `price_sikka` (422 shortfall, zero trace) → `spend` row (−S, eligible) → order paid + license grant → creator `sale_credit` (+S, eligible, key `sale:{order}:{item}`). `topupCredit` credits a sikka-pack line once (keys `topup:`/`topupbonus:`) and now rides the `OrderObserver` paid transition, so manual approval and eSewa share one path — never re-add a second credit call in a controller.
+58. **`composer.json` autoload.files is FROZEN at `[app/Support/money.php]` (v1.8.0).** Sikka deliberately ships NO helper file: `autoload.files` entries do not exist on a code-only host after an update zip (the v1.6.1 prod /earnings 500). New renderers must be PSR-4 classes that resolve without `composer dump-autoload`; `ReleaseHygieneTest` hash-locks the file list, so adding one fails the suite before it can ship.
+59. **An unlimited membership is an ENTITLEMENT, never a balance (v1.8.0).** `spendSikka` grants the license with `source = membership_unlimited` and writes ZERO ledger rows; the membership is consulted live (`active` + `unlimited_unlock`), so expiry revokes the perk without touching any ledger. Never "grant unlimited credits" as a balance substitute — the balance would be wrong on the next scan and the ledger is insert-only, so the mistake could not be corrected.
+60. **Engagement Sikka is spend-only by default, capped, and idempotent (v1.8.0).** Publish / rating-received / daily-visit awards are `cashout_eligible = false` (they buy prompts, they do not withdraw); each emitter's amount comes from settings and 0 disables it; the `engage:{user}:{type}:{date}` UNIQUE key plus the same-day SUM bound (`engage_daily_cap_sikka`) make double-fires impossible. Flipping one award to cash-out-able is an audited admin action with a mandatory reason — not a default, never a bulk backfill.
+61. **Sikka is a credit, not a currency — copy, rendering, and art (v1.8.0).** Copy says "Sikka credits" (never "currency"), a cash-out is "withdraw earnings", and no ₨/Rs/$ glyph sits inside the icon or price chip. Amounts are integers with no decimal point, rendered only through `<x-sikka>`; a blade view echoing a raw Sikka amount fails `SikkaIconTest`'s arch ban. The unit mark is an **admin-managed brand asset uploaded on each install** (Admin → Brand → `sikka-icon-path` / `sikka-icon-mono-path`; PNG/WebP, alpha preserved, ≤512px, JPEG refused) — it is never bundled in a release zip, so nobody should hunt for a binary in the artifact; with none uploaded, `<x-sikka>` renders the honest bordered "Sikka" chip.
+
 ## 7. Deploying the current update
 
 ### Installing on a NEW server (fresh install, v1.7.5+)
@@ -649,6 +740,23 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
+
+### Post-check (v1.8.0) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Zip contents (builder output) | `entries: 505 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | SHA-256 of the uploaded zip | `0dd3e0b619113e37207fc3a502bb7240a519031d6040ad8ccaf4dba37c5f19c4` | builder output |
+| 3 | `php artisan migrate:status` | the 11 Sikka migrations `2026_10_04_160000` … `2026_10_04_170000` newly **Ran**; nothing else moves | `DeployParityAcceptanceTest` (parity DB migrates the whole Sikka batch in one run) |
+| 4 | Admin → Overview | `v1.8.0` chip | `config('app.version')` single source |
+| 5 | The kill-switch is OFF after the update (default) | home, library, prompt detail, checkout and earnings render EXACTLY the v1.7.8 NPR experience — zero Sikka markup; `/sikka` 404s | `SikkaSurfacesTest::the kill-switch sweep: disabled means zero Sikka markup on every buyer surface` |
+| 6 | Admin → Sikka desk → flip the kill-switch ON, save the rates | the desk appears (pill after Finance) and the storefront/earnings Sikka cards appear; moderators get 403 everywhere on the desk | `SikkaDeskTest::the desk renders for admins with its pill and 403s moderators everywhere`, `SikkaDeskTest::settings respect the documented bounds and persist valid values` |
+| 7 | Admin → Brand → "Sikka unit mark": upload the founder's art (color + mono), check both grounds live | previews render on paper AND ink; a JPEG is refused with a field error; with no art uploaded the UI shows the bordered “Sikka” chip, never a broken image | `SikkaIconTest::the served Brand form previews both marks on paper and ink grounds`, `SikkaIconTest::the Brand form ingests both Sikka marks and refuses JPEG with a field error` |
+| 8 | Publish a prompt (Sikka earn), then open Earnings | a spend-only `engagement_reward` row appears (cash-out column empty); the daily cap stops further awards | `EngagementRewardTest` (5 tests) |
+| 9 | Buy a prompt with Sikka while short | checkout offers "Top up Sikka credits" and keeps the NPR rails visible; after a top-up the Sikka rail pays in one step and the creator gets `sale_credit` | `SikkaServiceTest::spendSikka pays the order and moves spend + creator credit in one transaction`, `SikkaSurfacesTest::the checkout selector offers the top-up CTA when the balance is short` |
+| 10 | Request a cash-out, then approve → settle on Finance | hold lowers both balances; settle stores the NPR amount once at the cash-out rate; reject/cancel returns the credits | `SikkaCashoutTest::approve then settle stores the NPR amount once at the rate; reject and cancel release` |
+| 11 | Buy a membership on the NPR rail (eSewa or manual) | approval writes one membership + first stipend + perks (badge/frame/verified) exactly once; `pv:stipend-scan` grants each elapsed period once | `MembershipActivationTest` (3 tests), `StipendScanTest` (3 tests) |
+| 12 | `cd core && php artisan test` | **613 passed / 17,849 assertions / 3 skipped** — and `Tests\Arch\…` appears in `--list-tests` (616 tests / 6 Arch) | whole suite |
 
 ### Post-check (v1.4.1) — run in order after the update.php pipeline finishes
 
@@ -846,5 +954,7 @@ deploy/build-update-zip.php                       v1.3.0: ships public_html/ all
 | v1.7.8 (2026-10-04) | **The admin Finance desk had no door** — no Finance pill existed anywhere, so the v1.6.0 ledger/payout desk was unreachable from the nav (found pre-release by the raid-fallout sweep) | The desk shipped with its route and tests but no nav entry, and nothing proved an admin GET route was linked from any served page | v1.7.8 (F1: pill after Payments + `OrphanAdminRouteTest` — every named `admin.*` GET route must be linked from a served page or exempt with a reason; `cbffe78`) |
 | v1.7.8 (2026-10-04) | Founder-requested: clicking your own profile avatar did nothing — no view/upload/frame shortcuts anywhere. The repro also surfaced two latent defects: `active_frame_id` not int-cast (string drivers fail the picker precheck) and in-test `pv:update` runs leaving a testing-flavoured `bootstrap/cache/config.php` behind (BH-R9-04 — the next `artisan serve`/tinker boot talked to an empty DB) | The feature was never built; the cast relied on the driver's returned type; nothing removed config caches written inside the test process | v1.7.8 (F2: owner-only avatar menu on hero + navbar with lightbox/anchors, int cast, Pest `afterEach` cache purge + hygiene lock; `32e1d08`) |
 | v1.7.8 (2026-10-04) | **“Badge criteria not working”** — met tiers never produced badges. The repro cleared the evaluator (real event → award + XP + feed); the actual holes: `verified` had no emitter, `manual` was not selectable for badges, criteria had no descriptions, and historical eligibility had no backfill path (BH-R9-03) | No observer covered the verified flip; `Badge::CRITERIA` excluded manual; no scan existed | v1.7.8 (F3: verified emitter inside the flag-flip transaction, full criterion select + descriptions, `pv:award-scan` + admin “Scan now” on one idempotent path, daily 04:15; `59cde41`) |
+
+| v1.8.0 (2026-10-05) | — **incident-free release**: Sikka ships behind a kill-switch that is OFF on every install, so the NPR rails are the v1.7.8 experience until the founder flips it. Pre-release finding (never reached live): the S4 Finance desk settle preview carried a raw U+2192 arrow, caught by the v1.7.5 arch suite in the S9 sweep and fixed in the release commit | S4 hand-typed the glyph while v1.7.8 had standardized on the `&rarr;` entity; nothing asserted the new line until `NoBladeLeakTest` ran over it | v1.8.0 (`&rarr;` entity; the arch suite is the trap — §6.49) |
 
 — Prepared by Codebuff. Questions about any section: start from the file map and read the docblocks; every non-obvious decision is commented inline in the code.

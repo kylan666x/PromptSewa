@@ -11,8 +11,8 @@ use App\Models\Product;
 use App\Models\Prompt;
 use App\Models\PromptReport;
 use App\Models\ToolLogo;
-use App\Models\UserFrameUnlock;
 use App\Models\User;
+use App\Models\UserFrameUnlock;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
@@ -200,6 +200,15 @@ function raidMatrixRoutes(array $w): array
         'packs.index' => $route('packs.index'),
         'packs.show' => $route('packs.show'),
         'feed.index' => $route('feed.index'),
+        // S5 (v1.8.0): the membership storefront is public — guests browse the
+        // plan catalog, signed-in visitors also see their own memberships.
+        'memberships.index' => $route('memberships.index'),
+        // S6 (v1.8.0): the Sikka top-up storefront 404s while the kill-switch
+        // is off (the shipped default), so EVERY role gets 404 in this world;
+        // SikkaSurfacesTest sweeps the enabled state and the kill-switch.
+        'sikka.topup' => ['url' => raidMatrixUrl('sikka.topup', $w), 'title' => false, 'roles' => [
+            'guest' => 404, 'member' => 404, 'creator' => 404, 'moderator' => 404, 'admin' => 404, 'banned' => 302, 'impersonator' => 404,
+        ]],
         'search.preview' => $route('search.preview', 'public', false),
         'robots' => $route('robots', 'public', false),
         'sitemap' => $route('sitemap', 'public', false),
@@ -269,6 +278,8 @@ function raidMatrixRoutes(array $w): array
         // R5: comp grants are admin-only — the read page must 403 moderators
         // (§6.36: a write-gated feature with an ungated read door).
         'admin.comp-grants.create' => $route('admin.comp-grants.create', 'admin'),
+        // S6 (v1.8.0): the Sikka desk is an admin-only door — moderators 403.
+        'admin.sikka.index' => $route('admin.sikka.index', 'admin'),
         'admin.finance.payouts.destination' => $route('admin.finance.payouts.destination', 'admin', false),
     ];
 }

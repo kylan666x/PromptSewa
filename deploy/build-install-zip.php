@@ -41,7 +41,7 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.7.8';
+const APP_VERSION = '1.8.0';
 
 $repoRoot = dirname(__DIR__);
 $core = $repoRoot.DIRECTORY_SEPARATOR.'core';
