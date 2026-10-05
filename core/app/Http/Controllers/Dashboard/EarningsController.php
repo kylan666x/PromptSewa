@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
 use App\Models\Payout;
-use App\Models\Prompt;
+use App\Models\SikkaTransaction;
 use App\Models\WalletTransaction;
+use App\Services\SettingsService;
+use App\Services\SikkaService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
@@ -29,6 +29,8 @@ class EarningsController extends Controller
 {
     public function __construct(
         private readonly WalletService $wallet,
+        private readonly SikkaService $sikka,
+        private readonly SettingsService $settings,
     ) {}
 
     public function index(Request $request)
@@ -70,16 +72,47 @@ class EarningsController extends Controller
 
         // K3: settings fallback in code — a missing payout_min row renders
         // the documented Rs. 500 default, never null math in the form.
-        $minPayoutPaisa = (int) (app(\App\Services\SettingsService::class)->get('payout_min_paisa', '50000') ?? '50000');
+        $minPayoutPaisa = (int) ($this->settings->get('payout_min_paisa', '50000') ?? '50000');
+
+        // S4/S6 (v1.8.0): the Sikka half of the earnings tab — read-only
+        // while the kill-switch is off (zero Sikka markup anywhere).
+        $sikkaEnabled = $this->settings->isOn('sikka_enabled');
+        $sikkaSpendable = $sikkaEnabled ? $this->sikka->spendableAvailable($user) : 0;
+        $sikkaCashoutable = $sikkaEnabled ? $this->sikka->cashoutableAvailable($user) : 0;
+        $sikkaMin = max(0, (int) ($this->settings->get('sikka_cashout_min', '500') ?? '500'));
+        $sikkaRate = $this->sikka->cashoutRatePaisaPerToken();
+
+        $sikkaLedger = $sikkaEnabled
+            ? SikkaTransaction::query()
+                ->where('user_id', $user->id)
+                ->latest('created_at')
+                ->limit(25)
+                ->get()
+            : collect();
+
+        // Two queues, one table: the wallet history stays NPR-only; Sikka
+        // withdrawals render in the Sikka card with their own cancel door.
+        $walletPayouts = collect($payouts)
+            ->reject(fn (Payout $payout) => $payout->isSikkaSource())
+            ->values();
+        $sikkaPayouts = collect($payouts)->where('source_currency', Payout::SOURCE_SIKKA)->values();
 
         return view('dashboard.earnings', [
             'balance' => $balance,
             'available' => $available,
             'lifetimeCredits' => $lifetimeCredits,
             'salesCount' => $salesCount,
-            'payouts' => $payouts,
+            'payouts' => $walletPayouts,
+            'walletPayouts' => $walletPayouts,
             'ledger' => $ledger,
             'minPayoutPaisa' => $minPayoutPaisa,
+            'sikkaEnabled' => $sikkaEnabled,
+            'sikkaSpendable' => $sikkaSpendable,
+            'sikkaCashoutable' => $sikkaCashoutable,
+            'sikkaMin' => $sikkaMin,
+            'sikkaRate' => $sikkaRate,
+            'sikkaLedger' => $sikkaLedger,
+            'sikkaPayouts' => $sikkaPayouts,
         ]);
     }
 
@@ -111,10 +144,49 @@ class EarningsController extends Controller
     public function cancelPayout(Request $request, Payout $payout)
     {
         abort_unless($payout->user_id === $request->user()->id, 403);
+        abort_unless(! $payout->isSikkaSource(), 422, 'That is a Sikka withdrawal — cancel it from the Sikka card.');
         abort_unless($payout->status === Payout::STATUS_REQUESTED, 422, 'Only open requests can be cancelled.');
 
         $this->wallet->releasePayout($payout, $request->user(), Payout::STATUS_CANCELLED);
 
         return back()->with('success', 'Payout cancelled — the held amount is back in your available balance.');
+    }
+
+    /**
+     * S4 (v1.8.0): request a Sikka → NPR withdrawal. SikkaService owns
+     * every check (positive amount, known method, >= sikka_cashout_min,
+     * <= cashoutableAvailable); a violation maps to 422.
+     */
+    public function requestSikkaPayout(Request $request)
+    {
+        $validated = $request->validate([
+            'amount_sikka' => ['required', 'integer', 'min:1'],
+            'method' => ['required', 'in:'.implode(',', Payout::METHODS)],
+            'destination' => ['required', 'string', 'min:4', 'max:190'],
+        ]);
+
+        try {
+            $this->sikka->requestPayout(
+                $request->user(),
+                (int) $validated['amount_sikka'],
+                $validated['method'],
+                trim($validated['destination']),
+            );
+        } catch (InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        return back()->with('success', 'Withdrawal requested — the credits are now on hold until an admin settles it.');
+    }
+
+    public function cancelSikkaPayout(Request $request, Payout $payout)
+    {
+        abort_unless($payout->user_id === $request->user()->id, 403);
+        abort_unless($payout->isSikkaSource(), 422, 'That is not a Sikka withdrawal.');
+        abort_unless($payout->status === Payout::STATUS_REQUESTED, 422, 'Only open requests can be cancelled.');
+
+        $this->sikka->releasePayout($payout, $request->user(), Payout::STATUS_CANCELLED);
+
+        return back()->with('success', 'Withdrawal cancelled — the held credits are back in your Sikka balance.');
     }
 }

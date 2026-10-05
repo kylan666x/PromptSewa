@@ -74,11 +74,24 @@
                             <div>
                                 <p class="text-sm font-semibold text-ink">
                                     #{{ $payout->id }} · {{ $payout->user?->name ?? ('user '.$payout->user_id) }}
-                                    — <span class="font-mono"><x-money :paisa="$payout->amount_paisa"/></span>
+                                    @if ($payout->isSikkaSource())
+                                        <span class="ml-1 rounded-full bg-ink px-2 py-0.5 font-mono text-[10px] font-bold text-saffron">SIKKA</span>
+                                        — <x-sikka :amount="$payout->sikka_amount"/>
+                                        @if ($payout->settled_npr_paisa !== null)
+                                            <span class="text-xs text-ink/60">→ <x-money :paisa="$payout->settled_npr_paisa"/></span>
+                                        @endif
+                                    @else
+                                        <span class="ml-1 rounded-full bg-ink/10 px-2 py-0.5 font-mono text-[10px] font-bold text-ink/60">NPR</span>
+                                        — <span class="font-mono"><x-money :paisa="$payout->amount_paisa"/></span>
+                                    @endif
                                 </p>
                                 <p class="text-xs text-ink/50">
                                     {{ str_replace('_', ' ', $payout->method) }} · requested {{ $payout->requested_at->format('M j, Y H:i') }}
-                                    @if ($payout->status === 'approved') · awaiting settlement @endif
+                                    @if ($payout->isSikkaSource() && $payout->status === 'approved')
+                                        · settles at <x-money :paisa="$sikkaCashoutRate"/> per credit
+                                    @elseif ($payout->status === 'approved')
+                                        · awaiting settlement
+                                    @endif
                                 </p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">

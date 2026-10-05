@@ -8,9 +8,11 @@ use App\Models\Order;
 use App\Models\Payout;
 use App\Models\WalletTransaction;
 use App\Services\SettingsService;
+use App\Services\SikkaService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -26,6 +28,7 @@ class FinanceController extends Controller
     public function __construct(
         private readonly WalletService $wallet,
         private readonly SettingsService $settings,
+        private readonly SikkaService $sikka,
     ) {}
 
     public function index(Request $request)
@@ -83,6 +86,11 @@ class FinanceController extends Controller
             'payoutQueue' => $payoutQueue,
             'ledger' => $ledger,
             'filters' => $request->only(['user', 'type', 'from', 'to']),
+            // S4 (v1.8.0): the Sikka queue rides the same desk — currency
+            // chips tell the two rails apart, and the settle preview shows
+            // the NPR the stored spread will fix at settlement time.
+            'sikkaEnabled' => $this->settings->isOn('sikka_enabled'),
+            'sikkaCashoutRate' => $this->sikka->cashoutRatePaisaPerToken(),
         ]);
     }
 
@@ -105,6 +113,15 @@ class FinanceController extends Controller
     {
         abort_unless($request->user()?->isAdmin(), 403);
         abort_unless($payout->status === Payout::STATUS_APPROVED, 422, 'Only approved payouts can be settled.');
+
+        // S4 (v1.8.0): the Sikka queue settles at the stored spread —
+        // settled_npr_paisa = S × cash-out rate, computed ONCE on the
+        // payout row; history never re-prices. The service emits the bell row.
+        if ($payout->isSikkaSource()) {
+            $this->sikka->settlePayout($payout, $request->user());
+
+            return back()->with('success', "Sikka payout #{$payout->id} settled — the NPR amount is fixed at the cash-out rate.");
+        }
 
         // Settled inserts NOTHING financial — the hold was the debit; the
         // payout row carries the settlement state. F6 (v1.7.8): the
@@ -136,6 +153,14 @@ class FinanceController extends Controller
 
         $validated = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
 
+        // S4 (v1.8.0): a Sikka rejection releases the held credits through
+        // the SikkaService choke point (the release row restores the balance).
+        if ($payout->isSikkaSource()) {
+            $this->sikka->releasePayout($payout, $request->user(), Payout::STATUS_REJECTED, $validated['note'] ?? null);
+
+            return back()->with('success', "Sikka payout #{$payout->id} rejected — the held credits are back in the creator's Sikka balance.");
+        }
+
         DB::transaction(function () use ($payout, $request, $validated) {
             app(WalletService::class)->releasePayout(
                 $payout,
@@ -163,7 +188,7 @@ class FinanceController extends Controller
         abort_unless($request->user()?->isAdmin(), 403);
 
         try {
-            $plaintext = \Illuminate\Support\Facades\Crypt::decryptString($payout->destination_encrypted);
+            $plaintext = Crypt::decryptString($payout->destination_encrypted);
         } catch (\Throwable) {
             return response()->json(['error' => 'undecryptable'], 422);
         }

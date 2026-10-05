@@ -1,32 +1,50 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdoptionController;
+use App\Http\Controllers\Admin\BadgeAdminController;
+use App\Http\Controllers\Admin\BrandSettingsAdminController;
+use App\Http\Controllers\Admin\CompGrantController;
+use App\Http\Controllers\Admin\FinanceController;
+use App\Http\Controllers\Admin\FrameAdminController;
+use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\MailSettingsAdminController;
+use App\Http\Controllers\Admin\ManualPaymentMethodController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PackAdminController;
 use App\Http\Controllers\Admin\PaymentMethodAdminController;
 use App\Http\Controllers\Admin\PromptAdminController;
-use App\Http\Controllers\Admin\BrandSettingsAdminController;
+use App\Http\Controllers\Admin\PromptPreviewController;
+use App\Http\Controllers\Admin\PromptReportAdminController;
+use App\Http\Controllers\Admin\SecurityAdminController;
 use App\Http\Controllers\Admin\ToolLogoAdminController;
-use App\Http\Controllers\Admin\ImpersonationController;
-use App\Http\Controllers\Admin\MailSettingsAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
+use App\Http\Controllers\Admin\UserPurgeController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CreatorProfileController;
+use App\Http\Controllers\Dashboard\EarningsController;
+use App\Http\Controllers\Dashboard\PaymentProofController;
+use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\PromptEditController;
 use App\Http\Controllers\Dashboard\PromptFormController;
 use App\Http\Controllers\Dashboard\ReleaseUpdateController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FeedController;
 use App\Http\Controllers\LibraryController;
-use App\Http\Controllers\PageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackController;
-use App\Http\Controllers\Admin\PromptReportAdminController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\PromptReportController;
+use App\Http\Controllers\RatingController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Models\Prompt;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 // --- Public catalog (UI-001) --------------------------------------------
@@ -46,7 +64,7 @@ Route::get('/prompts/{prompt:slug}/versions', [PromptController::class, 'version
 // T7 (v1.5.0): restore an old snapshot as a new append-only version.
 // Owner/moderator only (policy gate inside). Route-model binds by the
 // version's numeric PK; controller re-verifies the version belongs.
-Route::post('/prompts/{prompt:slug}/versions/{version}/restore', [\App\Http\Controllers\Dashboard\PromptEditController::class, 'restore'])
+Route::post('/prompts/{prompt:slug}/versions/{version}/restore', [PromptEditController::class, 'restore'])
     ->middleware('auth')
     ->name('prompts.versions.restore');
 
@@ -60,7 +78,7 @@ Route::post('/prompts/{prompt:slug}/report', [PromptReportController::class, 'st
 
 // Community ratings: paid prompts require an active license; free are open
 // to any logged-in user. One rating per user per prompt (upsert).
-Route::post('/prompts/{prompt:slug}/rate', [\App\Http\Controllers\RatingController::class, 'store'])
+Route::post('/prompts/{prompt:slug}/rate', [RatingController::class, 'store'])
     ->name('prompts.rate')
     ->middleware('auth');
 
@@ -90,8 +108,8 @@ Route::get('/categories/{category:slug}', [LibraryController::class, 'category']
 
 // T9 (v1.5.0): dynamic sitemap + robots. deploy/public_html has no physical
 // robots.txt; the .htaccess catch-all forwards both here.
-Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'sitemap'])->name('sitemap');
-Route::get('/robots.txt', [\App\Http\Controllers\SitemapController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 Route::get('/about', [PageController::class, 'about'])->name('pages.about');
 
@@ -135,10 +153,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->name('dashboard');
 
 // Full profile editing (identity + avatar + banner).
-Route::get('/dashboard/profile', [\App\Http\Controllers\Dashboard\ProfileController::class, 'edit'])
+Route::get('/dashboard/profile', [ProfileController::class, 'edit'])
     ->middleware('auth')
     ->name('dashboard.profile.edit');
-Route::put('/dashboard/profile', [\App\Http\Controllers\Dashboard\ProfileController::class, 'update'])
+Route::put('/dashboard/profile', [ProfileController::class, 'update'])
     ->middleware('auth')
     ->name('dashboard.profile.update');
 
@@ -165,12 +183,12 @@ Route::put('/dashboard/prompts/{prompt:slug}', [PromptEditController::class, 'up
 Route::middleware('auth')->group(function () {
     // F6 (v1.7.8): the navbar bell. unread() is the 60s poll (throttled),
     // read-all is the panel button, open() is the mark-read click-through.
-    Route::get('/notifications/unread', [\App\Http\Controllers\NotificationController::class, 'unread'])
+    Route::get('/notifications/unread', [NotificationController::class, 'unread'])
         ->middleware('throttle:30,1')
         ->name('notifications.unread');
-    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
-    Route::get('/notifications/{notification}/open', [\App\Http\Controllers\NotificationController::class, 'open'])
+    Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
         ->name('notifications.open');
 
     Route::get('/purchases', [CheckoutController::class, 'purchases'])->name('purchases.index');
@@ -185,7 +203,7 @@ Route::middleware('auth')->group(function () {
         ->name('purchases.download');
 
     // T13: bookmarks — toggle save state on a prompt. Owner-only, throttled.
-    Route::post('/bookmarks/{prompt:slug}', [\App\Http\Controllers\BookmarkController::class, 'toggle'])
+    Route::post('/bookmarks/{prompt:slug}', [BookmarkController::class, 'toggle'])
         ->middleware('throttle:30,1')
         ->name('bookmarks.toggle');
 
@@ -201,7 +219,7 @@ Route::middleware('auth')->group(function () {
         ->name('payments.esewa.webhook');
 
     Route::post('/checkout/esewa/verify', [CheckoutController::class, 'esewaVerify'])
-        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+        ->withoutMiddleware([VerifyCsrfToken::class])
         ->name('checkout.esewa.verify');
 
     Route::post('/checkout/{order}/manual', [CheckoutController::class, 'manualSubmit'])->name('checkout.manual.submit');
@@ -213,14 +231,14 @@ Route::middleware('auth')->group(function () {
 
     // C3 (v1.4.4): buyer submits/refreshes the TXN id + screenshot proof on
     // their own pending manual order. Throttled like other public writes.
-    Route::post('/orders/{order}/proof', [\App\Http\Controllers\Dashboard\PaymentProofController::class, 'store'])
+    Route::post('/orders/{order}/proof', [PaymentProofController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('orders.proof.store');
 
     // C3: payment-proof images are PRIVATE — served through this controller
     // (owner or staff only), never a raw storage URL. QR codes (public
     // disk) are fine as plain storage URLs; proofs are not.
-    Route::get('/orders/{order}/proof', [\App\Http\Controllers\Dashboard\PaymentProofController::class, 'show'])
+    Route::get('/orders/{order}/proof', [PaymentProofController::class, 'show'])
         ->name('orders.proof.show');
 });
 
@@ -233,7 +251,7 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/prompts', [PromptAdminController::class, 'index'])->name('prompts.index');
     // Moderation preview — full body for staff, grants nothing (replaces
     // the fragile ?preview=1 + referer heuristic).
-    Route::get('/prompts/{prompt}/preview', [\App\Http\Controllers\Admin\PromptPreviewController::class, 'show'])->name('prompts.preview');
+    Route::get('/prompts/{prompt}/preview', [PromptPreviewController::class, 'show'])->name('prompts.preview');
     Route::patch('/prompts/{prompt}/status', [PromptAdminController::class, 'updateStatus'])->name('prompts.status');
 
     // User management (admin only for role changes). {user:id} pins the
@@ -253,18 +271,18 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     // T10 (v1.5.0): demo purge panel (dry-run preview + force). Admin-only
     // in the controller; the panel shells pv:purge-demo so logic can't drift.
-    Route::post('/users/purge-demo/preview', [\App\Http\Controllers\Admin\UserPurgeController::class, 'preview'])->name('users.purge.preview');
-    Route::post('/users/purge-demo/run', [\App\Http\Controllers\Admin\UserPurgeController::class, 'run'])->name('users.purge.run');
+    Route::post('/users/purge-demo/preview', [UserPurgeController::class, 'preview'])->name('users.purge.preview');
+    Route::post('/users/purge-demo/run', [UserPurgeController::class, 'run'])->name('users.purge.run');
 
     // F3 (v1.5.2): "Apply adoption" panel — dry-run preview + force, shelling
     // pv:adopt-catalog so the runbook logic and UI can't drift. Admin-only
     // in the controller; the founder runs T4 from the browser (no SSH host).
-    Route::post('/users/adopt-catalog/preview', [\App\Http\Controllers\Admin\AdoptionController::class, 'preview'])->name('users.adopt.preview');
-    Route::post('/users/adopt-catalog/run', [\App\Http\Controllers\Admin\AdoptionController::class, 'run'])->name('users.adopt.run');
+    Route::post('/users/adopt-catalog/preview', [AdoptionController::class, 'preview'])->name('users.adopt.preview');
+    Route::post('/users/adopt-catalog/run', [AdoptionController::class, 'run'])->name('users.adopt.run');
 
     // A5: complimentary grants (press copies, make-goods) — admin only.
-    Route::get('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'create'])->name('comp-grants.create');
-    Route::post('/comp-grants', [\App\Http\Controllers\Admin\CompGrantController::class, 'store'])->name('comp-grants.store');
+    Route::get('/comp-grants', [CompGrantController::class, 'create'])->name('comp-grants.create');
+    Route::post('/comp-grants', [CompGrantController::class, 'store'])->name('comp-grants.store');
 
     // Abuse reports triage ("Report this prompt").
     Route::get('/reports', [PromptReportAdminController::class, 'index'])->name('reports.index');
@@ -275,10 +293,10 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/payments', [PaymentMethodAdminController::class, 'update'])->name('payments.update');
 
     // C3 (v1.4.4): manual payment methods CRUD (QR + instructions).
-    Route::get('/manual-methods', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'index'])->name('manual-methods.index');
-    Route::post('/manual-methods', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'store'])->name('manual-methods.store');
-    Route::put('/manual-methods/{manualMethod}', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'update'])->name('manual-methods.update');
-    Route::delete('/manual-methods/{manualMethod}', [\App\Http\Controllers\Admin\ManualPaymentMethodController::class, 'destroy'])->name('manual-methods.destroy');
+    Route::get('/manual-methods', [ManualPaymentMethodController::class, 'index'])->name('manual-methods.index');
+    Route::post('/manual-methods', [ManualPaymentMethodController::class, 'store'])->name('manual-methods.store');
+    Route::put('/manual-methods/{manualMethod}', [ManualPaymentMethodController::class, 'update'])->name('manual-methods.update');
+    Route::delete('/manual-methods/{manualMethod}', [ManualPaymentMethodController::class, 'destroy'])->name('manual-methods.destroy');
 
     // Packs CRUD.
     Route::get('/packs', [PackAdminController::class, 'index'])->name('packs.index');
@@ -305,36 +323,36 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
 
     // M5 (v1.6.0): Finance desk — totals, pre-ledger list, payout queue,
     // ledger browser. Admin-only in the controller.
-    Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
-    Route::post('/finance/payouts/{payout}/approve', [\App\Http\Controllers\Admin\FinanceController::class, 'approvePayout'])->name('finance.payouts.approve');
-    Route::post('/finance/payouts/{payout}/settle', [\App\Http\Controllers\Admin\FinanceController::class, 'settlePayout'])->name('finance.payouts.settle');
-    Route::post('/finance/payouts/{payout}/reject', [\App\Http\Controllers\Admin\FinanceController::class, 'rejectPayout'])->name('finance.payouts.reject');
-    Route::get('/finance/payouts/{payout}/destination', [\App\Http\Controllers\Admin\FinanceController::class, 'payoutDestination'])->name('finance.payouts.destination');
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance');
+    Route::post('/finance/payouts/{payout}/approve', [FinanceController::class, 'approvePayout'])->name('finance.payouts.approve');
+    Route::post('/finance/payouts/{payout}/settle', [FinanceController::class, 'settlePayout'])->name('finance.payouts.settle');
+    Route::post('/finance/payouts/{payout}/reject', [FinanceController::class, 'rejectPayout'])->name('finance.payouts.reject');
+    Route::get('/finance/payouts/{payout}/destination', [FinanceController::class, 'payoutDestination'])->name('finance.payouts.destination');
 
     // G2 (v1.7.0): badge CRUD + manual award (admin, audited).
-    Route::get('/badges', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'index'])->name('badges.index');
-    Route::post('/badges', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'store'])->name('badges.store');
-    Route::put('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'update'])->name('badges.update');
-    Route::delete('/badges/{badge}', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'destroy'])->name('badges.destroy');
-    Route::post('/badges/award', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'award'])->name('badges.award');
+    Route::get('/badges', [BadgeAdminController::class, 'index'])->name('badges.index');
+    Route::post('/badges', [BadgeAdminController::class, 'store'])->name('badges.store');
+    Route::put('/badges/{badge}', [BadgeAdminController::class, 'update'])->name('badges.update');
+    Route::delete('/badges/{badge}', [BadgeAdminController::class, 'destroy'])->name('badges.destroy');
+    Route::post('/badges/award', [BadgeAdminController::class, 'award'])->name('badges.award');
     // F3 (v1.7.8): idempotent award backfill (admin-only in the controller,
     // throttled — a human clicking twice must not queue a second scan).
-    Route::post('/badges/scan', [\App\Http\Controllers\Admin\BadgeAdminController::class, 'scan'])->middleware('throttle:6,1')->name('badges.scan');
+    Route::post('/badges/scan', [BadgeAdminController::class, 'scan'])->middleware('throttle:6,1')->name('badges.scan');
 
     // G3 (v1.7.0): frame CRUD.
-    Route::get('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'index'])->name('frames.index');
-    Route::post('/frames', [\App\Http\Controllers\Admin\FrameAdminController::class, 'store'])->name('frames.store');
-    Route::put('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'update'])->name('frames.update');
+    Route::get('/frames', [FrameAdminController::class, 'index'])->name('frames.index');
+    Route::post('/frames', [FrameAdminController::class, 'store'])->name('frames.store');
+    Route::put('/frames/{frame}', [FrameAdminController::class, 'update'])->name('frames.update');
 
     // W4 (v1.7.3): manual frame award (audited: granted_by + reason) + revoke.
-    Route::post('/frames/award', [\App\Http\Controllers\Admin\FrameAdminController::class, 'award'])->name('frames.award');
-    Route::delete('/frames/unlocks/{unlock}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'revoke'])->name('frames.unlocks.revoke');
-    Route::delete('/frames/{frame}', [\App\Http\Controllers\Admin\FrameAdminController::class, 'destroy'])->name('frames.destroy');
+    Route::post('/frames/award', [FrameAdminController::class, 'award'])->name('frames.award');
+    Route::delete('/frames/unlocks/{unlock}', [FrameAdminController::class, 'revoke'])->name('frames.unlocks.revoke');
+    Route::delete('/frames/{frame}', [FrameAdminController::class, 'destroy'])->name('frames.destroy');
 
     // T6 (v1.7.3): Admin → Security — bot challenge + disposable blocklist.
-    Route::get('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'edit'])->name('security.edit');
-    Route::put('/security', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'update'])->name('security.update');
-    Route::post('/security/test-email', [\App\Http\Controllers\Admin\SecurityAdminController::class, 'testEmail'])->name('security.test-email');
+    Route::get('/security', [SecurityAdminController::class, 'edit'])->name('security.edit');
+    Route::put('/security', [SecurityAdminController::class, 'update'])->name('security.update');
+    Route::post('/security/test-email', [SecurityAdminController::class, 'testEmail'])->name('security.test-email');
 
     // A3 (v1.7.6): Admin → Email — mailer selection, SMTP credentials
     // (write-only, encrypted at rest) and the send-a-test-mail probe.
@@ -356,20 +374,30 @@ Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])
     ->name('impersonation.stop');
 
 // G4 (v1.7.0): public community feed (paper world, noindex, cached page 1).
-Route::get('/feed', [\App\Http\Controllers\FeedController::class, 'index'])
+Route::get('/feed', [FeedController::class, 'index'])
     ->middleware('throttle:60,1')
     ->name('feed.index');
 
 // M4 (v1.6.0): creator Earnings tab — balance, sales, payout request/cancel.
-Route::get('/dashboard/earnings', [\App\Http\Controllers\Dashboard\EarningsController::class, 'index'])
+Route::get('/dashboard/earnings', [EarningsController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard.earnings');
-Route::post('/dashboard/earnings/payouts', [\App\Http\Controllers\Dashboard\EarningsController::class, 'requestPayout'])
+Route::post('/dashboard/earnings/payouts', [EarningsController::class, 'requestPayout'])
     ->middleware('auth')
     ->name('dashboard.earnings.request');
-Route::post('/dashboard/earnings/payouts/{payout}/cancel', [\App\Http\Controllers\Dashboard\EarningsController::class, 'cancelPayout'])
+Route::post('/dashboard/earnings/payouts/{payout}/cancel', [EarningsController::class, 'cancelPayout'])
     ->middleware('auth')
     ->name('dashboard.earnings.cancel');
+
+// S4 (v1.8.0): Sikka → NPR withdrawals. Requesting parks a payout_hold row
+// (credits are unavailable until released or settled); the admin settles it
+// at the cash-out spread in the Finance desk.
+Route::post('/dashboard/earnings/sikka', [EarningsController::class, 'requestSikkaPayout'])
+    ->middleware('auth')
+    ->name('dashboard.earnings.sikka.request');
+Route::post('/dashboard/earnings/sikka/{payout}/cancel', [EarningsController::class, 'cancelSikkaPayout'])
+    ->middleware('auth')
+    ->name('dashboard.earnings.sikka.cancel');
 
 // Legacy path kept working for bookmarks from the previous dashboard card.
 Route::get('/dashboard/update', fn () => redirect()->route('admin.update'))

@@ -70,6 +70,7 @@ function raidFormExtract(string $html, string $needle, ?string $requireVerb = nu
 
             if ($type === 'file') {
                 $files[] = $name;
+
                 continue;
             }
             if (in_array($type, ['checkbox', 'radio'], true) && ! preg_match('/\bchecked\b/i', $tag)) {
@@ -236,6 +237,8 @@ function raidFormInventory(): array
         'dashboard.prompts.update' => 'PromptCreateEditTest',
         'dashboard.earnings.request' => 'FormRoundTripInventoryTest (R3)',
         'dashboard.earnings.cancel' => 'FormRoundTripInventoryTest (R3)',
+        'dashboard.earnings.sikka.request' => 'SikkaCashoutTest (S4)',
+        'dashboard.earnings.sikka.cancel' => 'SikkaCashoutTest (S4)',
         'prompts.rate' => 'AdminFlowsTest',
         'prompts.report.store' => 'PromptReportTest',
         'prompts.versions.restore' => 'CatalogAndVersionTruthTest',

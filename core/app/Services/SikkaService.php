@@ -4,10 +4,14 @@ namespace App\Services;
 
 use App\Models\LicenseGrant;
 use App\Models\Membership;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payout;
 use App\Models\SikkaTransaction;
 use App\Models\User;
+use App\Support\SikkaFormat;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -381,6 +385,182 @@ class SikkaService
                 'created_at' => now(),
             ]);
         });
+    }
+
+    // -------------------------------------------------------------
+    // Cash-out (S4) — Sikka → NPR at the spread
+    // -------------------------------------------------------------
+
+    /**
+     * The configured cash-out rate in paisa per Sikka, bounded between 10
+     * and the buy rate (the spread can never invert: the founder cannot
+     * make cashing out pay better than buying in).
+     */
+    public function cashoutRatePaisaPerToken(): int
+    {
+        $buy = max(1, (int) ($this->settings->get('sikka_buy_paisa_per_token', '100') ?? '100'));
+        $rate = (int) ($this->settings->get('sikka_cashout_paisa_per_token', '80') ?? '80');
+
+        return max(10, min($buy, $rate));
+    }
+
+    /**
+     * Request a Sikka withdrawal: payout row + payout_hold row in ONE
+     * transaction.
+     *
+     * Checks (all throw InvalidArgumentException — controllers map them to
+     * 422): a positive amount, a known method, >= sikka_cashout_min, and
+     * <= cashoutableAvailable. The hold (−S, eligible=true) lives inside
+     * the balance SUM, so the amount is unavailable the moment it is held
+     * and is restored by the release row if the request is refused.
+     */
+    public function requestPayout(User $user, int $sikkaAmount, string $method, string $destinationPlaintext): Payout
+    {
+        if ($sikkaAmount <= 0) {
+            throw new InvalidArgumentException('Withdrawal amount must be positive.');
+        }
+
+        if (! in_array($method, Payout::METHODS, true)) {
+            throw new InvalidArgumentException("Unknown payout method: {$method}");
+        }
+
+        $min = max(0, (int) ($this->settings->get('sikka_cashout_min', '500') ?? '500'));
+
+        return DB::transaction(function () use ($user, $sikkaAmount, $method, $destinationPlaintext, $min) {
+            if ($sikkaAmount < $min) {
+                throw new InvalidArgumentException('Withdrawal amount is below the Sikka minimum.');
+            }
+
+            if ($sikkaAmount > $this->cashoutableAvailable($user)) {
+                throw new InvalidArgumentException('Withdrawal amount exceeds the cashoutable Sikka balance.');
+            }
+
+            $payout = Payout::query()->create([
+                'user_id' => $user->id,
+                // NPR is DERIVED at settlement; the hold itself is Sikka.
+                'amount_paisa' => 0,
+                'status' => Payout::STATUS_REQUESTED,
+                'method' => $method,
+                // Encrypted at rest; plaintext exists only in this call frame.
+                'destination_encrypted' => Crypt::encryptString($destinationPlaintext),
+                'source_currency' => Payout::SOURCE_SIKKA,
+                'sikka_amount' => $sikkaAmount,
+                'requested_at' => now(),
+            ]);
+
+            SikkaTransaction::query()->create([
+                'user_id' => $user->id,
+                'type' => SikkaTransaction::TYPE_PAYOUT_HOLD,
+                'amount_sikka' => -$sikkaAmount,
+                'cashout_eligible' => true,
+                'idempotency_key' => "sikka_payout_hold:{$payout->id}",
+                'meta' => ['payout_id' => $payout->id, 'method' => $method],
+                'created_at' => now(),
+            ]);
+
+            return $payout;
+        });
+    }
+
+    /**
+     * Settle an APPROVED Sikka payout: compute settled_npr_paisa = S ×
+     * cashout_rate with a pure integer multiply and store it ONCE on the
+     * payout row. No ledger row is inserted — the hold was the debit, and
+     * re-pricing a settled payout is impossible by construction.
+     */
+    public function settlePayout(Payout $payout, User $decider): void
+    {
+        DB::transaction(function () use ($payout, $decider) {
+            /** @var Payout $payout */
+            $payout = Payout::query()->whereKey($payout->getKey())->lockForUpdate()->firstOrFail();
+
+            $this->assertSikkaPayout($payout);
+
+            if ($payout->status === Payout::STATUS_SETTLED) {
+                return; // idempotent replay — the stored NPR never re-prices
+            }
+
+            if ($payout->status !== Payout::STATUS_APPROVED) {
+                throw new RuntimeException('Only approved payouts can be settled.');
+            }
+
+            $fill = ['decided_by' => $decider->id, 'decided_at' => now()];
+
+            if ($payout->settled_npr_paisa === null) {
+                $fill['settled_npr_paisa'] = (int) $payout->sikka_amount * $this->cashoutRatePaisaPerToken();
+            }
+
+            $payout->fill($fill);
+            $payout->transitionTo(Payout::STATUS_SETTLED);
+
+            if ($payout->user !== null) {
+                Notification::emit(
+                    $payout->user,
+                    Notification::TYPE_PAYOUT_SETTLED,
+                    'Your withdrawal of '.SikkaFormat::render((int) $payout->sikka_amount)
+                        .' Sikka credits was settled — Rs '.number_format(intdiv((int) $payout->settled_npr_paisa, 100)).' sent.',
+                    $payout,
+                );
+            }
+        });
+    }
+
+    /**
+     * Reject or cancel a Sikka payout: the release row (+S) restores the
+     * held credits, and the payout row carries the decision. Insert-only
+     * reversal — the hold row is never rewritten.
+     */
+    public function releasePayout(Payout $payout, User $decider, string $status, ?string $note = null): void
+    {
+        if (! in_array($status, [Payout::STATUS_REJECTED, Payout::STATUS_CANCELLED], true)) {
+            throw new InvalidArgumentException('releasePayout accepts only rejected|cancelled.');
+        }
+
+        DB::transaction(function () use ($payout, $decider, $status, $note) {
+            /** @var Payout $payout */
+            $payout = Payout::query()->whereKey($payout->getKey())->lockForUpdate()->firstOrFail();
+
+            $this->assertSikkaPayout($payout);
+
+            if ($payout->status === $status) {
+                return; // idempotent replay
+            }
+
+            $payout->fill([
+                'decided_by' => $decider->id,
+                'decided_at' => now(),
+                'note' => $note ?? $payout->note,
+            ]);
+            $payout->transitionTo($status);
+
+            SikkaTransaction::query()->create([
+                'user_id' => $payout->user_id,
+                'type' => SikkaTransaction::TYPE_PAYOUT_RELEASE,
+                'amount_sikka' => (int) $payout->sikka_amount,
+                'cashout_eligible' => true,
+                'idempotency_key' => "sikka_payout_release:{$payout->id}",
+                'meta' => ['payout_id' => $payout->id, 'status' => $status, 'by' => $decider->id],
+                'created_at' => now(),
+            ]);
+
+            if ($payout->user !== null) {
+                Notification::emit(
+                    $payout->user,
+                    Notification::TYPE_PAYOUT_REJECTED,
+                    'Your withdrawal of '.SikkaFormat::render((int) $payout->sikka_amount)
+                        .' Sikka credits was '.($status === Payout::STATUS_REJECTED ? 'rejected' : 'cancelled')
+                        .' — the credits are back in your Sikka balance.',
+                    $payout,
+                );
+            }
+        });
+    }
+
+    private function assertSikkaPayout(Payout $payout): void
+    {
+        if (! $payout->isSikkaSource()) {
+            throw new InvalidArgumentException('That payout is an NPR wallet withdrawal — the wallet service owns it.');
+        }
     }
 
     // -------------------------------------------------------------
