@@ -28,6 +28,9 @@
                                 @if ($item->pack)
                                     {{ $item->pack->name }}
                                     <span class="font-mono text-xs text-ink/50">(bundle)</span>
+                                @elseif ($item->membershipPlan)
+                                    {{ $item->membershipPlan->name }}
+                                    <span class="font-mono text-xs text-ink/50">(membership)</span>
                                 @else
                                     {{ $item->product?->prompt?->title ?? 'Prompt' }}
                                 @endif
@@ -96,15 +99,15 @@
                                 </button>
                             </form>
                         @elseif ($sikkaSpendable >= $sikkaTotal)
-                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You have {{ number_format($sikkaSpendable) }} Sikka credits — this order costs {{ number_format($sikkaTotal) }}.</p>
+                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You have <x-sikka :amount="$sikkaSpendable"/> credits — this order costs <x-sikka :amount="$sikkaTotal"/>.</p>
                             <form method="POST" action="{{ route('checkout.sikka.pay', $order) }}" class="mt-4">
                                 @csrf
                                 <button class="w-full rounded-full bg-ink px-4 py-3 text-sm font-bold text-paper transition hover:bg-ink-soft">
-                                    Pay {{ number_format($sikkaTotal) }} Sikka credits
+                                    Pay <x-sikka :amount="$sikkaTotal"/> credits
                                 </button>
                             </form>
                         @else
-                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You have {{ number_format($sikkaSpendable) }} of the {{ number_format($sikkaTotal) }} Sikka credits this order costs — use eSewa or a manual transfer below.</p>
+                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You hold <x-sikka :amount="$sikkaSpendable"/> of the <x-sikka :amount="$sikkaTotal"/> credits this order costs — top up from a Sikka pack, or use eSewa or a manual transfer below.</p>
                         @endif
                     </div>
                 @endif

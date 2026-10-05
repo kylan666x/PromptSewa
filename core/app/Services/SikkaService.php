@@ -226,7 +226,10 @@ class SikkaService
             /** @var Order $order */
             $order = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
-            $order->items()->with('sikkaPack')->get()->each(function (OrderItem $item) use ($order) {
+            $credited = 0;
+            $bonus = 0;
+
+            $order->items()->with('sikkaPack')->get()->each(function (OrderItem $item) use ($order, &$credited, &$bonus) {
                 $pack = $item->sikkaPack;
 
                 if ($pack === null) {
@@ -235,24 +238,41 @@ class SikkaService
 
                 $quantity = max(1, (int) $item->quantity);
 
-                $this->creditBuyerOnce(
+                if ($this->creditBuyerOnce(
                     $order,
                     $item,
                     SikkaTransaction::TYPE_TOPUP,
                     $pack->sikka_amount * $quantity,
                     "topup:{$order->id}:{$item->id}",
                     'sikka_amount',
-                );
+                ) !== null) {
+                    $credited += $pack->sikka_amount * $quantity;
+                }
 
-                $this->creditBuyerOnce(
+                if ($this->creditBuyerOnce(
                     $order,
                     $item,
                     SikkaTransaction::TYPE_TOPUP_BONUS,
                     $pack->bonus_sikka * $quantity,
                     "topupbonus:{$order->id}:{$item->id}",
                     'bonus_sikka',
-                );
+                ) !== null) {
+                    $bonus += $pack->bonus_sikka * $quantity;
+                }
             });
+
+            // S6 (v1.8.0): the buyer's bell row commits with the credit —
+            // and only on the delivery that actually credited (a double
+            // approval credits, and notifies, exactly once).
+            if ($credited > 0 && $order->buyer !== null) {
+                Notification::emit(
+                    $order->buyer,
+                    Notification::TYPE_SIKKA_TOPUP,
+                    'Top-up credited: '.SikkaFormat::render($credited).' Sikka credits'
+                        .($bonus > 0 ? ' + '.SikkaFormat::render($bonus).' bonus' : '').'.',
+                    $order,
+                );
+            }
         });
     }
 
@@ -370,7 +390,7 @@ class SikkaService
                 return null;
             }
 
-            return SikkaTransaction::query()->create([
+            $row = SikkaTransaction::query()->create([
                 'user_id' => $membership->user_id,
                 'type' => SikkaTransaction::TYPE_MEMBERSHIP_STIPEND,
                 'amount_sikka' => $amount,
@@ -384,6 +404,19 @@ class SikkaService
                 ],
                 'created_at' => now(),
             ]);
+
+            // S6 (v1.8.0): one bell row per stipend actually granted — a
+            // replay grants no row and therefore notifies nothing.
+            if ($membership->user !== null) {
+                Notification::emit(
+                    $membership->user,
+                    Notification::TYPE_SIKKA_STIPEND,
+                    'Membership stipend: '.SikkaFormat::render($amount).' Sikka credits credited.',
+                    $membership,
+                );
+            }
+
+            return $row;
         });
     }
 
@@ -615,17 +648,17 @@ class SikkaService
         ])->save();
     }
 
-    private function creditBuyerOnce(Order $order, OrderItem $item, string $type, int $amount, string $key, string $label): void
+    private function creditBuyerOnce(Order $order, OrderItem $item, string $type, int $amount, string $key, string $label): ?SikkaTransaction
     {
         if ($amount <= 0) {
-            return; // bonus-less packs credit no bonus row
+            return null; // bonus-less packs credit no bonus row
         }
 
         if (SikkaTransaction::query()->where('idempotency_key', $key)->exists()) {
-            return; // double approval credits once
+            return null; // double approval credits once
         }
 
-        SikkaTransaction::query()->create([
+        return SikkaTransaction::query()->create([
             'user_id' => $order->buyer_id,
             'type' => $type,
             'amount_sikka' => $amount,

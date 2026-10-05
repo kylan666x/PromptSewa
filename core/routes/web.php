@@ -33,6 +33,7 @@ use App\Http\Controllers\Dashboard\ReleaseUpdateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\LibraryController;
+use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackController;
 use App\Http\Controllers\PageController;
@@ -115,6 +116,13 @@ Route::get('/about', [PageController::class, 'about'])->name('pages.about');
 
 Route::get('/packs', [PackController::class, 'index'])->name('packs.index');
 Route::get('/packs/{pack:slug}', [PackController::class, 'show'])->name('packs.show');
+
+// S5 (v1.8.0): membership plans — NPR-rail orders whose paid transition
+// activates the membership, first stipend and perks (one idempotent path).
+Route::get('/memberships', [MembershipController::class, 'index'])->name('memberships.index');
+Route::post('/checkout/memberships/{plan:slug}', [MembershipController::class, 'buy'])
+    ->middleware('auth')
+    ->name('checkout.memberships.buy');
 
 // --- Minimal auth (navbar links must resolve) ---------------------------
 

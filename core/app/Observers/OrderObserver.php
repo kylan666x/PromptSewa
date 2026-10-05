@@ -6,6 +6,7 @@ use App\Models\FeedEvent;
 use App\Models\Order;
 use App\Models\Prompt;
 use App\Services\GamificationService;
+use App\Services\MembershipService;
 
 /**
  * G2/G4 (v1.7.0) — sale-side gamification, fired from the paid transition
@@ -56,6 +57,12 @@ class OrderObserver
 
             $this->emitSaleMilestone($prompt, $creator->id, $salesCount);
         });
+
+        // S5 (v1.8.0): membership plan lines activate with the payment —
+        // membership row + first stipend + perk grants, all idempotent.
+        // Riding the paid transition keeps ONE activation path for the
+        // manual and eSewa rails alike.
+        app(MembershipService::class)->activateForOrder($order);
     }
 
     /** Sale milestones at the real thresholds only (10, 50). */

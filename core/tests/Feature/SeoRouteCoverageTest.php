@@ -36,6 +36,7 @@ function seoExpectedSubjects(): array
         'creators.show' => [null, ['guest']], // subject = creator name (asserted dynamically)
         'packs.index' => ['Prompt packs', ['guest']],
         'packs.show' => [null, ['guest']], // subject = pack name (asserted dynamically)
+        'memberships.index' => ['Memberships', ['guest']],
         'feed.index' => ['Community feed', ['guest']],
         'pages.about' => ['About', ['guest']],
 
@@ -184,7 +185,8 @@ test('every named GET route renders exactly one x-seo <title> with the expected 
 });
 
 test('the permanent route list stays in sync — every named GET route is either asserted or explicitly exempted', function () {
-    seedOwnerWorld();        $exempt = [
+    seedOwnerWorld();
+    $exempt = [
         // JSON endpoints, non-HTML responses, POST/PUT-only flows.
         'search.preview',
         'sitemap',

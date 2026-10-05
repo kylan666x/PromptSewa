@@ -246,6 +246,7 @@ function raidFormInventory(): array
         'checkout.packs.buy' => 'CheckoutFlowTest',
         'checkout.manual.submit' => 'ManualPaymentMethodsTest',
         'checkout.sikka.pay' => 'SikkaServiceTest',
+        'checkout.memberships.buy' => 'MembershipActivationTest (S5)',
         'orders.proof.store' => 'ManualPaymentMethodsTest',
         'notifications.read-all' => 'NotificationTest',
         'admin.users.impersonate' => 'ImpersonationTest',

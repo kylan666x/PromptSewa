@@ -41,6 +41,12 @@ class Notification extends Model
 
     public const TYPE_COMP_GRANT = 'comp_grant';
 
+    // S4/S6 (v1.8.0): the Sikka rail's own bell rows — top-up credited,
+    // membership stipend granted. Cash-out decisions reuse the payout types.
+    public const TYPE_SIKKA_TOPUP = 'sikka_topup';
+
+    public const TYPE_SIKKA_STIPEND = 'sikka_stipend';
+
     public const TYPES = [
         self::TYPE_ORDER_APPROVED,
         self::TYPE_ORDER_REJECTED,
@@ -53,6 +59,8 @@ class Notification extends Model
         self::TYPE_REPORT_RESOLVED,
         self::TYPE_REPORT_DISMISSED,
         self::TYPE_COMP_GRANT,
+        self::TYPE_SIKKA_TOPUP,
+        self::TYPE_SIKKA_STIPEND,
     ];
 
     public $timestamps = false;
@@ -115,6 +123,7 @@ class Notification extends Model
                 : route('purchases.index'),
             self::TYPE_COMP_GRANT => route('purchases.index'),
             self::TYPE_PAYOUT_SETTLED, self::TYPE_PAYOUT_REJECTED => route('dashboard.earnings'),
+            self::TYPE_SIKKA_TOPUP, self::TYPE_SIKKA_STIPEND => route('dashboard.earnings'),
             self::TYPE_BADGE_AWARDED, self::TYPE_FRAME_UNLOCKED,
             self::TYPE_VERIFIED_GRANTED, self::TYPE_VERIFIED_REVOKED => route('dashboard.profile.edit'),
             default => route('dashboard'),

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\MembershipPlan;
 use App\Models\Order;
 use App\Models\Pack;
 use App\Models\Product;
@@ -99,6 +100,52 @@ class CheckoutService
                     'quantity' => $line['quantity'],
                 ]);
             }
+
+            return ['order' => $order, 'created' => true];
+        });
+    }
+
+    /**
+     * S5 (v1.8.0): a membership plan order — one line, NPR rail, priced
+     * from membership_plans.price_paisa. The membership itself activates
+     * on payment approval (OrderObserver → MembershipService), never at
+     * order creation (grants follow payments, AGENTS.md #4).
+     *
+     * @return array{order: Order, created: bool}
+     */
+    public function createMembershipOrder(User $buyer, MembershipPlan $plan, ?string $idempotencyKey = null): array
+    {
+        if (! $plan->active) {
+            throw new \InvalidArgumentException('That membership plan is not available.');
+        }
+
+        $idempotencyKey ??= (string) Str::uuid();
+
+        return DB::transaction(function () use ($buyer, $plan, $idempotencyKey) {
+            $existing = Order::query()->where('idempotency_key', $idempotencyKey)->first();
+            if ($existing !== null) {
+                return ['order' => $existing, 'created' => false];
+            }
+
+            $price = (int) $plan->price_paisa;
+
+            $order = Order::create([
+                'buyer_id' => $buyer->id,
+                'status' => Order::STATUS_PENDING,
+                'subtotal_paisa' => $price,
+                'tax_paisa' => 0,
+                'total_paisa' => $price,
+                'currency' => Order::CURRENCY_NPR,
+                'sikka_amount' => 0,
+                'idempotency_key' => $idempotencyKey,
+            ]);
+
+            $order->items()->create([
+                'membership_plan_id' => $plan->id,
+                'price_paisa' => $price,
+                'currency' => Order::CURRENCY_NPR,
+                'quantity' => 1,
+            ]);
 
             return ['order' => $order, 'created' => true];
         });
