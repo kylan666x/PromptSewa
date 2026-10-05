@@ -253,6 +253,137 @@ class SikkaService
     }
 
     // -------------------------------------------------------------
+    // Engagement rewards (S3) — bounded, idempotent, SPEND-ONLY
+    // -------------------------------------------------------------
+
+    /** The three engagement emitters (S3 contract). */
+    final public const ENGAGEMENT_DAILY_VISIT = 'daily_visit';
+
+    final public const ENGAGEMENT_PUBLISH = 'publish';
+
+    final public const ENGAGEMENT_RATING_RECEIVED = 'rating_received';
+
+    public const ENGAGEMENT_TYPES = [
+        self::ENGAGEMENT_DAILY_VISIT,
+        self::ENGAGEMENT_PUBLISH,
+        self::ENGAGEMENT_RATING_RECEIVED,
+    ];
+
+    /**
+     * Emit one engagement_reward row for (user, type, day).
+     *
+     * Bounds, in order:
+     *   - kill-switch: while sikka_enabled is off nothing moves;
+     *   - the per-type amount must be > 0 (an admin setting of 0 = off);
+     *   - ONE row per (user, type, calendar day) — the UNIQUE idempotency
+     *     key `engage:{user}:{type}:{yyyy-mm-dd}` makes a double-fire
+     *     (observer re-entry, replay, two emitters) credit exactly once;
+     *   - the same-day SUM of engagement rows must stay below
+     *     engage_daily_cap_sikka — earning is BOUNDED.
+     *
+     * Engagement rows are SPEND-ONLY: cashout_eligible = false at write
+     * time (S2 contract) — they can be spent on prompts, never cashed out.
+     */
+    public function rewardEngagement(User $user, string $type): ?SikkaTransaction
+    {
+        if (! in_array($type, self::ENGAGEMENT_TYPES, true)) {
+            throw new InvalidArgumentException("Unknown engagement type: {$type}");
+        }
+
+        if (! $this->settings->isOn('sikka_enabled')) {
+            return null; // kill-switch: the economy is off, so is earning
+        }
+
+        $amount = $this->engagementAmount($type);
+
+        if ($amount <= 0) {
+            return null; // this emitter is administratively off
+        }
+
+        $cap = max(0, (int) ($this->settings->get('engage_daily_cap_sikka', '5') ?? '5'));
+        $day = now()->toDateString();
+        $key = "engage:{$user->id}:{$type}:{$day}";
+        $startOfDay = now()->startOfDay();
+
+        return DB::transaction(function () use ($user, $type, $amount, $cap, $day, $key, $startOfDay) {
+            if (SikkaTransaction::query()->where('idempotency_key', $key)->exists()) {
+                return null; // double-fire — already credited today
+            }
+
+            $todaySum = (int) SikkaTransaction::query()
+                ->where('user_id', $user->id)
+                ->where('type', SikkaTransaction::TYPE_ENGAGEMENT_REWARD)
+                ->where('created_at', '>=', $startOfDay)
+                ->lockForUpdate()
+                ->sum('amount_sikka');
+
+            if ($todaySum >= $cap) {
+                return null; // the day's cap is spent — bounded earning
+            }
+
+            return SikkaTransaction::query()->create([
+                'user_id' => $user->id,
+                'type' => SikkaTransaction::TYPE_ENGAGEMENT_REWARD,
+                'amount_sikka' => $amount,
+                'cashout_eligible' => false, // spend-only, always
+                'idempotency_key' => $key,
+                'meta' => [
+                    'engagement' => $type,
+                    'day' => $day,
+                    'daily_cap_sikka' => $cap,
+                ],
+                'created_at' => now(),
+            ]);
+        });
+    }
+
+    // -------------------------------------------------------------
+    // Membership stipends (S3/S5) — replay-safe forever
+    // -------------------------------------------------------------
+
+    /**
+     * Grant ONE stipend period for a membership: a membership_stipend row
+     * (+plan stipend, cashout-eligible) keyed
+     * `stipend:{membership_id}:{period_index}`.
+     *
+     * Replay safety is structural: the existence check plus the UNIQUE key
+     * mean a replayed scan (cron fires twice, a manual rerun, a catch-up
+     * after the kill-switch was off) grants each period exactly once — the
+     * period index never re-prices.
+     */
+    public function grantStipend(Membership $membership, int $periodIndex): ?SikkaTransaction
+    {
+        $amount = (int) ($membership->plan?->stipend_sikka ?? 0);
+
+        if ($amount <= 0) {
+            return null; // stipend-less plans write no row (still replay-safe)
+        }
+
+        $key = "stipend:{$membership->id}:{$periodIndex}";
+
+        return DB::transaction(function () use ($membership, $periodIndex, $amount, $key) {
+            if (SikkaTransaction::query()->where('idempotency_key', $key)->exists()) {
+                return null;
+            }
+
+            return SikkaTransaction::query()->create([
+                'user_id' => $membership->user_id,
+                'type' => SikkaTransaction::TYPE_MEMBERSHIP_STIPEND,
+                'amount_sikka' => $amount,
+                'cashout_eligible' => true,
+                'idempotency_key' => $key,
+                'meta' => [
+                    'membership_id' => $membership->id,
+                    'plan_id' => $membership->plan_id,
+                    'period_index' => $periodIndex,
+                    'period_days' => Membership::PERIOD_DAYS,
+                ],
+                'created_at' => now(),
+            ]);
+        });
+    }
+
+    // -------------------------------------------------------------
     // Pure helpers (read-only; controller/display consumers)
     // -------------------------------------------------------------
 
@@ -340,6 +471,23 @@ class SikkaService
             ->get()
             ->first(fn (Membership $membership) => ! $membership->hasEnded()
                 && $membership->plan?->hasUnlimitedUnlock() === true);
+    }
+
+    /** Per-type engagement amount from settings (0 disables the emitter). */
+    private function engagementAmount(string $type): int
+    {
+        $key = match ($type) {
+            self::ENGAGEMENT_DAILY_VISIT => 'engage_daily_sikka',
+            self::ENGAGEMENT_PUBLISH => 'engage_publish_sikka',
+            self::ENGAGEMENT_RATING_RECEIVED => 'engage_rating_sikka',
+            default => null,
+        };
+
+        if ($key === null) {
+            return 0;
+        }
+
+        return max(0, (int) ($this->settings->get($key, '0') ?? '0'));
     }
 
     private function itemSikkaPrice(OrderItem $item): int

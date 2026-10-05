@@ -37,3 +37,8 @@ Schedule::command('promptsewa:recompute-leaderboards')->dailyAt('04:00');
 // 5. F3 (v1.7.8): backfill auto-award badge criteria. Idempotent — awards
 //    users who met a criterion before its badge existed, then no-ops daily.
 Schedule::command('pv:award-scan')->dailyAt('04:15')->description('Backfill missed badge criterion awards');
+
+// 6. S3 (v1.8.0): membership stipend grant + expiry flip. Each period is
+//    keyed `stipend:{membership}:{period}` (UNIQUE), so a late, doubled or
+//    hand-run execution grants every elapsed period exactly once.
+Schedule::command('pv:stipend-scan')->dailyAt('04:20')->description('Grant elapsed membership stipends and expire lapsed memberships');

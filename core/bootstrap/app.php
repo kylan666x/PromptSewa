@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\ForgetPerRequestState;
+use App\Http\Middleware\RecordDailyVisit;
 use App\Http\Middleware\RejectBannedUsers;
+use App\Http\Middleware\ResolveImpersonation;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,12 +35,18 @@ return Application::configure(basePath: dirname(__DIR__))
         // T3 (v1.5.0): effective-user resolution for admin impersonation —
         // validates the session's impersonator_id after StartSession,
         // before auth-dependent routes run.
-        $middleware->appendToGroup('web', \App\Http\Middleware\ResolveImpersonation::class);
+        $middleware->appendToGroup('web', ResolveImpersonation::class);
 
         // H4 (v1.7.4): per-request viewer state (bookmarked ids) must never
         // outlive its request — a long-lived worker or the test client would
         // otherwise serve the previous viewer saved state.
-        $middleware->appendToGroup('web', \App\Http\Middleware\ForgetPerRequestState::class);
+        $middleware->appendToGroup('web', ForgetPerRequestState::class);
+
+        // S3 (v1.8.0): daily-visit engagement reward. One row per user per
+        // day (the ledger's UNIQUE key dedupes); the service owns the
+        // kill-switch, the amount and the daily cap — this only decides
+        // when an authenticated GET is a candidate visit.
+        $middleware->appendToGroup('web', RecordDailyVisit::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // cPanel hardening: never leak stack traces to visitors. The cron
