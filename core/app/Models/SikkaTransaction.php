@@ -12,8 +12,8 @@ use RuntimeException;
  * S1 (v1.8.0) — one immutable row in the insert-only Sikka ledger.
  *
  * The insert-only invariant is enforced at RUNTIME, not just by convention:
- * any ->save() on an existing row or any ->delete() throws immediately
- * (the WalletTransaction guard, mirrored). Balances are
+ * any write to an existing row or any delete throws immediately (the
+ * wallet guard, mirrored). Balances are
  * SUM(amount_sikka) computed by SikkaService under lockForUpdate() — this
  * model holds no balance column and never will.
  *

@@ -85,7 +85,9 @@ class CheckoutService
                 'subtotal_paisa' => $subtotal,
                 'tax_paisa' => 0,
                 'total_paisa' => $subtotal,
-                'currency' => $firstPack->currency,
+                // S1 (v1.8.0): the rail marker is canonical lowercase.
+                'currency' => strtolower((string) $firstPack->currency),
+                'sikka_amount' => 0,
                 'idempotency_key' => $idempotencyKey,
             ]);
 
@@ -93,7 +95,7 @@ class CheckoutService
                 $order->items()->create([
                     'pack_id' => $line['pack']->id,
                     'price_paisa' => $line['pack']->price_paisa,
-                    'currency' => $line['pack']->currency,
+                    'currency' => strtolower((string) $line['pack']->currency),
                     'quantity' => $line['quantity'],
                 ]);
             }
@@ -157,7 +159,9 @@ class CheckoutService
                 'subtotal_paisa' => $subtotal,
                 'tax_paisa' => $tax,
                 'total_paisa' => $total,
-                'currency' => $products->first()->currency,
+                // S1 (v1.8.0): the rail marker is canonical lowercase.
+                'currency' => strtolower((string) $products->first()->currency),
+                'sikka_amount' => 0,
                 'idempotency_key' => $idempotencyKey,
             ]);
 
@@ -166,7 +170,7 @@ class CheckoutService
                     'product_id' => $line['product']->id,
                     'prompt_id' => $line['product']->prompt_id,
                     'price_paisa' => $line['price_paisa'],
-                    'currency' => $line['product']->currency,
+                    'currency' => strtolower((string) $line['product']->currency),
                     'quantity' => $line['quantity'],
                 ]);
             }

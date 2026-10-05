@@ -1,10 +1,11 @@
 <?php
 
+use App\Models\Order;
 use App\Models\Prompt;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\File;
  *     cache, so a poisoned boot-time view.paths cannot break view:cache.
  * D4: demo/bulk/flagship seeders HARD-refuse in production.
  */
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
+
+// S2 (v1.8.0): composer autoload.files is FROZEN to the money helper.
+const AUTOLOAD_FILES_SHA256 = '886f676d3cb2a341de489bdd67418b4b2d38ae5699cb2002c4e58b7c5911133d';
 
 const FORBIDDEN_ZIP_PATTERNS = [
     'core/bootstrap/cache/',
@@ -45,7 +49,7 @@ function buildUpdateZip(string $target): array
 
 function auditZip(string $zipPath): array
 {
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     expect($zip->open($zipPath))->toBeTrue();
 
     $violations = [];
@@ -250,6 +254,24 @@ test('local env seeding is unchanged', function () {
 });
 
 // ---------------------------------------------------------------------------
+// S2 (v1.8.0) — composer autoload.files is FROZEN
+// ---------------------------------------------------------------------------
+
+test('composer autoload.files stays exactly [app/Support/money.php]', function () {
+    // The v1.6.1 prod trap: autoload.files only takes effect after
+    // `composer dump-autoload`, which the cPanel host cannot run. Sikka
+    // formatters are PSR-4 classes for exactly this reason — a new entry
+    // here would ship code prod can never load. The list is hash-locked:
+    // silent edits (order, spelling, additions) fail this test.
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
+    $files = array_values($composer['autoload']['files'] ?? []);
+
+    expect($files)->toBe(['app/Support/money.php'], 'Sikka must never ride autoload.files — PSR-4 only (the v1.6.1 money.php lesson).')
+        ->and(hash('sha256', json_encode($files, JSON_UNESCAPED_SLASHES)))
+        ->toBe(AUTOLOAD_FILES_SHA256);
+});
+
+// ---------------------------------------------------------------------------
 // D5 — pv:purge-demo command
 // ---------------------------------------------------------------------------
 
@@ -258,7 +280,7 @@ test('pv:purge-demo dry run writes nothing; force hard-deletes unused and bans l
     $linked = User::factory()->create(['email' => 'justshipitai@gmail.com', 'role' => User::ROLE_CREATOR]);
 
     // Give the linked account money-adjacent rows.
-    $order = App\Models\Order::factory()->for($linked, 'buyer')->create();
+    $order = Order::factory()->for($linked, 'buyer')->create();
 
     // Dry run: reports but writes nothing.
     Artisan::call('pv:purge-demo', ['--dry-run' => true]);

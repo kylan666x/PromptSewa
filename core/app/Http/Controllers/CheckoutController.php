@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LicenseGrant;
+use App\Models\ManualPaymentMethod;
 use App\Models\Order;
 use App\Models\Pack;
 use App\Models\Product;
@@ -10,8 +12,11 @@ use App\Services\CheckoutService;
 use App\Services\EntitlementService;
 use App\Services\EsewaService;
 use App\Services\SettingsService;
+use App\Services\SikkaService;
+use App\Services\WalletService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 /**
  * Buyer checkout (PAY-001 flow, cPanel-safe: no webhooks required).
@@ -32,6 +37,7 @@ class CheckoutController extends Controller
         private readonly EntitlementService $entitlements,
         private readonly EsewaService $esewa,
         private readonly SettingsService $settings,
+        private readonly SikkaService $sikka,
     ) {}
 
     /** Order review page before choosing a payment method. */
@@ -41,14 +47,28 @@ class CheckoutController extends Controller
 
         $order->load(['items.product.prompt', 'items.pack']);
 
+        // S2 (v1.8.0): the Sikka rail — offered only when the kill-switch is
+        // on and every line is a prompt line (packs/plans ride NPR). The
+        // spend itself happens in paySikka(), the single call site.
+        $sikkaEligible = $this->settings->isOn('sikka_enabled')
+            && $order->isPending()
+            && $this->sikka->supportsSikkaRail($order);
+        $sikkaTotal = $sikkaEligible ? $this->sikka->orderTotalSikka($order) : 0;
+        $sikkaSpendable = $sikkaEligible ? $this->sikka->spendableAvailable($request->user()) : 0;
+        $sikkaUnlimited = $sikkaEligible && $this->sikka->hasUnlimitedUnlock($request->user());
+
         return view('checkout.show', [
             'order' => $order,
             'esewaEnabled' => $this->settings->isOn('esewa_enabled'),
             'manualEnabled' => $this->settings->isOn('manual_payment_enabled'),
+            'sikkaEligible' => $sikkaEligible,
+            'sikkaTotal' => $sikkaTotal,
+            'sikkaSpendable' => $sikkaSpendable,
+            'sikkaUnlimited' => $sikkaUnlimited,
             'manualInstructions' => (string) $this->settings->get('manual_payment_instructions', ''),
             // C3 (v1.4.4): admin-configured methods with per-method QR +
             // instructions, position-ordered, active only.
-            'manualMethods' => \App\Models\ManualPaymentMethod::query()
+            'manualMethods' => ManualPaymentMethod::query()
                 ->orderedForCheckout()
                 ->get(),
         ]);
@@ -76,6 +96,29 @@ class CheckoutController extends Controller
         [, $order] = $this->createOrder($request, fn () => [['pack_id' => $pack->id]]);
 
         return redirect()->route('checkout.show', $order);
+    }
+
+    /**
+     * S2 (v1.8.0): pay a pending order with Sikka credits. Balance IS the
+     * verification, so the order is paid immediately inside
+     * SikkaService::spendSikka — this is the ONE controller call site
+     * (arch-locked; a second one is a bug, not a feature).
+     */
+    public function paySikka(Request $request, Order $order)
+    {
+        abort_unless($request->user()?->id === $order->buyer_id, 403);
+        abort_unless($order->isPending(), 400, 'This order is no longer payable.');
+        abort_unless($this->settings->isOn('sikka_enabled'), 403, 'Sikka payments are not enabled.');
+
+        try {
+            $this->sikka->spendSikka($order, $request->user());
+        } catch (InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        return redirect()
+            ->route('purchases.index')
+            ->with('success', 'Paid with Sikka credits — your prompts are unlocked.');
     }
 
     /** Redirect the buyer to the eSewa hosted checkout form. */
@@ -118,7 +161,7 @@ class CheckoutController extends Controller
         }
 
         if ($order->isPending()) {
-            app(\App\Services\WalletService::class)->settleOrder($order, 'esewa');
+            app(WalletService::class)->settleOrder($order, 'esewa');
         }
 
         return redirect()
@@ -138,21 +181,21 @@ class CheckoutController extends Controller
         $payload = is_array($request->all()) ? $request->all() : [];
 
         // Masked info-level log: audit trail without leaking secrets.
-        \Illuminate\Support\Facades\Log::info('esewa webhook received', [
+        Log::info('esewa webhook received', [
             'transaction_uuid' => substr((string) ($payload['transaction_uuid'] ?? ''), 0, 12),
             'has_signature' => ($payload['signature'] ?? '') !== '',
             'signed_field_names' => (string) ($payload['signed_field_names'] ?? ''),
         ]);
 
         // M3: the admin payments card shows this masked info line.
-        app(\App\Services\SettingsService::class)->set('esewa_last_webhook', now()->toDateTimeString()
+        app(SettingsService::class)->set('esewa_last_webhook', now()->toDateTimeString()
             .' · uuid '.substr((string) ($payload['transaction_uuid'] ?? '?'), 0, 12)
             .' · sig '.((($payload['signature'] ?? '') !== '') ? 'present' : 'absent'));
 
         try {
             $reference = $this->esewa->verifyCallback($payload);
         } catch (\RuntimeException $e) {
-            \Illuminate\Support\Facades\Log::warning('esewa webhook rejected', ['reason' => $e->getMessage()]);
+            Log::warning('esewa webhook rejected', ['reason' => $e->getMessage()]);
 
             return response()->json(['status' => 'rejected', 'reason' => 'signature verification failed'], 200);
         }
@@ -165,7 +208,7 @@ class CheckoutController extends Controller
 
         if ($order->isPending()) {
             $order->fill(['payment_reference' => $reference])->save();
-            app(\App\Services\WalletService::class)->settleOrder($order, 'esewa');
+            app(WalletService::class)->settleOrder($order, 'esewa');
         }
 
         return response()->json(['status' => 'ok']);
@@ -236,10 +279,10 @@ class CheckoutController extends Controller
     {
         $user = $request->user();
 
-        $hasActiveGrant = \App\Models\LicenseGrant::query()
+        $hasActiveGrant = LicenseGrant::query()
             ->where('user_id', $user->id)
             ->where('prompt_id', $prompt->id)
-            ->where('status', \App\Models\LicenseGrant::STATUS_ACTIVE)
+            ->where('status', LicenseGrant::STATUS_ACTIVE)
             ->exists();
 
         $isOwner = $prompt->user_id === $user->id;

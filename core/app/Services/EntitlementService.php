@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LicenseGrant;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Pack;
 use App\Models\Prompt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,11 +25,11 @@ use Illuminate\Support\Str;
  */
 class EntitlementService
 {
-    public function fulfill(Order $order): void
+    public function fulfill(Order $order, ?string $source = null): void
     {
         // Fulfillment is a single atomic unit: either the whole order is
         // granted or nothing is — no partial entitlements, ever.
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $source) {
             // Lock the order row so a concurrent webhook/process cannot
             // double-fulfill while we are mid-transaction.
             /** @var Order $order */
@@ -38,20 +39,20 @@ class EntitlementService
                 throw new \DomainException('Cannot fulfill order '.$order->id.' with status '.$order->status);
             }
 
-            $order->items()->with(['product.prompt'])->get()->each(function (OrderItem $item) use ($order) {
+            $order->items()->with(['product.prompt'])->get()->each(function (OrderItem $item) use ($order, $source) {
                 if ($item->pack_id !== null) {
-                    $this->grantPack($order, $item);
+                    $this->grantPack($order, $item, $source);
 
                     return;
                 }
 
-                $this->grantPrompt($order, $item, $item->prompt_id);
+                $this->grantPrompt($order, $item, $item->prompt_id, $source);
             });
         });
     }
 
     /** Single-prompt line: one grant (idempotent via order_item check). */
-    private function grantPrompt(Order $order, OrderItem $item, ?int $promptId): void
+    private function grantPrompt(Order $order, OrderItem $item, ?int $promptId, ?string $source = null): void
     {
         if ($promptId === null) {
             return;
@@ -68,6 +69,7 @@ class EntitlementService
             'license_tier' => $item->product?->prompt?->license_tier
                 ?? Prompt::query()->whereKey($promptId)->value('license_tier')
                 ?? 'personal',
+            'source' => $source,
             'grant_code' => $this->grantCode(),
             'status' => LicenseGrant::STATUS_ACTIVE,
         ]);
@@ -78,16 +80,16 @@ class EntitlementService
      * at the same order_item. Already-entitled prompts are skipped so a
      * buyer who owns 3 of 10 pack members only gains the other 7.
      */
-    private function grantPack(Order $order, OrderItem $item): void
+    private function grantPack(Order $order, OrderItem $item, ?string $source = null): void
     {
-        /** @var \App\Models\Pack|null $pack */
-        $pack = \App\Models\Pack::query()->find($item->pack_id);
+        /** @var Pack|null $pack */
+        $pack = Pack::query()->find($item->pack_id);
 
         if ($pack === null) {
             return;
         }
 
-        $pack->publishedPrompts()->get(['prompts.id', 'license_tier'])->each(function (Prompt $prompt) use ($order, $item) {
+        $pack->publishedPrompts()->get(['prompts.id', 'license_tier'])->each(function (Prompt $prompt) use ($order, $item, $source) {
             $exists = LicenseGrant::query()
                 ->where('user_id', $order->buyer_id)
                 ->where('prompt_id', $prompt->id)
@@ -103,6 +105,7 @@ class EntitlementService
                 'order_item_id' => $item->id,
                 'prompt_id' => $prompt->id,
                 'license_tier' => $prompt->license_tier ?? 'personal',
+                'source' => $source,
                 'grant_code' => $this->grantCode(),
                 'status' => LicenseGrant::STATUS_ACTIVE,
             ]);

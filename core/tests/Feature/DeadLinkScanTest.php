@@ -58,6 +58,7 @@ function raidDeadLinkFormViewers(): array
         'checkout.prompts.buy' => $auth,
         'checkout.packs.buy' => $auth,
         'checkout.manual.submit' => $auth,
+        'checkout.sikka.pay' => $auth,
         'orders.proof.store' => $auth,
         'notifications.read-all' => $auth,
 
@@ -120,6 +121,7 @@ function raidDeadLinkFormsOutsideSweep(): array
     return [
         'impersonation.stop' => 'Only rendered inside an impersonation session; the R1 impersonation sweep and ImpersonationTest cover it.',
         'admin.badges.update' => 'No form renders this route (badge edits ship as store/destroy only) — audited against the served HTML.',
+        'checkout.sikka.pay' => 'Rendered only when the Sikka kill-switch is ON (admin setting, default OFF) and the order is credit-eligible — SikkaServiceTest covers the served form with the switch on.',
     ];
 }
 

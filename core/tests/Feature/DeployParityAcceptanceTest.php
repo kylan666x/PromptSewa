@@ -112,6 +112,8 @@ test('v1.4.3-schema database migrates the legacy trio plus every v1.8.0 migratio
             '2026_10_04_166000_add_sikka_to_payouts_table',
             '2026_10_04_167000_add_membership_plan_id_to_order_items_table',
             '2026_10_04_168000_add_sikka_settings',
+            '2026_10_04_169000_add_source_to_license_grants_table',
+            '2026_10_04_170000_add_sikka_pack_id_to_order_items_table',
         ];
 
         DB::statement('CREATE TABLE migrations (id int unsigned not null auto_increment primary key, migration varchar(255) not null, batch int not null)');

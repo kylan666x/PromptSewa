@@ -202,7 +202,7 @@ test('the permanent route list stays in sync — every named GET route is either
         'prompts.versions.restore', // POST
         'dashboard.prompts.store', 'dashboard.prompts.update', 'dashboard.profile.update', // POST/PUT
         'dashboard.earnings.request', 'dashboard.earnings.cancel', // POST
-        'checkout.prompts.buy', 'checkout.packs.buy', 'checkout.manual.submit', 'orders.proof.store', // POST
+        'checkout.prompts.buy', 'checkout.packs.buy', 'checkout.sikka.pay', 'checkout.manual.submit', 'orders.proof.store', // POST
         'bookmarks.toggle', 'prompts.rate', 'prompts.report.store', // POST
         'payments.esewa.webhook', 'checkout.esewa.verify', 'impersonation.stop', // POST
         'admin.prompts.status', 'admin.users.role', 'admin.users.verified', 'admin.users.banned', // PATCH/POST

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Order;
+use App\Services\SikkaService;
+use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +18,6 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderAdminController extends Controller
 {
-
     public function index(Request $request)
     {
         $status = (string) $request->query('status', '');
@@ -48,7 +49,12 @@ class OrderAdminController extends Controller
         // No controller may duplicate this pipeline (M6 arch test).
         // F6 (v1.7.8): the buyer's bell row commits with the settlement.
         DB::transaction(function () use ($order) {
-            app(\App\Services\WalletService::class)->settleOrder($order, 'manual');
+            app(WalletService::class)->settleOrder($order, 'manual');
+
+            // S2 (v1.8.0): sikka-pack lines credit the buyer's Sikka ledger
+            // on approval. Idempotency keys make a double approval credit
+            // exactly once; non-top-up lines are ignored.
+            app(SikkaService::class)->topupCredit($order);
 
             if ($order->buyer !== null) {
                 Notification::emit(

@@ -18,6 +18,7 @@ class OrderItem extends Model
         'product_id',
         'pack_id',
         'membership_plan_id',
+        'sikka_pack_id',
         'prompt_id',
         'price_paisa',
         'currency',
@@ -61,6 +62,12 @@ class OrderItem extends Model
     public function membershipPlan(): BelongsTo
     {
         return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
+    }
+
+    /** S2 (v1.8.0): Sikka top-up lines — credited on approval. */
+    public function sikkaPack(): BelongsTo
+    {
+        return $this->belongsTo(SikkaPack::class, 'sikka_pack_id');
     }
 
     /** Line total in paisa (integer math only). */

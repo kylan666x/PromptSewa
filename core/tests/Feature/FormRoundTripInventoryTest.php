@@ -242,6 +242,7 @@ function raidFormInventory(): array
         'checkout.prompts.buy' => 'FormRoundTripInventoryTest (R3)',
         'checkout.packs.buy' => 'CheckoutFlowTest',
         'checkout.manual.submit' => 'ManualPaymentMethodsTest',
+        'checkout.sikka.pay' => 'SikkaServiceTest',
         'orders.proof.store' => 'ManualPaymentMethodsTest',
         'notifications.read-all' => 'NotificationTest',
         'admin.users.impersonate' => 'ImpersonationTest',

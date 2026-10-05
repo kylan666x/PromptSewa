@@ -16,11 +16,15 @@ class LicenseGrant extends Model
 
     final public const STATUS_REVOKED = 'revoked';
 
+    /** S2 (v1.8.0): provenance for grants issued by the unlimited bypass. */
+    final public const SOURCE_MEMBERSHIP_UNLIMITED = 'membership_unlimited';
+
     protected $fillable = [
         'user_id',
         'order_item_id',
         'issued_by',
         'issue_reason',
+        'source',
         'prompt_id',
         'license_tier',
         'grant_code',

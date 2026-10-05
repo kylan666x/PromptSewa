@@ -206,6 +206,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/checkout/{order}/manual', [CheckoutController::class, 'manualSubmit'])->name('checkout.manual.submit');
 
+    // S2 (v1.8.0): the Sikka rail — balance IS the verification, so the
+    // order is paid on POST. The single controller call site of
+    // SikkaService::spendSikka (arch-locked).
+    Route::post('/checkout/{order}/sikka', [CheckoutController::class, 'paySikka'])->name('checkout.sikka.pay');
+
     // C3 (v1.4.4): buyer submits/refreshes the TXN id + screenshot proof on
     // their own pending manual order. Throttled like other public writes.
     Route::post('/orders/{order}/proof', [\App\Http\Controllers\Dashboard\PaymentProofController::class, 'store'])
