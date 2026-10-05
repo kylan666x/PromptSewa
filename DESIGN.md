@@ -80,7 +80,38 @@ The dark pill navbar and dark footer sit on both worlds and stitch them together
 - PromptVellum's own copy only. Never reproduce GoP headlines, mascot, or
   testimonials. **No fabricated claims**: stats come from the database,
   unbuilt features get honest "Coming soon" / "On the roadmap" chips.
-- Currency renders as NPR paisa (integer) — never floats.
+- Currency renders as NPR paisa (integer) — never floats; `money_npr` is the
+  sole NPR renderer.
+- **Sikka is a credit, not a currency (v1.8.0).** The copy says "Sikka
+  credits" — never "Sikka currency"; a cash-out is labeled "withdraw
+  earnings". Amounts are integers with no decimal point, rendered ONLY
+  through `<x-sikka>` (`SikkaFormat::render()`); no ₨/Rs/$ glyph ever sits
+  inside the icon or the price chip.
+
+## Sikka unit mark — v1.8.0 addendum
+
+- **The `{{ }}` mint mark is Sikka's identity.** It is the ONE sanctioned
+  mark for the credit and `<x-sikka>` is its only renderer. First mention
+  per page pairs the mark with the word "Sikka" (`:word="true"`); later
+  mentions may be mark + number. App surfaces render the color mark at
+  ≥ 20px (it reads on both worlds); mail headers and ink/plain-text
+  fallbacks use the mono variant.
+- **Brand asset, not code — ships by upload.** Admin → Brand → "Sikka unit
+  mark" writes `sikka-icon-path` / `sikka-icon-mono-path` via
+  SettingsService. The founder's approved art is uploaded on each install;
+  it is never bundled inside a release zip, and nobody should hunt for a
+  binary in the artifact. Ingest is the `sikka` variant of
+  `ImageUploadService`: PNG/WebP only, alpha preserved (blending OFF +
+  save-alpha ON), downscaled to ≤512px, JPEG refused. With no mark
+  uploaded, `<x-sikka>` falls back to an honest mono bordered "Sikka"
+  chip — zero broken images.
+- **Do-not list:** no recoloring, no stretching (square box,
+  `object-contain`), no fiat glyphs, no glow/shadow decoration, and never
+  as a UI accent — it is a unit mark, not a button. No new color token:
+  the mint is the art's own pigment, not a theme token.
+- **Sanctioned motion: none on the icon itself.** The frame
+  `frame-anim-spin|pulse|shine` keyframes remain the only decorative
+  motion in the system (still gated behind `prefers-reduced-motion`).
 
 ## Conflict policy
 

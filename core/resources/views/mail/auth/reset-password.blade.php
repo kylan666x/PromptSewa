@@ -12,6 +12,7 @@
     @var int    $minutes  link lifetime, from config('auth.passwords.users.expire')
     @var string $siteName
     @var string $name     the account's display name
+    @var string|null $sikkaMonoUrl  S9: the mono Sikka mark for the header (null = none)
 --}}
 <!DOCTYPE html>
 <html lang="en">
@@ -28,11 +29,27 @@
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
                    style="max-width:600px;background:#fafaf7;border-radius:16px;overflow:hidden;border:1px solid #e6e5df;">
 
-                {{-- ink header bar — the brand mark --}}
+                {{-- ink header bar — the brand mark; S9 (v1.8.0): the Sikka
+                     unit mark rides the MONO variant here (color would be a
+                     different asset on an ink ground), and renders nothing
+                     when unset — no broken image, ever. --}}
                 <tr>
                     <td style="background:#171715;padding:18px 28px;">
-                        <span style="color:#f5c518;font-size:15px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">{{ $siteName }}</span>
-                        <span style="color:#8a8981;font-size:12px;letter-spacing:0.04em;">&nbsp;·&nbsp;Password reset</span>
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td>
+                                    <span style="color:#f5c518;font-size:15px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">{{ $siteName }}</span>
+                                    <span style="color:#8a8981;font-size:12px;letter-spacing:0.04em;">&nbsp;·&nbsp;Password reset</span>
+                                </td>
+                                @if (! empty($sikkaMonoUrl))
+                                    <td align="right" style="white-space:nowrap;">
+                                        <img src="{{ $sikkaMonoUrl }}" alt="Sikka" width="16" height="16"
+                                             style="vertical-align:middle;height:16px;width:16px;object-fit:contain;">
+                                        <span style="color:#8a8981;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;">&nbsp;Sikka</span>
+                                    </td>
+                                @endif
+                            </tr>
+                        </table>
                     </td>
                 </tr>
 

@@ -35,7 +35,28 @@ class ResetPasswordNotification extends ResetPassword
             minutes: (int) config('auth.passwords.users.expire', 60),
             siteName: $siteName,
             name: (string) ($notifiable->name ?? $notifiable->getEmailForPasswordReset()),
+            // S9 (v1.8.0): mail headers use the MONO Sikka mark; unset (or
+            // economy off) means no unit mark, never a broken image.
+            sikkaMonoUrl: $this->sikkaMonoUrl(),
         );
+    }
+
+    /** The mono mark's public URL, or null — a settings failure never breaks mail. */
+    private function sikkaMonoUrl(): ?string
+    {
+        try {
+            $settings = app(SettingsService::class);
+
+            if (! $settings->isOn('sikka_enabled')) {
+                return null;
+            }
+
+            $path = (string) ($settings->get('sikka-icon-mono-path', '') ?? '');
+
+            return $path !== '' ? asset('storage/'.$path) : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /** Never let a settings failure break the mail rail. */

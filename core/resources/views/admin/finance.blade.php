@@ -78,7 +78,7 @@
                                         <span class="ml-1 rounded-full bg-ink px-2 py-0.5 font-mono text-[10px] font-bold text-saffron">SIKKA</span>
                                         — <x-sikka :amount="$payout->sikka_amount"/>
                                         @if ($payout->settled_npr_paisa !== null)
-                                            <span class="text-xs text-ink/60">→ <x-money :paisa="$payout->settled_npr_paisa"/></span>
+                                            <span class="text-xs text-ink/60">&rarr; <x-money :paisa="$payout->settled_npr_paisa"/></span>
                                         @endif
                                     @else
                                         <span class="ml-1 rounded-full bg-ink/10 px-2 py-0.5 font-mono text-[10px] font-bold text-ink/60">NPR</span>

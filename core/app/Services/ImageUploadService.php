@@ -42,6 +42,10 @@ class ImageUploadService
         'badge' => ['max' => 512, 'dir' => 'badges', 'quality' => 90, 'alpha' => true],
         'frame' => ['max' => 512, 'dir' => 'frames', 'quality' => 90, 'alpha' => true],
         'pack_hero' => ['max' => 1600, 'dir' => 'pack_heroes', 'quality' => 82, 'alpha' => false],
+        // S9 (v1.8.0): the Sikka unit mark — a brand asset uploaded from
+        // Admin → Brand (never shipped in the zip). PNG/WebP only, alpha
+        // preserved (blending OFF + save-alpha ON, the W2 rule), <=512px.
+        'sikka' => ['max' => 512, 'dir' => 'sikka', 'quality' => 90, 'alpha' => true],
     ];
 
     public const MAX_INPUT_KB = 8192; // 8 MB hard ceiling before compression
@@ -81,9 +85,10 @@ class ImageUploadService
         // G1 (v1.7.0): badge/frame uploads reject JPEG sources outright —
         // these variants EXIST to carry transparency; a JPEG source has
         // none, and silently flattening it onto a black box is worse than
-        // a clear rejection at the desk.
-        if (in_array($variant, ['badge', 'frame'], true) && $mime === 'image/jpeg') {
-            throw new \RuntimeException('Badges and frames must be PNG or WebP (transparency required) — JPEG is not accepted.');
+        // a clear rejection at the desk. S9 (v1.8.0) adds the Sikka mark to
+        // the same rule: the unit mark is an alpha asset by contract.
+        if (in_array($variant, ['badge', 'frame', 'sikka'], true) && $mime === 'image/jpeg') {
+            throw new \RuntimeException('Badges, frames and Sikka icons must be PNG or WebP (transparency required) — JPEG is not accepted.');
         }
 
         // W3 (v1.7.3): animated GIF/WebP pass-through lane — GD cannot

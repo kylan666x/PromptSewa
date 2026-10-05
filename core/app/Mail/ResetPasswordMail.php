@@ -28,6 +28,9 @@ class ResetPasswordMail extends Mailable
         public readonly int $minutes,
         public readonly string $siteName,
         public readonly string $name,
+        /** S9 (v1.8.0): the MONO Sikka mark for the ink mail header
+         *  (null when unset — the header simply carries no unit mark). */
+        public readonly ?string $sikkaMonoUrl = null,
     ) {}
 
     public function envelope(): Envelope
@@ -44,6 +47,7 @@ class ResetPasswordMail extends Mailable
                 'minutes' => $this->minutes,
                 'siteName' => $this->siteName,
                 'name' => $this->name,
+                'sikkaMonoUrl' => $this->sikkaMonoUrl,
             ],
             // A plain-text alternative ships with it — a text-only client
             // must still receive the working link.

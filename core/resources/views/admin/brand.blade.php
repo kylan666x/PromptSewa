@@ -6,6 +6,8 @@
         /** @var string $supportEmail */
         /** @var string $logoPath */
         /** @var string $faviconPath */
+        /** @var string $sikkaIconPath */
+        /** @var string $sikkaIconMonoPath */
     @endphp
 
     {{-- R2 (v1.7.7 raid): read stays staff (audit ladder); the save form is
@@ -83,6 +85,58 @@
                     </div>
                     @error('favicon') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                     <p class="mt-1 text-xs text-ink0">@if ($faviconPath !== '') Uploaded — upload a new file to replace it. @else Falls back to /favicon.ico. @endif</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- S9 (v1.8.0): the Sikka unit mark is an admin-managed brand asset
+             — uploaded here, never shipped inside the release zip. Color for
+             the app (>= 20px, reads on both worlds), mono for mail headers
+             and and plain-text fallbacks. With no mark uploaded the UI falls
+             back to an honest bordered “Sikka” chip, never a broken image. --}}
+        <div class="rounded-2xl border border-ink/10 bg-white p-6">
+            <h3 class="text-sm font-semibold text-ink">Sikka unit mark</h3>
+            <p class="mt-1 text-xs text-ink0">Brand asset — PNG or WebP only, transparency preserved, downscaled to 512px; JPEG is refused. The marks only appear while the Sikka economy is enabled on the Sikka desk. Never bundled in a release zip: upload it here on each install.</p>
+
+            <div class="mt-4 grid gap-6 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs font-medium text-ink/60">Icon <span class="text-ink0">(color)</span></label>
+                    <div class="mt-1.5 flex items-center gap-3">
+                        @foreach (['paper' => 'border-ink/10 bg-paper', 'ink' => 'border-inkline bg-ink'] as $ground => $groundClass)
+                            <span data-sikka-preview="{{ $ground }}" title="On the {{ $ground }} ground"
+                                  class="flex size-14 shrink-0 items-center justify-center rounded-xl border p-1.5 {{ $groundClass }}">
+                                @if ($sikkaIconPath !== '')
+                                    <img src="{{ asset('storage/'.$sikkaIconPath) }}" alt="Sikka icon on the {{ $ground }} ground" class="size-11 object-contain">
+                                @else
+                                    <span class="text-[10px] {{ $ground === 'ink' ? 'text-paper/50' : 'text-ink0' }}">none</span>
+                                @endif
+                            </span>
+                        @endforeach
+                        <input type="file" name="sikka_icon" accept="image/png,image/webp"
+                               class="block w-full text-sm text-ink/60 file:mr-3 file:rounded-lg file:border-0 file:bg-paper-deep file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink/90">
+                    </div>
+                    @error('sikka_icon') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <p class="mt-1 text-xs text-ink0">App surfaces. @if ($sikkaIconPath !== '') Uploaded — upload a new file to replace it. @else Falls back to the bordered “Sikka” chip. @endif</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-ink/60">Icon <span class="text-ink0">(mono)</span></label>
+                    <div class="mt-1.5 flex items-center gap-3">
+                        @foreach (['paper' => 'border-ink/10 bg-paper', 'ink' => 'border-inkline bg-ink'] as $ground => $groundClass)
+                            <span data-sikka-preview="mono-{{ $ground }}" title="On the {{ $ground }} ground"
+                                  class="flex size-14 shrink-0 items-center justify-center rounded-xl border p-1.5 {{ $groundClass }}">
+                                @if ($sikkaIconMonoPath !== '')
+                                    <img src="{{ asset('storage/'.$sikkaIconMonoPath) }}" alt="Sikka mono icon on the {{ $ground }} ground" class="size-11 object-contain">
+                                @else
+                                    <span class="text-[10px] {{ $ground === 'ink' ? 'text-paper/50' : 'text-ink0' }}">none</span>
+                                @endif
+                            </span>
+                        @endforeach
+                        <input type="file" name="sikka_icon_mono" accept="image/png,image/webp"
+                               class="block w-full text-sm text-ink/60 file:mr-3 file:rounded-lg file:border-0 file:bg-paper-deep file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink/90">
+                    </div>
+                    @error('sikka_icon_mono') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <p class="mt-1 text-xs text-ink0">Mail headers + ink grounds. @if ($sikkaIconMonoPath !== '') Uploaded — upload a new file to replace it. @else With none, the color icon covers ink too. @endif</p>
                 </div>
             </div>
         </div>
