@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Prompt;
 use App\Services\GamificationService;
 use App\Services\MembershipService;
+use App\Services\SikkaService;
 
 /**
  * G2/G4 (v1.7.0) — sale-side gamification, fired from the paid transition
@@ -63,6 +64,11 @@ class OrderObserver
         // Riding the paid transition keeps ONE activation path for the
         // manual and eSewa rails alike.
         app(MembershipService::class)->activateForOrder($order);
+
+        // S6 (v1.8.0): Sikka top-up lines credit the buyer on the SAME paid
+        // transition (keys make a replay credit once). Moved here from the
+        // manual-approval controller so eSewa-paid top-ups credit too.
+        app(SikkaService::class)->topupCredit($order);
     }
 
     /** Sale milestones at the real thresholds only (10, 50). */

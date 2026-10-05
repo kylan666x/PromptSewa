@@ -7,7 +7,10 @@ use App\Http\Requests\PromptFormRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Prompt;
+use App\Models\PromptReport;
 use App\Models\PromptVersion;
+use App\Models\ToolLogo;
+use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -38,7 +41,7 @@ class PromptEditController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'type_scope']),
             'typeContexts' => PromptFormController::TYPE_CONTEXTS,
-            'tools' => \App\Models\ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
+            'tools' => ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
             'tagsValue' => implode(', ', $latest?->tags ?? []),
             'tipsValue' => implode("\n", $latest?->tips ?? []),
         ]);
@@ -52,7 +55,7 @@ class PromptEditController extends Controller
         $user = $request->user();
 
         // Cover art replacement (image prompts only, GD-compressed).
-        $uploader = app(\App\Services\ImageUploadService::class);
+        $uploader = app(ImageUploadService::class);
         if ($request->boolean('remove_cover') && $prompt->cover_image_path) {
             $uploader->delete($prompt->cover_image_path);
             $prompt->cover_image_path = null;
@@ -82,6 +85,9 @@ class PromptEditController extends Controller
                 'visibility' => $validated['visibility'],
                 'search_text' => $request->searchText(),
                 'license_tier' => $validated['license_tier'],
+                // S6 (v1.8.0): Sikka is the price of record; the pair is
+                // written together and the mirror validates the relation.
+                'price_sikka' => $validated['price_sikka'],
                 'price_cents' => $validated['price_cents'],
                 'cover_image_path' => $prompt->cover_image_path,
             ])->save();
@@ -110,9 +116,9 @@ class PromptEditController extends Controller
             // the moderation queue after an edit (the report may be about
             // the content that just changed).
             if ($wasPublished) {
-                \App\Models\PromptReport::query()
+                PromptReport::query()
                     ->where('prompt_id', $prompt->id)
-                    ->where('status', \App\Models\PromptReport::STATUS_OPEN)
+                    ->where('status', PromptReport::STATUS_OPEN)
                     ->update(['status' => 'pending']);
             }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Prompt;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -93,7 +94,12 @@ class PromptFormRequest extends FormRequest
             'audience' => ['nullable', 'string', 'max:120'],
             'tips' => ['nullable', 'string', 'max:1500'],
             'changelog' => ['nullable', 'string', 'max:500'],
-            'price_npr' => ['required', 'integer', 'min:0', 'max:50000'],
+            // S6 (v1.8.0): Sikka is the price of record (integer credits;
+            // 0 = free). price_npr stays accepted as the legacy NPR alias —
+            // either field satisfies the other, so old callers (and tests)
+            // keep landing a coherent pair through the model mirror.
+            'price_sikka' => ['nullable', 'integer', 'min:0', 'max:100000', 'required_without:price_npr'],
+            'price_npr' => ['nullable', 'integer', 'min:0', 'max:50000', 'required_without:price_sikka'],
             'visibility' => ['required', 'string', 'in:'.Prompt::VISIBILITY_PUBLIC.','.Prompt::VISIBILITY_PRIVATE],
             // Cover art (A2/A3, v1.7.2): image prompts only — prohibited on
             // every other type; REQUIRED when the creator switches an existing
@@ -130,7 +136,20 @@ class PromptFormRequest extends FormRequest
             ->values()
             ->all();
 
-        $priceCents = max(0, (int) $this->input('price_npr')) * 100;
+        // S6 (v1.8.0): Sikka is the price of record; price_cents is the
+        // derived NPR mirror (price_sikka × buy rate). A legacy price_npr
+        // submission is normalized the other way with the S1 backfill
+        // formula (intdiv(paisa + buy − 1, buy)) so nothing ever looks
+        // free by drift.
+        $buyPaisa = max(1, min(500, (int) app(SettingsService::class)->get('sikka_buy_paisa_per_token', '100')));
+
+        if ($this->filled('price_sikka')) {
+            $priceSikka = max(0, (int) $this->input('price_sikka'));
+            $priceCents = $priceSikka * $buyPaisa;
+        } else {
+            $priceCents = max(0, (int) $this->input('price_npr')) * 100;
+            $priceSikka = $priceCents === 0 ? 0 : intdiv($priceCents + $buyPaisa - 1, $buyPaisa);
+        }
 
         return [
             'title' => trim((string) $this->input('title')),
@@ -142,6 +161,7 @@ class PromptFormRequest extends FormRequest
             'recommended_tools' => array_values((array) $this->input('recommended_tools', [])),
             'audience' => $this->filled('audience') ? trim((string) $this->input('audience')) : null,
             'tips' => $tips,
+            'price_sikka' => $priceSikka,
             'price_cents' => $priceCents,
             'license_tier' => $priceCents > 0 ? Prompt::LICENSE_COMMERCIAL : Prompt::LICENSE_PERSONAL,
             'visibility' => (string) $this->input('visibility'),

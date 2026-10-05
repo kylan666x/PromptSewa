@@ -31,6 +31,9 @@
                                 @elseif ($item->membershipPlan)
                                     {{ $item->membershipPlan->name }}
                                     <span class="font-mono text-xs text-ink/50">(membership)</span>
+                                @elseif ($item->sikkaPack)
+                                    {{ $item->sikkaPack->name }}
+                                    <span class="font-mono text-xs text-ink/50">(Sikka top-up)</span>
                                 @else
                                     {{ $item->product?->prompt?->title ?? 'Prompt' }}
                                 @endif
@@ -107,7 +110,11 @@
                                 </button>
                             </form>
                         @else
-                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You hold <x-sikka :amount="$sikkaSpendable"/> of the <x-sikka :amount="$sikkaTotal"/> credits this order costs — top up from a Sikka pack, or use eSewa or a manual transfer below.</p>
+                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You hold <x-sikka :amount="$sikkaSpendable"/> of the <x-sikka :amount="$sikkaTotal"/> credits this order costs. Top up, or use eSewa or a manual transfer below.</p>
+                            <a href="{{ route('sikka.topup') }}"
+                               class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-saffron-deep/40 bg-saffron/15 px-4 py-2 text-xs font-bold text-ink transition hover:bg-saffron/30">
+                                Top up Sikka credits &rarr;
+                            </a>
                         @endif
                     </div>
                 @endif

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Prompt;
 use App\Models\PromptVersion;
 use App\Models\User;
+use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -109,10 +110,19 @@ class PromptFactory extends Factory
         return $this->state(fn () => ['price_cents' => $paisa]);
     }
 
-    /** Sikka price of record; price_cents is derived by the model hook. */
+    /**
+     * Sikka price of record. price_cents is emitted as a coherent mirror
+     * (the model's both-dirty rule honors writes as-is, so a state that set
+     * only price_sikka would ship a paid listing with a zero NPR mirror).
+     */
     public function sikkaPriced(int $sikka): static
     {
-        return $this->state(fn () => ['price_sikka' => $sikka]);
+        $buy = max(1, min(500, (int) app(SettingsService::class)->get('sikka_buy_paisa_per_token', '100')));
+
+        return $this->state(fn () => [
+            'price_sikka' => $sikka,
+            'price_cents' => $sikka * $buy,
+        ]);
     }
 
     public function commercial(): static

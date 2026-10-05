@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\SikkaPackFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * S1 (v1.8.0) — an admin-managed Sikka top-up pack.
@@ -41,5 +42,12 @@ class SikkaPack extends Model
     public function totalSikka(): int
     {
         return $this->sikka_amount + $this->bonus_sikka;
+    }
+
+    /** S6 (v1.8.0): the order lines that sold this pack (restrictOnDelete
+     *  keeps a sold pack's row for audit; the desk deactivates instead). */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'sikka_pack_id');
     }
 }

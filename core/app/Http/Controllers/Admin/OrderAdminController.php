@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Order;
-use App\Services\SikkaService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,14 +46,13 @@ class OrderAdminController extends Controller
         // M2 (v1.6.0): approval goes through the WalletService choke point —
         // paid guard + grants + creator credits, one transaction, idempotent.
         // No controller may duplicate this pipeline (M6 arch test).
+        // S6 (v1.8.0): sikka-pack credits now ride the SAME paid transition
+        // (OrderObserver → SikkaService::topupCredit), so manual approval
+        // and eSewa settlement credit identically — a double approval still
+        // credits once (UNIQUE keys).
         // F6 (v1.7.8): the buyer's bell row commits with the settlement.
         DB::transaction(function () use ($order) {
             app(WalletService::class)->settleOrder($order, 'manual');
-
-            // S2 (v1.8.0): sikka-pack lines credit the buyer's Sikka ledger
-            // on approval. Idempotency keys make a double approval credit
-            // exactly once; non-top-up lines are ignored.
-            app(SikkaService::class)->topupCredit($order);
 
             if ($order->buyer !== null) {
                 Notification::emit(

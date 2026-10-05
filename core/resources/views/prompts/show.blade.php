@@ -11,6 +11,10 @@
     $variableNames = $canViewFullBody ? ($latest?->variableNames() ?? []) : [];
     $isOwner = auth()->check() && auth()->user()->id === $prompt->user_id;
     $isPaid = $prompt->price_cents > 0;
+    // S6 (v1.8.0): the Sikka transition — while the economy is on, Sikka is
+    // the primary label with NPR in parentheses; off, the legacy NPR label.
+    $sikkaEnabled = app(\App\Services\SettingsService::class)->isOn('sikka_enabled');
+    $sikkaPrice = (int) $prompt->price_sikka;
 
     // Locked teaser: first lines of the body, never the whole thing.
     $teaserLines = collect(explode("\n", (string) $latest?->body))
@@ -226,7 +230,13 @@
                                 <p class="max-w-sm text-xs leading-relaxed text-paper/60">
                                     Purchase includes the complete prompt, all future versions, and usage tips.
                                 </p>
-                                <span class="rounded-full bg-saffron px-4 py-1.5 font-mono text-xs font-bold text-ink shadow-[0_3px_0_0_#a16207]">{{ $prompt->priceLabel() }}</span>
+                                <span class="rounded-full bg-saffron px-4 py-1.5 font-mono text-xs font-bold text-ink shadow-[0_3px_0_0_#a16207]">
+                                    @if ($sikkaEnabled && $isPaid)
+                                        <x-sikka :amount="$sikkaPrice" :word="true"/>
+                                    @else
+                                        {{ $prompt->priceLabel() }}
+                                    @endif
+                                </span>
                             </div>
                         </div>
                     @endif
@@ -294,9 +304,15 @@
             <aside class="space-y-5 lg:sticky lg:top-24 lg:self-start">
                 <div class="rounded-3xl bg-ink p-5 shadow-card-hover">
                     <p class="font-mono text-xs font-semibold uppercase tracking-widest text-paper/50">License</p>
-                    <p class="mt-2 flex items-baseline gap-2">
-                        <span class="font-mono text-3xl font-bold tracking-tight {{ $isPaid ? 'text-saffron' : 'text-emerald-300' }}">{{ $prompt->priceLabel() }}</span>
-                        @if ($isPaid)<span class="text-sm text-paper/40">one-time</span>@endif
+                    <p class="mt-2 flex flex-wrap items-baseline gap-2">
+                        @if ($sikkaEnabled && $isPaid)
+                            <span class="text-3xl font-bold tracking-tight text-saffron"><x-sikka :amount="$sikkaPrice" :word="true" :size="24"/></span>
+                            <span class="font-mono text-sm text-paper/40">(<x-money :paisa="$prompt->price_cents"/>)</span>
+                            <span class="text-sm text-paper/40">one-time</span>
+                        @else
+                            <span class="font-mono text-3xl font-bold tracking-tight {{ $isPaid ? 'text-saffron' : 'text-emerald-300' }}">{{ $prompt->priceLabel() }}</span>
+                            @if ($isPaid)<span class="text-sm text-paper/40">one-time</span>@endif
+                        @endif
                     </p>
                     <p class="mt-2 text-xs leading-relaxed text-paper/60">
                         @if ($prompt->license_tier === \App\Models\Prompt::LICENSE_COMMERCIAL)
@@ -324,14 +340,14 @@
                                         type="submit"
                                         class="w-full rounded-full bg-saffron px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none"
                                     >
-                                        Buy now — {{ $prompt->priceLabel() }}
+                                        Buy now — @if ($sikkaEnabled && $isPaid)<x-sikka :amount="$sikkaPrice"/>@else{{ $prompt->priceLabel() }}@endif
                                     </button>
                                 </form>
                             @else
                                 <a href="{{ route('login') }}"
                                    class="flex w-full items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink shadow-[0_4px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_#a16207] active:translate-y-0.5 active:shadow-none"
                                 >
-                                    Log in to buy — {{ $prompt->priceLabel() }}
+                                    Log in to buy — @if ($sikkaEnabled && $isPaid)<x-sikka :amount="$sikkaPrice"/>@else{{ $prompt->priceLabel() }}@endif
                                 </a>
                             @endauth
                         @endif

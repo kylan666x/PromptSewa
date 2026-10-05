@@ -37,6 +37,9 @@ function seoExpectedSubjects(): array
         'packs.index' => ['Prompt packs', ['guest']],
         'packs.show' => [null, ['guest']], // subject = pack name (asserted dynamically)
         'memberships.index' => ['Memberships', ['guest']],
+        // S6 (v1.8.0): the Sikka top-up storefront — 404 while the kill-switch
+        // is off, asserted when enabled (SikkaSurfacesTest).
+        'sikka.topup' => ['Sikka', ['guest']],
         'feed.index' => ['Community feed', ['guest']],
         'pages.about' => ['About', ['guest']],
 
@@ -72,6 +75,7 @@ function seoExpectedSubjects(): array
         'admin.tool-logos.index' => ['Tool logos', ['admin']],
         'admin.brand.edit' => ['Brand', ['admin']],
         'admin.finance' => ['Finance', ['admin']],
+        'admin.sikka.index' => ['Sikka desk', ['admin']],
         'admin.badges.index' => ['Badges', ['admin']],
         'admin.frames.index' => ['Frames', ['admin']],
         'admin.security.edit' => ['Security', ['admin']],

@@ -4,7 +4,10 @@
     /** @var array<string, array<string, mixed>> $typeContexts */
     /** @var \Illuminate\Support\Collection<int, \App\Models\Category> $categories */
     $oldType = old('type', $prompt->type);
-    $priceNpr = old('price_npr', intdiv($prompt->price_cents, 100));
+    // S6 (v1.8.0): Sikka is the price of record; the buy rate drives the
+    // live NPR preview (money_npr formatting, mirrored in Alpine).
+    $priceSikka = old('price_sikka', (int) $prompt->price_sikka);
+    $buyPaisa = max(1, min(500, (int) app(\App\Services\SettingsService::class)->get('sikka_buy_paisa_per_token', '100')));
     $variableHint = 'Wrap reusable inputs in {{double braces}} — buyers get fill-in fields automatically.';
 @endphp
 
@@ -252,14 +255,29 @@
                         @error('cover_image') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="rounded-2xl border border-ink/10 bg-white p-5">
+                    <div class="rounded-2xl border border-ink/10 bg-white p-5"
+                         x-data="{
+                            sikka: {{ (int) $priceSikka }},
+                            buy: {{ $buyPaisa }},
+                            fmtNpr(p) {
+                                const neg = p < 0;
+                                const a = Math.abs(Math.round(p));
+                                return (neg ? '-' : '') + 'Rs. ' + Math.floor(a / 100).toLocaleString('en-US')
+                                    + '.' + String(a % 100).padStart(2, '0');
+                            }
+                         }">
                         <h3 class="text-sm font-semibold text-ink">Pricing</h3>
                         <div class="mt-4">
-                            <x-form.label name="price_npr" label="Price (NPR)" hint="Set 0 to offer it for free." :required="true"/>
+                            <x-form.label name="price_sikka" label="Price (Sikka credits)" hint="Integer credits, 0 = free. Sikka is a credit, not a currency." :required="true"/>
                             <div class="mt-1.5">
-                                <x-form.input name="price_npr" type="number" :value="$priceNpr" :required="true" min="0"/>
+                                <x-form.input name="price_sikka" type="number" x-model.number="sikka" :value="$priceSikka" :required="true" min="0" max="100000"/>
                             </div>
+                            @error('price_sikka') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                             @error('price_npr') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            <p class="mt-2 text-xs leading-relaxed text-ink/70">
+                                Buyers see <span class="font-mono font-semibold text-ink" x-text="fmtNpr(sikka * buy)"><x-money :paisa="((int) $priceSikka) * $buyPaisa"/></span>
+                                at checkout — the NPR figure is derived from your Sikka price, live.
+                            </p>
                         </div>
                     </div>
 

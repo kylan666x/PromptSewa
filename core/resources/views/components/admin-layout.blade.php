@@ -31,6 +31,10 @@
                     // no pill — reachable only by typing the URL (BH-R9-01).
                     // Admin-only: FinanceController::index 403s moderators.
                     'admin.finance' => ['Finance', '∑', true],
+                    // S6 (v1.8.0): the Sikka desk ships with its pill in the
+                    // same commit (§6.36). Admin-only: the controller 403s
+                    // moderators.
+                    'admin.sikka.index' => ['Sikka desk', '◈', true],
                     'admin.brand.edit' => ['Brand', '◆', false],
                     'admin.tool-logos.index' => ['Tool logos', '✦', false],
                     'admin.update' => ['Software update', '⬆', false],

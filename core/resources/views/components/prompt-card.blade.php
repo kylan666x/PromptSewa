@@ -11,6 +11,11 @@
     // NOTE: a Blade {{-- --}} comment inside @php is a parse error — use
     // PHP comments in this block.
     $saved = $saved ?? \App\Support\BookmarkedIds::contains($prompt);
+
+    // S6 (v1.8.0): during the Sikka transition a paid card leads with the
+    // Sikka price (price of record) and keeps the NPR figure in
+    // parentheses; free chips and the kill-switch-off world are unchanged.
+    $sikkaEnabled = app(\App\Services\SettingsService::class)->isOn('sikka_enabled');
 @endphp
 
 {{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
@@ -27,9 +32,16 @@
                     {{ $prompt->title }}
                 </a>
             </h3>
-            <span class="shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-bold {{ $prompt->price_cents === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-saffron/25 text-ink' }}">
-                {{ $prompt->priceLabel() }}
-            </span>
+            @if ($prompt->isFree())
+                <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 font-mono text-xs font-bold text-emerald-800">Free</span>
+            @elseif ($sikkaEnabled)
+                <span class="shrink-0 rounded-full bg-saffron/25 px-2.5 py-1 font-mono text-xs font-bold text-ink">
+                    <x-sikka :amount="$prompt->price_sikka"/>
+                    <span class="ml-1 font-normal text-ink/50">(<x-money :paisa="$prompt->price_cents"/>)</span>
+                </span>
+            @else
+                <span class="shrink-0 rounded-full bg-saffron/25 px-2.5 py-1 font-mono text-xs font-bold text-ink">{{ $prompt->priceLabel() }}</span>
+            @endif
         </div>
 
         {{-- T13 (v1.5.0) / P1 (v1.7.1): bookmark heart — Alpine optimistic

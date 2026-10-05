@@ -7,7 +7,11 @@ use App\Http\Requests\PromptFormRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Prompt;
+use App\Models\ToolLogo;
+use App\Services\BotChallengeService;
+use App\Services\ImageUploadService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Creator "Add Prompt" flow — the God of Prompt lesson applied: choosing a
@@ -80,15 +84,15 @@ class PromptFormController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'type_scope']),
             'typeContexts' => self::TYPE_CONTEXTS,
-            'tools' => \App\Models\ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
+            'tools' => ToolLogo::query()->where('is_active', true)->orderBy('position')->orderBy('name')->get(['name', 'modality', 'is_active']),
         ]);
     }
 
     public function store(PromptFormRequest $request)
     {
         // T4 (v1.7.3): bot challenge on prompt submit (off by default).
-        if (! app(\App\Services\BotChallengeService::class)->verify('submit', $request->input('cf-turnstile-response') ?? $request->input('captcha_token'))) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+        if (! app(BotChallengeService::class)->verify('submit', $request->input('cf-turnstile-response') ?? $request->input('captcha_token'))) {
+            throw ValidationException::withMessages([
                 'captcha' => 'Bot check failed — please retry.',
             ]);
         }
@@ -101,7 +105,7 @@ class PromptFormController extends Controller
         $coverPath = null;
         if ($request->hasFile('cover_image')) {
             try {
-                $coverPath = app(\App\Services\ImageUploadService::class)
+                $coverPath = app(ImageUploadService::class)
                     ->store($request->file('cover_image'), 'cover');
             } catch (\RuntimeException $e) {
                 return back()->withInput()->withErrors(['cover_image' => $e->getMessage()]);
@@ -121,6 +125,9 @@ class PromptFormController extends Controller
                 'visibility' => $validated['visibility'],
                 'search_text' => $request->searchText(),
                 'license_tier' => $validated['license_tier'],
+                // S6 (v1.8.0): price_sikka is the price of record; the model
+                // mirror derives price_cents (both set here → honored as-is).
+                'price_sikka' => $validated['price_sikka'],
                 'price_cents' => $validated['price_cents'],
                 'status' => Prompt::STATUS_PENDING,
                 'cover_image_path' => $coverPath,

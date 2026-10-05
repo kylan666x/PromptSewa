@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PromptAdminController;
 use App\Http\Controllers\Admin\PromptPreviewController;
 use App\Http\Controllers\Admin\PromptReportAdminController;
 use App\Http\Controllers\Admin\SecurityAdminController;
+use App\Http\Controllers\Admin\SikkaAdminController;
 use App\Http\Controllers\Admin\ToolLogoAdminController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\UserPurgeController;
@@ -42,6 +43,7 @@ use App\Http\Controllers\PromptController;
 use App\Http\Controllers\PromptReportController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SikkaPackController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Models\Prompt;
@@ -123,6 +125,13 @@ Route::get('/memberships', [MembershipController::class, 'index'])->name('member
 Route::post('/checkout/memberships/{plan:slug}', [MembershipController::class, 'buy'])
     ->middleware('auth')
     ->name('checkout.memberships.buy');
+
+// S6 (v1.8.0): Sikka top-up storefront — packs ride the NPR rails; the
+// credits land on payment approval. 404 while the kill-switch is off.
+Route::get('/sikka', [SikkaPackController::class, 'index'])->name('sikka.topup');
+Route::post('/checkout/sikka-packs/{pack:slug}', [SikkaPackController::class, 'buy'])
+    ->middleware('auth')
+    ->name('checkout.sikka.packs.buy');
 
 // --- Minimal auth (navbar links must resolve) ---------------------------
 
@@ -328,6 +337,19 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders.index');
     Route::patch('/orders/{order}/approve', [OrderAdminController::class, 'approve'])->name('orders.approve');
     Route::patch('/orders/{order}/reject', [OrderAdminController::class, 'reject'])->name('orders.reject');
+
+    // S6 (v1.8.0): Sikka desk — rates + bounds, packs/plans CRUD, the
+    // insert-only ledger browser and audited admin grants with the per-grant
+    // eligibility flip. Admin-only in the controller; the pill ships with it.
+    Route::get('/sikka', [SikkaAdminController::class, 'index'])->name('sikka.index');
+    Route::put('/sikka/settings', [SikkaAdminController::class, 'updateSettings'])->name('sikka.settings');
+    Route::post('/sikka/packs', [SikkaAdminController::class, 'storePack'])->name('sikka.packs.store');
+    Route::put('/sikka/packs/{sikkaPack}', [SikkaAdminController::class, 'updatePack'])->name('sikka.packs.update');
+    Route::delete('/sikka/packs/{sikkaPack}', [SikkaAdminController::class, 'destroyPack'])->name('sikka.packs.destroy');
+    Route::post('/sikka/plans', [SikkaAdminController::class, 'storePlan'])->name('sikka.plans.store');
+    Route::put('/sikka/plans/{membershipPlan}', [SikkaAdminController::class, 'updatePlan'])->name('sikka.plans.update');
+    Route::delete('/sikka/plans/{membershipPlan}', [SikkaAdminController::class, 'destroyPlan'])->name('sikka.plans.destroy');
+    Route::post('/sikka/grants', [SikkaAdminController::class, 'grant'])->name('sikka.grants.store');
 
     // M5 (v1.6.0): Finance desk — totals, pre-ledger list, payout queue,
     // ledger browser. Admin-only in the controller.

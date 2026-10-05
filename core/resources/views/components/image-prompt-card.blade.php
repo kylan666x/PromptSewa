@@ -17,6 +17,10 @@
     ];
     $palette = $palettes[$prompt->id % count($palettes)];
     $initials = collect(explode(' ', $prompt->title))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('');
+
+    // S6 (v1.8.0): paid cards lead with Sikka while the economy is on;
+    // free chips and the kill-switch-off world stay exactly as before.
+    $sikkaEnabled = app(\App\Services\SettingsService::class)->isOn('sikka_enabled');
 @endphp
 
 {{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
@@ -47,9 +51,16 @@
             @endif
 
             {{-- Price pill — top-right --}}
-            <span class="absolute right-3 top-3 rounded-full px-2.5 py-1 font-mono text-[11px] font-bold shadow-sm {{ $prompt->price_cents === 0 ? 'bg-emerald-500 text-white' : 'bg-saffron text-ink' }}">
-                {{ $prompt->priceLabel() }}
-            </span>
+            @if ($prompt->isFree())
+                <span class="absolute right-3 top-3 rounded-full bg-emerald-500 px-2.5 py-1 font-mono text-[11px] font-bold text-white shadow-sm">Free</span>
+            @elseif ($sikkaEnabled)
+                <span class="absolute right-3 top-3 rounded-full bg-saffron px-2.5 py-1 font-mono text-[11px] font-bold text-ink shadow-sm">
+                    <x-sikka :amount="$prompt->price_sikka"/>
+                    <span class="ml-1 font-normal text-ink/60">(<x-money :paisa="$prompt->price_cents"/>)</span>
+                </span>
+            @else
+                <span class="absolute right-3 top-3 rounded-full bg-saffron px-2.5 py-1 font-mono text-[11px] font-bold text-ink shadow-sm">{{ $prompt->priceLabel() }}</span>
+            @endif
         </div>
     </a>
 
@@ -65,7 +76,7 @@
 
         <div class="mt-auto flex items-center justify-between gap-2 pt-2">
             {{-- Copy button — copies the raw prompt body (free) or links to detail (paid) --}}
-            @if ($prompt->price_cents === 0 && $body !== '')
+            @if ($prompt->isFree() && $body !== '')
                 <button type="button"
                         x-data="promptCopy(@js($body))"
                         @click="copy()"
@@ -79,7 +90,11 @@
             @else
                 <a href="{{ route('prompts.show', $prompt) }}"
                    class="inline-flex items-center gap-1.5 rounded-full bg-saffron px-3.5 py-2 font-mono text-xs font-bold text-ink transition hover:bg-saffron-deep">
-                    {{ $prompt->priceLabel() }} — view
+                    @if ($sikkaEnabled && ! $prompt->isFree())
+                        <x-sikka :amount="$prompt->price_sikka"/> — view
+                    @else
+                        {{ $prompt->priceLabel() }} — view
+                    @endif
                 </a>
             @endif
 

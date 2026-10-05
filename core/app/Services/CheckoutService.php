@@ -6,6 +6,7 @@ use App\Models\MembershipPlan;
 use App\Models\Order;
 use App\Models\Pack;
 use App\Models\Product;
+use App\Models\SikkaPack;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -142,6 +143,51 @@ class CheckoutService
 
             $order->items()->create([
                 'membership_plan_id' => $plan->id,
+                'price_paisa' => $price,
+                'currency' => Order::CURRENCY_NPR,
+                'quantity' => 1,
+            ]);
+
+            return ['order' => $order, 'created' => true];
+        });
+    }
+
+    /**
+     * S6 (v1.8.0): a Sikka top-up order — one sikka-pack line on the NPR
+     * rail. The credits land on payment approval (OrderObserver →
+     * SikkaService::topupCredit), never at order creation.
+     *
+     * @return array{order: Order, created: bool}
+     */
+    public function createSikkaPackOrder(User $buyer, SikkaPack $pack, ?string $idempotencyKey = null): array
+    {
+        if (! $pack->active) {
+            throw new \InvalidArgumentException('That Sikka pack is not available.');
+        }
+
+        $idempotencyKey ??= (string) Str::uuid();
+
+        return DB::transaction(function () use ($buyer, $pack, $idempotencyKey) {
+            $existing = Order::query()->where('idempotency_key', $idempotencyKey)->first();
+            if ($existing !== null) {
+                return ['order' => $existing, 'created' => false];
+            }
+
+            $price = (int) $pack->price_paisa;
+
+            $order = Order::create([
+                'buyer_id' => $buyer->id,
+                'status' => Order::STATUS_PENDING,
+                'subtotal_paisa' => $price,
+                'tax_paisa' => 0,
+                'total_paisa' => $price,
+                'currency' => Order::CURRENCY_NPR,
+                'sikka_amount' => 0,
+                'idempotency_key' => $idempotencyKey,
+            ]);
+
+            $order->items()->create([
+                'sikka_pack_id' => $pack->id,
                 'price_paisa' => $price,
                 'currency' => Order::CURRENCY_NPR,
                 'quantity' => 1,
