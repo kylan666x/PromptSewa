@@ -82,7 +82,7 @@
                 <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
             @endforeach
 
-            <p class="mt-4 text-xs leading-relaxed text-ink0">
+            <p class="mt-4 text-xs leading-relaxed text-ink/60">
                 The zip must be a PromptSewa release (containing <code>core/</code> and <code>public_html/</code>).
                 Your existing <code>.env</code>, database and update token are preserved.
                 @if (isset($zipLimit) && $zipLimit < 104857600)

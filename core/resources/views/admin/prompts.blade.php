@@ -18,14 +18,14 @@
                    'border-saffron-deep bg-saffron/20 text-saffron-deep' => $currentStatus === $statusKey,
                    'border-ink/10 bg-paper-deep text-ink/80 hover:border-ink/25' => $currentStatus !== $statusKey,
                ])>
-                {{ $label }} <span class="ml-1 text-xs text-ink0">{{ $count }}</span>
+                {{ $label }} <span class="ml-1 text-xs text-ink/60">{{ $count }}</span>
             </a>
         @endforeach
     </div>
 
     <div class="mt-6 overflow-hidden rounded-2xl border border-ink/10">
         <table class="min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink/60">
                 <tr>
                     <th class="px-5 py-3 font-semibold">Title</th>
                     <th class="px-5 py-3 font-semibold">Creator</th>
@@ -89,7 +89,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-ink0">No prompts in this state.</td></tr>
+                    <tr><td colspan="6" class="px-5 py-10 text-center text-ink/60">No prompts in this state.</td></tr>
                 @endforelse
             </tbody>
         </table>

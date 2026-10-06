@@ -22,7 +22,7 @@
 
     <div class="mt-6 overflow-x-auto rounded-2xl border border-ink/10">
         <table class="min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink/60">
                 <tr>
                     <th class="px-5 py-3 font-semibold">Order</th>
                     <th class="px-5 py-3 font-semibold">Buyer</th>
@@ -38,7 +38,7 @@
                     <tr class="transition hover:bg-paper-deep">
                         <td class="px-5 py-3.5">
                             <p class="font-medium text-ink">#{{ $order->id }}</p>
-                            <p class="text-xs text-ink0">{{ $order->created_at->format('M j, Y H:i') }}</p>
+                            <p class="text-xs text-ink/60">{{ $order->created_at->format('M j, Y H:i') }}</p>
                         </td>
                         <td class="px-5 py-3.5 text-ink/60">{{ $order->buyer?->name ?? '—' }}</td>
                         <td class="hidden px-5 py-3.5 text-ink/60 md:table-cell">
@@ -48,7 +48,7 @@
                         <td class="hidden px-5 py-3.5 text-ink/60 md:table-cell">
                             <p>{{ ucfirst($order->payment_method ?? '—') }}</p>
                             @if ($order->payment_reference)
-                                <p class="max-w-[200px] truncate text-xs text-ink0" title="{{ $order->payment_reference }}">{{ $order->payment_reference }}</p>
+                                <p class="max-w-[200px] truncate text-xs text-ink/60" title="{{ $order->payment_reference }}">{{ $order->payment_reference }}</p>
                             @endif
                             {{-- C3 (v1.4.4): TXN id + submitted-at + proof preview
                                  (staff-only private route — never a raw storage URL). --}}
@@ -61,7 +61,7 @@
                                 <p class="mt-1 font-mono text-[11px] text-ink/70">TXN: {{ $order->manual_txn_id }}</p>
                             @endif
                             @if ($order->manual_submitted_at)
-                                <p class="font-mono text-[10px] text-ink0">proof {{ $order->manual_submitted_at->format('M j, H:i') }}</p>
+                                <p class="font-mono text-[10px] text-ink/60">proof {{ $order->manual_submitted_at->format('M j, H:i') }}</p>
                             @endif
                             @if ($order->manual_proof_path)
                                 <a href="{{ route('orders.proof.show', $order) }}" target="_blank" class="mt-1 inline-block" title="Open proof (staff only)">
@@ -105,7 +105,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-5 py-10 text-center text-ink0">No orders in this state.</td></tr>
+                    <tr><td colspan="7" class="px-5 py-10 text-center text-ink/60">No orders in this state.</td></tr>
                 @endforelse
             </tbody>
         </table>

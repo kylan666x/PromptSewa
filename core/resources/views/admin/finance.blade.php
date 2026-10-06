@@ -143,7 +143,7 @@
             </form>
         </div>
         <table class="mt-4 min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink/60">
                 <tr>
                     <th class="px-4 py-2.5 font-semibold">Date</th>
                     <th class="px-4 py-2.5 font-semibold">User</th>

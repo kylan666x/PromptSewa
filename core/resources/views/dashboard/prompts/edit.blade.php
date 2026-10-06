@@ -64,7 +64,7 @@
                                     <span class="block rounded-2xl border border-ink/10 bg-paper-deep p-4 transition hover:border-ink/25 peer-checked:border-saffron-deep peer-checked:bg-saffron/20 peer-checked:shadow-[0_0_0_1px_rgba(245,158,11,0.25)]">
                                         <span class="text-lg">{{ $ctx['icon'] }}</span>
                                         <span class="mt-1.5 block font-mono text-sm font-bold tracking-tight text-ink">{{ $ctx['label'] }}</span>
-                                        <span class="mt-0.5 block text-xs leading-relaxed text-ink0">{{ $ctx['blurb'] }}</span>
+                                        <span class="mt-0.5 block text-xs leading-relaxed text-ink/60">{{ $ctx['blurb'] }}</span>
                                     </span>
                                 </label>
                             @endforeach

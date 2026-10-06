@@ -72,7 +72,7 @@
 
         <div class="rounded-2xl border border-ink/10 bg-white p-6">
             <h3 class="text-sm font-semibold text-ink">Prompts in this pack</h3>
-            <p class="mt-1 text-xs text-ink0">Only published prompts are listed. Buyers get a license to every prompt here (current members included).</p>
+            <p class="mt-1 text-xs text-ink/60">Only published prompts are listed. Buyers get a license to every prompt here (current members included).</p>
 
             <div class="mt-4 max-h-96 space-y-1.5 overflow-y-auto rounded-xl border border-ink/10 bg-paper-deep p-3">
                 @forelse ($prompts as $prompt)
@@ -82,10 +82,10 @@
                                    class="size-4 rounded border-ink/20 bg-paper-deep text-saffron-deep focus:ring-saffron/40">
                             <span class="truncate text-sm text-ink/90">{{ $prompt->title }}</span>
                         </span>
-                        <span class="shrink-0 text-xs text-ink0"><x-sikka :amount="$prompt->price_sikka"/></span>
+                        <span class="shrink-0 text-xs text-ink/60"><x-sikka :amount="$prompt->price_sikka"/></span>
                     </label>
                 @empty
-                    <p class="px-2 py-4 text-sm text-ink0">No published prompts yet — publish some first.</p>
+                    <p class="px-2 py-4 text-sm text-ink/60">No published prompts yet — publish some first.</p>
                 @endforelse
             </div>
             @error('prompt_ids.*') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror

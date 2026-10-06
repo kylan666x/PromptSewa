@@ -65,7 +65,7 @@
                     <label class="block text-xs font-medium text-ink/60">Gateway base URL</label>
                     <input type="url" name="esewa_base_url" value="{{ $esewaBaseUrl }}"
                            class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
-                    <p class="mt-1 text-xs text-ink0">Production: <code class="text-ink/60">https://epay.esewa.com.np</code> · Test: <code class="text-ink/60">https://rc.esewa.com.np</code></p>
+                    <p class="mt-1 text-xs text-ink/60">Production: <code class="text-ink/60">https://epay.esewa.com.np</code> · Test: <code class="text-ink/60">https://rc.esewa.com.np</code></p>
                 </div>
             </div>
 
@@ -78,7 +78,7 @@
                 </label>
                 <input type="password" name="esewa_secret_key" placeholder="{{ $esewaSecretSaved ? 'Leave empty to keep the saved secret' : 'Paste your eSewa HMAC secret' }}"
                        class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
-                <p class="mt-1 text-xs text-ink0">Stored encrypted with the app key — never shown again, never logged.</p>
+                <p class="mt-1 text-xs text-ink/60">Stored encrypted with the app key — never shown again, never logged.</p>
             </div>
 
             {{-- M3 (v1.6.0): sandbox rail — swaps code + secret, never skips
@@ -139,7 +139,7 @@
 
         <div class="flex items-center gap-3">
             <button class="rounded-xl bg-saffron px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-saffron-deep">Save payment settings</button>
-            <span class="text-xs text-ink0">Changes apply immediately.</span>
+            <span class="text-xs text-ink/60">Changes apply immediately.</span>
         </div>
     </form>
     @else

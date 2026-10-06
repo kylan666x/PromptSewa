@@ -17,7 +17,7 @@
                    'border-saffron-deep bg-saffron/20 text-saffron-deep' => $currentStatus === $statusKey,
                    'border-ink/10 bg-paper-deep text-ink/80 hover:border-ink/25' => $currentStatus !== $statusKey,
                ])>
-                {{ $label }} <span class="ml-1 text-xs text-ink0">{{ $count }}</span>
+                {{ $label }} <span class="ml-1 text-xs text-ink/60">{{ $count }}</span>
             </a>
         @endforeach
     </div>
@@ -37,12 +37,12 @@
                                 } }}">
                                 {{ ucfirst($report->status) }}
                             </span>
-                            <span class="font-mono text-xs text-ink0">{{ $report->reasonLabel() }}</span>
+                            <span class="font-mono text-xs text-ink/60">{{ $report->reasonLabel() }}</span>
                         </div>
                         <p class="mt-2 font-medium text-ink">
                             <a href="{{ route('prompts.show', $report->prompt) }}" class="hover:text-saffron-deep">{{ $report->prompt?->title ?? 'Deleted prompt' }}</a>
                         </p>
-                        <p class="mt-1 text-xs text-ink0">
+                        <p class="mt-1 text-xs text-ink/60">
                             Reported {{ $report->created_at->format('M j, Y g:i A') }}
                             @if ($report->reporter)
                                 by {{ $report->reporter->name }}
@@ -85,11 +85,11 @@
                 <p class="mt-3 whitespace-pre-wrap rounded-xl bg-paper-deep px-4 py-3 text-sm leading-relaxed text-ink/80">{{ $report->message }}</p>
 
                 @if ($report->resolver)
-                    <p class="mt-2 text-xs text-ink0">Handled by {{ $report->resolver->name }} · {{ $report->resolved_at?->format('M j, Y') }}</p>
+                    <p class="mt-2 text-xs text-ink/60">Handled by {{ $report->resolver->name }} · {{ $report->resolved_at?->format('M j, Y') }}</p>
                 @endif
             </div>
         @empty
-            <div class="rounded-2xl border border-ink/10 bg-white p-10 text-center text-ink0">
+            <div class="rounded-2xl border border-ink/10 bg-white p-10 text-center text-ink/60">
                 No reports here — the library is behaving. 🎉
             </div>
         @endforelse

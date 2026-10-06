@@ -21,7 +21,7 @@
          the header's own rounded-t, instead of by an overflow clip. --}}
     <div class="mt-6 rounded-2xl border border-ink/10">
         <table class="min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="rounded-t-2xl bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="rounded-t-2xl bg-paper-deep text-left text-xs uppercase tracking-wider text-ink/60">
                 <tr>
                     <th class="px-5 py-3 font-semibold">User</th>
                     <th class="hidden px-5 py-3 font-semibold sm:table-cell">Prompts</th>
@@ -41,7 +41,7 @@
                                 {{ $user->name }}
                                 <x-verified-badge :user="$user" size="xs"/>
                             </p>
-                            <p class="text-xs text-ink0">{{ $user->email }}</p>
+                            <p class="text-xs text-ink/60">{{ $user->email }}</p>
                             <x-user-handle :user="$user" size="text-xs" class="opacity-70"/>
                         </td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $user->prompts_count }}</td>
@@ -92,7 +92,7 @@
                             @elseif ($user->isBanned())
                                 <span class="rounded-md bg-rose-600/15 px-2 py-0.5 text-xs font-semibold text-rose-700">Banned</span>
                             @else
-                                <span class="text-xs text-ink0">—</span>
+                                <span class="text-xs text-ink/60">—</span>
                             @endif
                         </td>
                         <td class="px-5 py-3.5">
@@ -105,12 +105,12 @@
                                     </button>
                                 </form>
                             @else
-                                <span class="text-xs text-ink0">—</span>
+                                <span class="text-xs text-ink/60">—</span>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-5 py-10 text-center text-ink0">No users match.</td></tr>
+                    <tr><td colspan="7" class="px-5 py-10 text-center text-ink/60">No users match.</td></tr>
                 @endforelse
             </tbody>
         </table>

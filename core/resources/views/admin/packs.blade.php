@@ -9,7 +9,7 @@
 
     <div class="overflow-hidden rounded-2xl border border-ink/10">
         <table class="min-w-full divide-y divide-ink/10 text-sm">
-            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink0">
+            <thead class="bg-paper-deep text-left text-xs uppercase tracking-wider text-ink/60">
                 <tr>
                     <th class="px-5 py-3 font-semibold">Pack</th>
                     <th class="hidden px-5 py-3 font-semibold sm:table-cell">Prompts</th>
@@ -23,7 +23,7 @@
                     <tr class="transition hover:bg-paper-deep">
                         <td class="px-5 py-3.5">
                             <p class="font-medium text-ink">{{ $pack->name }}</p>
-                            <p class="text-xs text-ink0">{{ Str::limit($pack->description, 60) }}</p>
+                            <p class="text-xs text-ink/60">{{ Str::limit($pack->description, 60) }}</p>
                         </td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $pack->published_prompts_count }}</td>
                         {{-- S1b (v1.9.0): the pack price of record is Sikka. --}}
@@ -52,7 +52,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-5 py-10 text-center text-ink0">No packs yet — create your first bundle.</td></tr>
+                    <tr><td colspan="5" class="px-5 py-10 text-center text-ink/60">No packs yet — create your first bundle.</td></tr>
                 @endforelse
             </tbody>
         </table>

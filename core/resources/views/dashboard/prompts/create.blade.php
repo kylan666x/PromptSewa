@@ -58,7 +58,7 @@
                             <span class="block rounded-2xl border border-ink/10 bg-paper-deep p-4 transition hover:border-ink/25 peer-checked:border-saffron-deep peer-checked:bg-saffron/20 peer-checked:shadow-[0_0_0_1px_rgba(245,158,11,0.25)]">
                                 <span class="text-lg">{{ $ctx['icon'] }}</span>
                                 <span class="mt-1.5 block font-mono text-sm font-bold tracking-tight text-ink">{{ $ctx['label'] }}</span>
-                                <span class="mt-0.5 block text-xs leading-relaxed text-ink0">{{ $ctx['blurb'] }}</span>
+                                <span class="mt-0.5 block text-xs leading-relaxed text-ink/60">{{ $ctx['blurb'] }}</span>
                             </span>
                         </label>
                     @endforeach
@@ -132,7 +132,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <p class="mt-1 text-xs text-ink0">Only categories that fit the selected prompt type are listed.</p>
+                                <p class="mt-1 text-xs text-ink/60">Only categories that fit the selected prompt type are listed.</p>
                                 @error('category_id') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                             </div>
                         </div>
@@ -306,7 +306,7 @@
                                 Buyers see <span class="font-mono font-semibold text-ink" x-text="fmtNpr(sikka * buy)"><x-money :paisa="((int) old('price_sikka', 0)) * $buyPaisa"/></span>
                                 at checkout — the NPR figure is derived from your Sikka price, live.
                             </p>
-                            <p class="mt-2 text-xs leading-relaxed text-ink0">
+                            <p class="mt-2 text-xs leading-relaxed text-ink/60">
                                 Free prompts publish instantly after review. Paid prompts also go through
                                 review; buyers get a personal license automatically at checkout.
                             </p>
@@ -338,7 +338,7 @@
                         >
                             <span x-text="submitting ? 'Submitting…' : 'Submit for review'"></span>
                         </button>
-                        <p class="mt-3 text-center text-xs text-ink0">You can edit and version it any time.</p>
+                        <p class="mt-3 text-center text-xs text-ink/60">You can edit and version it any time.</p>
                     </div>
                 </aside>
             </div>

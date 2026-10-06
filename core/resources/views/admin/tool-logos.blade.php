@@ -6,7 +6,7 @@
     <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div class="rounded-2xl border border-ink/10 bg-white p-6">
             <h3 class="text-sm font-semibold text-ink">Registered AI tools</h3>
-            <p class="mt-1 text-xs text-ink0">These logos appear on prompt cards and detail pages. Match the tool name exactly as creators type it (e.g. "ChatGPT", "Midjourney").</p>
+            <p class="mt-1 text-xs text-ink/60">These logos appear on prompt cards and detail pages. Match the tool name exactly as creators type it (e.g. "ChatGPT", "Midjourney").</p>
 
             <div class="mt-5 space-y-3">
                 @forelse ($tools as $tool)
@@ -19,7 +19,7 @@
                             @endif
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-ink">{{ $tool->name }}</p>
-                                <p class="text-xs {{ $tool->is_active ? 'text-emerald-700' : 'text-ink0' }}">
+                                <p class="text-xs {{ $tool->is_active ? 'text-emerald-700' : 'text-ink/60' }}">
                                     {{ $tool->is_active ? 'active' : 'hidden' }}
                                     · <span class="font-mono">{{ $tool->modality }}</span>
                                 </p>
@@ -51,7 +51,7 @@
                         </div>
                     </div>
                 @empty
-                    <p class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-8 text-center text-sm text-ink0">No tools yet — add ChatGPT, Gemini, Midjourney on the right.</p>
+                    <p class="rounded-xl border border-ink/10 bg-paper-deep px-4 py-8 text-center text-sm text-ink/60">No tools yet — add ChatGPT, Gemini, Midjourney on the right.</p>
                 @endforelse
             </div>
         </div>
@@ -73,7 +73,7 @@
                             <option value="{{ $modalityOption }}">{{ $modalityOption }}</option>
                         @endforeach
                     </select>
-                    <p class="mt-1 text-xs text-ink0">Which prompt types can list this tool — “any” fits all.</p>
+                    <p class="mt-1 text-xs text-ink/60">Which prompt types can list this tool — “any” fits all.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-ink/60">Logo (PNG/SVG, square works best)</label>
