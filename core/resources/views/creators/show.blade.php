@@ -101,6 +101,13 @@
                          breakpoint — Edit profile + a Dashboard secondary
                          button. Strangers see neither (the @if is owner-only). --}}
                     <div class="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+                        {{-- S3 (v1.9.0): the owner's profile is where the dock's
+                             "You" slot lands on mobile, so the membership
+                             storefront gets a visible door here too. --}}
+                        <a href="{{ route('memberships.index') }}" data-testid="profile-memberships"
+                           class="rounded-full border border-ink/15 bg-white px-5 py-2 text-sm font-semibold text-ink/80 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/40 hover:text-ink">
+                            Memberships
+                        </a>
                         <a href="{{ route('dashboard') }}" data-testid="profile-dashboard"
                            class="rounded-full border border-ink/15 bg-white px-5 py-2 text-sm font-semibold text-ink/80 shadow-sm transition hover:-translate-y-0.5 hover:border-ink/40 hover:text-ink">
                             Dashboard
