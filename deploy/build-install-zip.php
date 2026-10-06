@@ -41,7 +41,7 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 
 $repoRoot = dirname(__DIR__);
 $core = $repoRoot.DIRECTORY_SEPARATOR.'core';
@@ -181,6 +181,11 @@ $skip = static function (string $rel) use ($excludedDirs, $excludedFiles): bool 
     if (in_array($rel, $excludedFiles, true)) {
         return true;
     }
+    // S1b (v1.9.0): the audit below bans ANY `.sqlite` entry — a local
+    // preview copy or backup must not even be staged.
+    if (str_contains($rel, '.sqlite')) {
+        return true;
+    }
     foreach ($excludedDirs as $dir) {
         if ($rel === rtrim($dir, '/') || str_starts_with($rel, $dir)) {
             return true;
@@ -283,7 +288,7 @@ out("  vendor/ ready ({$vendorPkgs} entries, --no-dev)");
 // The pre-composer copy bypasses $excludedFiles, so scrub what it dragged in.
 // (The hygiene audit below still asserts this — the scrub is belt, the audit
 // is braces: the v1.4.4 lesson is that the audit must never be the only wall.)
-foreach (['database/database.sqlite', '.env', '.env.backup', '.env.production'] as $leak) {
+foreach (['database/database.sqlite', 'database/preview.sqlite', '.env', '.env.backup', '.env.production'] as $leak) {
     if (is_file($coreStaging.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $leak))) {
         @unlink($coreStaging.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $leak));
         out("  scrubbed pre-staged {$leak}");

@@ -35,15 +35,83 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.8.0 — Sikka Economy & Membership (this release)
+### v1.9.0 — Social Surface & Sikka-Only Economy (this release)
+
+> **Supersedes two v1.8.0 statements:** the kill-switch no longer ships
+> OFF (it is retired — see S1 below), and the earnings tab is no longer
+> NPR with a Sikka card (it is Sikka-only).
+
+The founder's S1–S3 + S1b directive on branch `raid/v1.8.0`, on top of the
+v1.8.0 release commit. **Sikka is the ONLY currency on buyer surfaces**;
+the one place money still appears is the top-up page (`/sikka`) and the
+checkout of the top-up itself.
+
+- **S1 — wallet visibility everywhere.** A Sikka balance chip in the
+  navbar (desktop cluster + mobile top row, both → `/dashboard/earnings`)
+  for signed-in users; prompt cards, the detail page, checkout and the
+  purchases list price in credits with **zero NPR parentheses**; the
+  earnings tab was rewritten Sikka-only (spendable, cash-out eligible,
+  credits ledger, "Withdraw earnings" — the legacy NPR payout pages are
+  exempt-with-reason inventory entries, still direct-POST tested).
+  **`sikka_enabled` is retired:** it defaults ON, the Sikka desk no longer
+  renders the toggle, migration `2026_10_05_120000` flips every existing
+  `'0'` row to `'1'`, and an explicit legacy `'0'` row is honoured as a
+  global off-switch only so the page never offers a door the POST refuses.
+- **S2 — avatar menu is two actions** (upload / edit picture, edit frame);
+  the picture itself is the lightbox door, on the hero and in the navbar.
+- **S3 — membership storefront entry points.** `/memberships` is public;
+  the account menu and the owner-profile action link to it (that is where
+  mobile's "You" slot lands), and the Sikka desk Plans tab has a
+  "View storefront" preview link.
+- **S1b — packs and plans join the credit economy (the founder's follow-up
+  directive).**
+  - `packs.price_sikka` and `membership_plans.price_sikka` are the prices of
+    record (migrations `2026_10_05_130000` / `131000`); the paisa columns
+    stay as the derived NPR mirror for order snapshots and accounting, the
+    same mirror contract prompts already carry.
+  - Pack cards, the pack landing page, the admin pack form, the membership
+    storefront and the desk plan form all price in credits.
+  - **Search returns packs:** `SearchController::preview` hydrates a third
+    `packs` key (name, prompt count, Sikka price, url) and the Alpine
+    typeahead renders the section — previously packs could never appear in
+    the dropdown, whatever the data.
+  - **Mobile dock leads with Packs:** Home · Packs · ＋ (create) · Library ·
+    Profile — five slots, saffron reserved for the centre CTA, active slot
+    marked text-only.
+  - **`/sikka` is the single money door.** The credit rail pays every
+    product order (prompt, pack, membership plan) atomically; when the
+    balance is short the checkout shows "Top up Sikka credits" and, if the
+    plan includes it, the unlimited-unlock bypass. The eSewa / manual rails
+    render ONLY on an order that carries a top-up pack — the `/sikka` page
+    and its checkout are the only surfaces that show NPR at all.
+  - **Structured data follows the surface:** pack and prompt JSON-LD now
+    advertise `priceCurrency: SIKKA`. Bug found by the browser gate and
+    fixed: a literal `'@context'` key inside a raw Blade echo was compiled
+    as Blade's `@context` DIRECTIVE, so the pack JSON-LD carried generated
+    PHP instead of `https://schema.org` (the array now lives in a stored
+    PHP block, and `PackLandingV2Test` decodes the script tag as JSON).
+  - **Hygiene:** both zip builders now refuse ANY `.sqlite` path (a local
+    `database/preview.sqlite` used to fail the build's own audit instead of
+    simply not shipping); `.gitignore` already excluded it from git.
+
+Release gates: full Pest suite **629 passed / 18,024 assertions / 3 skipped
+(exit 0)** on SQLite-in-memory — evidence `dist/v1.9.0-suite.txt`;
+`--list-tests` enumerates the Arch suite (6 tests) —
+`dist/v1.9.0-list-tests.txt`; update zip
+`dist/promptsewa-1.9.0-update.zip` — `entries: 512 | hygiene audit: CLEAN`,
+SHA-256 `32816e26b5f37179c114036f4d0b52c98a839347da7408a31811b9f4633212b8`
+(evidence `dist/v1.9.0-zip.txt`).
+
+### v1.8.0 — Sikka Economy & Membership (previous release)
 
 The founder's S1–S9 directive on branch `raid/v1.8.0`, cut from the v1.7.8
 release commit. Sikka is a **credit, not a currency**: an insert-only
 integer ledger whose every movement goes through ONE service, a bounded
 earn loop, a cash-out machine that settles at a spread, and NPR-rail
-memberships that unlock perks. The kill-switch (`sikka_enabled`) ships
+memberships that unlock perks. The kill-switch (`sikka_enabled`) shipped
 OFF — while off, every buyer surface renders exactly the v1.7.8 NPR
-experience.
+experience. (Superseded by v1.9.0 S1: the switch is retired and ON, and
+memberships are bought with credits.)
 
 - **S1 — schema (11 append-only migrations).** `sikka_transactions`
   (signed BIGINT `amount_sikka`, `cashout_eligible`, UNIQUE
@@ -740,6 +808,27 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
+
+### Post-check (v1.9.0) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Zip contents (builder output) | `entries: 512 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | SHA-256 of the uploaded zip | `32816e26b5f37179c114036f4d0b52c98a839347da7408a31811b9f4633212b8` (identical across two consecutive builds) | builder output |
+| 3 | `php artisan migrate:status` | `2026_10_05_120000_retire_sikka_kill_switch`, `2026_10_05_130000_add_price_sikka_to_packs_table`, `2026_10_05_131000_add_price_sikka_to_membership_plans_table` newly **Ran**; nothing else moves | `DeployParityAcceptanceTest` (parity DB runs the whole pending batch) |
+| 4 | Admin → Overview | `v1.9.0` chip | `config('app.version')` single source |
+| 5 | Navbar (desktop + mobile) while signed in | Sikka balance chip with the integer, clicking lands on `/dashboard/earnings`; guests see none | `SikkaEverywhereTest::the navbar shows the Sikka wallet chip for signed-in users on both viewports` |
+| 6 | Prompt card, prompt detail, checkout | credits only — no `Rs.` anywhere; the Sikka rail is the door | `SikkaEverywhereTest::cards, the detail page and checkout price in Sikka only — no NPR anywhere` |
+| 7 | Earnings tab | "Sikka spendable", "Cash-out eligible", "Withdraw earnings", credits ledger — no "Request a payout", no "Ledger balance", no NPR | `SikkaEverywhereTest::the earnings tab renders Sikka only…`, `EarningsEmptyLedgerTest` |
+| 8 | Typeahead: type `pack` / a pack name | a Packs section renders (name, prompt count, Sikka price) → `/packs/{slug}` | `PackSearchTest` (2 tests) |
+| 9 | Mobile (360px) | dock is exactly 5 slots: Home · Packs · ＋ · Library · Profile; active slot marked by text colour only; no horizontal overflow | `MobileDockTest` |
+| 10 | `/packs`, a pack landing, `/memberships` | credits only, buy form posts to checkout, no NPR parenthetical | `PackLandingV2Test`, `PackLandingAndSeoTest`, `SikkaEverywhereTest::packs and memberships price in Sikka only…` |
+| 11 | Buy a pack/plan while short on credits | checkout shows "Top up Sikka credits" → `/sikka`, and NO eSewa/manual rails | `CheckoutFlowTest::a short balance sends the pack buyer to the top-up page…` |
+| 12 | Funded: pay a pack or a plan with credits | order paid, contents granted / plan activated + stipend + perks exactly once, zero NPR involvement | `CheckoutFlowTest::a pack order pays with Sikka credits and grants the contents`, `MembershipActivationTest`, `SikkaEverywhereTest` |
+| 13 | Buy a top-up pack on `/sikka` | its checkout DOES show eSewa / manual transfer with NPR amounts — the only NPR surface left | `CheckoutFlowTest` (same test, second half) |
+| 14 | Admin → Sikka desk → Plans | prices are credits; the Plans tab has "View storefront" → `/memberships`; the kill-switch toggle is gone | `SikkaDeskTest::plans CRUD…`, `MembershipAccessTest` |
+| 15 | View source on a pack landing / prompt detail | one `application/ld+json` block, valid JSON, `"@context":"https://schema.org"`, offer `priceCurrency` `SIKKA` (no generated PHP leaking into the tag) | `PackLandingV2Test::JSON-LD and the x-seo head survive the redesign` |
+| 16 | `cd core && php artisan test` | **629 passed / 18,024 assertions / 3 skipped**; `--list-tests` shows the 6 Arch tests | whole suite (`dist/v1.9.0-suite.txt`, `dist/v1.9.0-list-tests.txt`) |
 
 ### Post-check (v1.8.0) — run in order after the update.php pipeline finishes
 

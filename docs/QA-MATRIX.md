@@ -651,3 +651,34 @@ named test; if a test regresses, the row goes red and the release blocks.
 | S9 release note: the founder's art ships by UPLOAD, not in the zip — the artifact carries only the ingest plumbing and the fallback | ✅ | release report `dist/v1.8.0-release-report.md` |
 | Suite | ✅ | **613 passed / 17,849 assertions, 3 skipped** (skips: two install-artifact tests — no v1.8.0 install zip is built, skip by design; one v1.4.4 incident lock, artifact absent) — `--list-tests` enumerates **616 tests / 6 Arch** (`BladeFormVerbTest` 1, `MigrationDropGuardTest` 1, `NoBladeLeakTest` 1, `UserAvatarGeometryTest` 3) |
 | Update artifact | ✅ | `dist/promptsewa-1.8.0-update.zip` — **505 entries** (501 core + 4 docroot), **0.94 MB**, hygiene audit **CLEAN (0 forbidden entries)**, **SHA-256 `0dd3e0b619113e37207fc3a502bb7240a519031d6040ad8ccaf4dba37c5f19c4`** (rebuild is byte-identical — reproducible) |
+
+## S-block (v1.9.0) — Sikka-only economy, social surface & the S1b extension
+
+> **Supersedes parts of the v1.8.0 S-block above:** the kill-switch is
+> retired (no longer "ships OFF"), cards/detail/checkout no longer keep an
+> NPR parenthetical, and membership plans are bought with credits instead
+> of the NPR rail. The old rows stay as release history.
+
+| Area | Status | Locked by |
+|---|---|---|
+| S1 the navbar carries the Sikka wallet chip for signed-in users on both viewports (mark + integer, linked to `/dashboard/earnings`); guests get none | ✅ | `SikkaEverywhereTest::the navbar shows the Sikka wallet chip for signed-in users on both viewports` |
+| S1 prompt cards, the detail page and checkout price in credits only — zero NPR; the rail shows the top-up CTA when short and the pay door when funded | ✅ | `SikkaEverywhereTest::cards, the detail page and checkout price in Sikka only — no NPR anywhere` |
+| S1 the earnings tab is Sikka-only: spendable, cash-out eligible, credits ledger, "Withdraw earnings" — no NPR payout chrome | ✅ | `SikkaEverywhereTest::the earnings tab renders Sikka only — balances, ledger and withdrawals, no NPR`, `EarningsEmptyLedgerTest`, `EmptyLedgerMysqlParityTest` |
+| S1 the kill-switch is retired: defaults ON, the desk hides the toggle, migration flips existing rows, the storefront exists with nobody flipping anything | ✅ | `SikkaEverywhereTest::the kill-switch is retired: the economy ships ON and the desk hides the toggle`, `DeployParityAcceptanceTest` (migration in the pending list) |
+| S1 the display balance (navbar) equals the locked spendable balance — one ledger, one answer | ✅ | `SikkaEverywhereTest::the display balance equals the locked spendable balance` |
+| S1 legacy NPR payout routes have no served form any more and are exempt-with-reason in the inventory, still direct-POST tested | ✅ | `DeadLinkScanTest`, `FormRoundTripInventoryTest`, `CheckoutFlowTest` |
+| S2 the avatar menu is exactly two actions; the picture itself opens the lightbox on the hero and in the navbar | ✅ | `AvatarMenuTest` (rewritten to two actions + the direct-click door) |
+| S3 `/memberships` is public and reachable from the account menu, the owner-profile action and the Sikka desk "View storefront" link | ✅ | `MembershipAccessTest` (3 tests) |
+| S1b `packs.price_sikka` and `membership_plans.price_sikka` are the prices of record; the paisa mirror derives on save (rounding UP for legacy paisa writes so a paid pack never becomes free) | ✅ | `PackLandingV2Test`, `PackLandingAndSeoTest`, `SikkaDeskTest::plans CRUD round-trips the perks picker and referenced plans deactivate` |
+| S1b pack grid, pack landing and the admin pack form price in credits; the desk plan form prices in credits | ✅ | `PackLandingV2Test`, `PackLandingAndSeoTest::admin pack form persists tagline and hero copy`, `SikkaDeskTest` |
+| S1b the typeahead payload carries a `packs` key (name, prompt count, Sikka price, url) and the served client renders the section | ✅ | `PackSearchTest::the typeahead payload carries packs priced in Sikka`, `PackSearchTest::the served typeahead renders the packs section priced in Sikka only` |
+| S1b the mobile dock is exactly Home · Packs · ＋ · Library · Profile with correct hrefs and text-only active state | ✅ | `MobileDockTest` |
+| S1b a pack order prices in credits, offers the rail when funded, pays atomically and grants every prompt inside; a short balance gets the top-up CTA and NO money rails | ✅ | `CheckoutFlowTest::a pack order pays with Sikka credits and grants the contents`, `CheckoutFlowTest::a short balance sends the pack buyer to the top-up page, and only a top-up order shows the money rails` |
+| S1b a membership plan is paid with credits and activates exactly once (membership row + first stipend + perks); a short balance gets the top-up CTA | ✅ | `SikkaEverywhereTest::packs and memberships price in Sikka only, and a short balance points at the top-up door`, `MembershipActivationTest` |
+| S1b the money rails (eSewa / manual transfer) render ONLY on an order carrying a top-up pack — `/sikka` and its checkout are the only NPR surfaces left | ✅ | `CheckoutFlowTest` (both halves), `ManualPaymentMethodsTest`, `MethodKindsAndLabelsTest` |
+| S1b the shortfall hint no longer sends buyers to rails that are not on the page, and a credit-rail order is never "Checkout is being configured" | ✅ | `CheckoutFlowTest::a short balance sends the pack buyer to the top-up page…` (asserts both absences) |
+| S1b structured data follows the surface: pack and prompt JSON-LD advertise `priceCurrency: SIKKA`; the pack script tag is valid JSON (no Blade `@context` directive leak) | ✅ | `PackLandingV2Test::JSON-LD and the x-seo head survive the redesign` (decodes the tag), `AvatarFrameCompositionTest` |
+| S1b the two new migrations join the parity pending list and ride the update batch | ✅ | `DeployParityAcceptanceTest` |
+| S1b both zip builders refuse ANY `.sqlite` path (host-local DBs never ship, and the audit can never fail because of one) | ✅ | `ReleaseHygieneTest::the built update zip carries no host-local artifacts and keeps docroot + build` |
+| Suite | ✅ | **629 passed / 18,024 assertions / 3 skipped** (skips: two install-artifact tests — no install zip built, by design; one v1.4.4 incident lock, artifact absent) — `--list-tests` enumerates the **6 Arch tests** (`BladeFormVerbTest` 1, `MigrationDropGuardTest` 1, `NoBladeLeakTest` 1, `UserAvatarGeometryTest` 3); evidence `dist/v1.9.0-suite.txt`, `dist/v1.9.0-list-tests.txt` |
+| Update artifact | ✅ | `dist/promptsewa-1.9.0-update.zip` — **512 entries** (508 core + 4 docroot), **0.96 MB**, hygiene audit **CLEAN (0 forbidden entries)**, **SHA-256 `32816e26b5f37179c114036f4d0b52c98a839347da7408a31811b9f4633212b8`** (identical across two consecutive builds — reproducible), 0 `.sqlite` entries, all 3 v1.9.0 migrations present; evidence `dist/v1.9.0-zip.txt` |

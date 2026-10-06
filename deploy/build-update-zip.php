@@ -32,7 +32,7 @@
 
 declare(strict_types=1);
 
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 
 $repoRoot = dirname(__DIR__);
 $zipPath = $repoRoot.DIRECTORY_SEPARATOR.'dist'
@@ -68,6 +68,12 @@ $excludedFiles = [
     'database/database.sqlite',
     'public/hot',
 ];
+
+// S1b (v1.9.0): the audit below bans ANY `.sqlite` entry, so the collector
+// must refuse them all too — not just database/database.sqlite. A local
+// preview copy (database/preview.sqlite) or a stray backup otherwise made
+// the build fail its own hygiene audit instead of simply not shipping it.
+$isHostLocalDb = static fn (string $relative): bool => str_contains($relative, '.sqlite');
 
 /** gitkeep-style placeholders that ARE allowed inside excluded trees. */
 $excludedTreeExceptions = [
@@ -173,7 +179,7 @@ foreach ($iterator as $item) {
 
     $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($core) + 1));
 
-    if ($skipDir($relative) || in_array($relative, $excludedFiles, true)) {
+    if ($skipDir($relative) || in_array($relative, $excludedFiles, true) || $isHostLocalDb($relative)) {
         continue;
     }
 
