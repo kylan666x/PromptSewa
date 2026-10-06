@@ -42,7 +42,10 @@
                     <span class="flex items-center gap-1 text-sm transition group-hover/creator:underline decoration-saffron decoration-2 underline-offset-2">
                         <x-user-handle :user="$prompt->creator" size="text-sm"/> <x-verified-badge :user="$prompt->creator" size="xs"/>
                     </span>
-                    <span class="block font-mono text-[11px] text-ink/40">{{ $prompt->updated_at->diffForHumans() }}</span>
+                    {{-- WCAG 2.1 AA: the timestamp is real information at
+                         11px, so it clears 4.5:1 on the white card
+                         (ink/60 ≈ 4.7:1; ink/40 ≈ 2.6:1 would not). --}}
+                    <span class="block font-mono text-[11px] text-ink/60">{{ $prompt->updated_at->diffForHumans() }}</span>
                 </span>
             </a>
         @else

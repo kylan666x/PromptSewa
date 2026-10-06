@@ -125,7 +125,7 @@ Release gates: full Pest suite **636 passed / 18,079 assertions / 3 skipped
 `--list-tests` enumerates the Arch suite (6 tests) —
 `dist/v1.9.0-list-tests.txt`; update zip
 `dist/promptsewa-1.9.0-update.zip` — `entries: 513 | hygiene audit: CLEAN`,
-SHA-256 `ec344da52a58373762864dd1389929e25818b7a94b163f638391cebb9cfa532c`
+SHA-256 `b40e36572c7dca34484e808b6f308f01f586a77033700ef12821fe00999b3fb2`
 (evidence `dist/v1.9.0-zip.txt`; supersedes the pre-S4 build
 `c61488a2…` / 512 entries).
 
@@ -841,7 +841,7 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | # | Check | Expected | Locked by |
 |---|---|---|---|
 | 1 | Zip contents (builder output) | `entries: 513 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
-| 2 | SHA-256 of the uploaded zip | `ec344da52a58373762864dd1389929e25818b7a94b163f638391cebb9cfa532c` (identical across two consecutive builds) | builder output |
+| 2 | SHA-256 of the uploaded zip | `b40e36572c7dca34484e808b6f308f01f586a77033700ef12821fe00999b3fb2` (identical across two consecutive builds) | builder output |
 | 3 | `php artisan migrate:status` | `2026_10_05_120000_retire_sikka_kill_switch`, `2026_10_05_130000_add_price_sikka_to_packs_table`, `2026_10_05_131000_add_price_sikka_to_membership_plans_table` newly **Ran**; nothing else moves | `DeployParityAcceptanceTest` (parity DB runs the whole pending batch) |
 | 4 | Admin → Overview | `v1.9.0` chip | `config('app.version')` single source |
 | 5 | Navbar (desktop + mobile) while signed in | Sikka balance chip with the integer, clicking lands on `/dashboard/earnings`; guests see none | `SikkaEverywhereTest::the navbar shows the Sikka wallet chip for signed-in users on both viewports` |
