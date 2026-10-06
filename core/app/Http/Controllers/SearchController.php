@@ -39,6 +39,9 @@ class SearchController extends Controller
                 'title' => $prompt->title,
                 'type' => $prompt->type,
                 'price' => $prompt->price_cents,
+                // S1 (v1.9.0): the typeahead prices in Sikka — the JSON
+                // carries the credit figure so the row never shows NPR.
+                'sikka' => (int) $prompt->price_sikka,
                 'url' => route('prompts.show', $prompt),
             ])
             ->values();

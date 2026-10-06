@@ -86,23 +86,24 @@ test('settings respect the documented bounds and persist valid values', function
     $this->actingAs($admin)->put(route('admin.sikka.settings'), array_merge($valid, ['engage_publish_sikka' => 51]))->assertSessionHasErrors('engage_publish_sikka');
     $this->actingAs($admin)->put(route('admin.sikka.settings'), array_merge($valid, ['engage_daily_cap_sikka' => 501]))->assertSessionHasErrors('engage_daily_cap_sikka');
 
-    // A valid save persists (including the kill-switch).
+    // A valid save persists (rates + engagement bounds).
     $this->actingAs($admin)->put(route('admin.sikka.settings'), array_merge($valid, [
         'sikka_buy_paisa_per_token' => 200,
         'sikka_cashout_paisa_per_token' => 150,
-        'sikka_enabled' => '1',
     ]))->assertRedirect();
 
     $settings = app(SettingsService::class);
 
     expect($settings->get('sikka_buy_paisa_per_token'))->toBe('200')
         ->and($settings->get('sikka_cashout_paisa_per_token'))->toBe('150')
-        ->and($settings->isOn('sikka_enabled'))->toBeTrue()
         ->and(app(SikkaService::class)->cashoutRatePaisaPerToken())->toBe(150);
 
-    // The kill-switch can be flipped back off.
-    $this->actingAs($admin)->put(route('admin.sikka.settings'), $valid)->assertRedirect();
-    expect($settings->isOn('sikka_enabled'))->toBeFalse();
+    // S1 (v1.9.0): the kill-switch is RETIRED — a stale "0" smuggled into
+    // the payload is ignored, the economy stays ON, and nothing in the desk
+    // can turn it off again.
+    $this->actingAs($admin)->put(route('admin.sikka.settings'), array_merge($valid, ['sikka_enabled' => '0']))->assertRedirect();
+
+    expect($settings->isOn('sikka_enabled'))->toBeTrue();
 });
 
 test('packs CRUD round-trips and a sold pack deactivates instead of deleting', function () {

@@ -114,6 +114,10 @@ test('v1.4.3-schema database migrates the legacy trio plus every v1.8.0 migratio
             '2026_10_04_168000_add_sikka_settings',
             '2026_10_04_169000_add_source_to_license_grants_table',
             '2026_10_04_170000_add_sikka_pack_id_to_order_items_table',
+            // v1.9.0 (S1): the kill-switch retirement rides the update too —
+            // the base schema is "prod before v1.9.0", so its migration is
+            // pending here exactly like the v1.8.0 batch above.
+            '2026_10_05_120000_retire_sikka_kill_switch',
         ];
 
         DB::statement('CREATE TABLE migrations (id int unsigned not null auto_increment primary key, migration varchar(255) not null, batch int not null)');

@@ -1,5 +1,4 @@
 @php
-    /** @var bool $enabled */
     /** @var int $buyRate */
     /** @var int $cashoutRate */
     /** @var array{daily:int, publish:int, rating:int, cap:int} $engage */
@@ -16,8 +15,8 @@
 
 <x-admin-layout title="Sikka desk">
     <div class="flex flex-wrap items-center gap-2">
-        <span class="rounded-full border px-3 py-1 font-mono text-xs font-bold {{ $enabled ? 'border-emerald-500/40 bg-emerald-50 text-emerald-800' : 'border-ink/15 bg-paper-deep text-ink/60' }}">
-            {{ $enabled ? 'Kill-switch ON — the economy is live' : 'Kill-switch OFF — zero Sikka markup everywhere' }}
+        <span class="rounded-full border border-emerald-500/40 bg-emerald-50 px-3 py-1 font-mono text-xs font-bold text-emerald-800">
+            Sikka economy — permanent (kill-switch retired)
         </span>
         <span class="rounded-full border border-ink/15 bg-white px-3 py-1 font-mono text-xs text-ink/60">
             1 credit = <x-money :paisa="$buyRate"/> to buy · <x-money :paisa="$cashoutRate"/> to cash out
@@ -52,10 +51,6 @@
         </p>
 
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="flex items-center gap-2 rounded-xl border border-ink/10 bg-paper-deep px-3 py-2.5 text-sm text-ink/80">
-                <input type="checkbox" name="sikka_enabled" value="1" @checked($enabled) class="size-4 rounded border-ink/20 text-saffron-deep">
-                Sikka enabled (kill-switch)
-            </label>
             <div>
                 <label for="sikka_buy_paisa_per_token" class="block text-xs font-medium text-ink/60">Buy rate (paisa / credit)</label>
                 <input id="sikka_buy_paisa_per_token" type="number" name="sikka_buy_paisa_per_token" min="50" max="500" required value="{{ $buyRate }}"
@@ -145,7 +140,16 @@
 
     {{-- Plans --}}
     <section class="mt-6 rounded-2xl border border-ink/10 bg-white p-6">
-        <h2 class="text-sm font-semibold text-ink">Membership plans</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-ink">Membership plans</h2>
+            {{-- S3 (v1.9.0): the buyer-facing storefront this catalog feeds,
+                 one click away — the desk edits, the storefront sells. --}}
+            <a href="{{ route('memberships.index') }}" target="_blank" rel="noopener"
+               data-testid="sikka-plans-storefront"
+               class="inline-flex items-center gap-1 rounded-full border border-ink/10 px-3 py-1.5 text-xs font-semibold text-ink/70 transition hover:border-saffron-deep/50 hover:bg-saffron/15 hover:text-ink">
+                View storefront &rarr;
+            </a>
+        </div>
         <p class="mt-1 text-xs text-ink/60">NPR-rail plans; activation grants the first stipend and every perk through the existing choke points.</p>
 
         <form method="POST" action="{{ route('admin.sikka.plans.store') }}" class="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">

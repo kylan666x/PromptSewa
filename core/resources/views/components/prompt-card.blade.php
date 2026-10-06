@@ -12,10 +12,9 @@
     // PHP comments in this block.
     $saved = $saved ?? \App\Support\BookmarkedIds::contains($prompt);
 
-    // S6 (v1.8.0): during the Sikka transition a paid card leads with the
-    // Sikka price (price of record) and keeps the NPR figure in
-    // parentheses; free chips and the kill-switch-off world are unchanged.
-    $sikkaEnabled = app(\App\Services\SettingsService::class)->isOn('sikka_enabled');
+    // S1 (v1.9.0): Sikka is the ONLY currency on buyer surfaces — a paid
+    // card shows the credit price (the price of record) and nothing else.
+    // No NPR parenthetical, no kill-switch branch.
 @endphp
 
 {{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
@@ -34,13 +33,10 @@
             </h3>
             @if ($prompt->isFree())
                 <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 font-mono text-xs font-bold text-emerald-800">Free</span>
-            @elseif ($sikkaEnabled)
+            @else
                 <span class="shrink-0 rounded-full bg-saffron/25 px-2.5 py-1 font-mono text-xs font-bold text-ink">
                     <x-sikka :amount="$prompt->price_sikka"/>
-                    <span class="ml-1 font-normal text-ink/50">(<x-money :paisa="$prompt->price_cents"/>)</span>
                 </span>
-            @else
-                <span class="shrink-0 rounded-full bg-saffron/25 px-2.5 py-1 font-mono text-xs font-bold text-ink">{{ $prompt->priceLabel() }}</span>
             @endif
         </div>
 

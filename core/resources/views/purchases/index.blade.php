@@ -39,7 +39,16 @@
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="font-mono text-sm text-ink">Rs. {{ number_format(intdiv($order->total_paisa, 100)) }}</span>
+                                    {{-- S1 (v1.9.0): Sikka-rail orders price in
+                                         credits; NPR-rail orders keep what
+                                         they actually paid. --}}
+                                    <span class="font-mono text-sm text-ink">
+                                        @if ($order->currency === \App\Models\Order::CURRENCY_SIKKA)
+                                            <x-sikka :amount="(int) $order->sikka_amount"/>
+                                        @else
+                                            Rs. {{ number_format(intdiv($order->total_paisa, 100)) }}
+                                        @endif
+                                    </span>
                                     <span class="font-mono text-xs text-ink/40 transition group-open:rotate-90">▸</span>
                                 </div>
                             </summary>

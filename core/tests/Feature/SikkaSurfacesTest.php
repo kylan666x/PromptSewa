@@ -17,13 +17,13 @@ uses(RefreshDatabase::class);
 /**
  * S6 (v1.8.0) — the served surfaces.
  *
- * Locks: the authoring form's Sikka price input (integer 0–100000) with
- * its NPR preview, the dual-price card label (Sikka primary, NPR in
- * parentheses), the detail page's Sikka buy box, the checkout selector +
+ * Locks: the authoring form's Sikka price input (integer 0–100000), the
+ * Sikka-only card/detail label (S1 v1.9.0 — the NPR parenthetical is
+ * gone), the detail page's Sikka buy box, the checkout selector +
  * insufficient top-up CTA, the /sikka top-up storefront and its approval
- * credit path, and the kill-switch sweep: while disabled, home, library,
- * card/detail, checkout and earnings carry ZERO Sikka markup. SEO crawl +
- * form inventory keep the new routes classified (their own suites).
+ * credit path. The retired kill-switch (economy ships ON, desk hides the
+ * toggle) is locked by SikkaEverywhereTest. SEO crawl + form inventory
+ * keep the new routes classified (their own suites).
  */
 function surfacesEnableSikka(): void
 {
@@ -74,7 +74,7 @@ test('the authoring forms carry the Sikka price input with an NPR preview', func
     ])->assertSessionHasErrors('price_sikka');
 });
 
-test('cards and the detail page lead with Sikka and keep NPR in parentheses', function () {
+test('cards and the detail page price in Sikka only — the NPR mirror is gone', function () {
     surfacesEnableSikka();
 
     $creator = User::factory()->create(['role' => User::ROLE_CREATOR]);
@@ -86,14 +86,16 @@ test('cards and the detail page lead with Sikka and keep NPR in parentheses', fu
 
     $html = $this->get(route('prompts.show', $prompt))->assertOk()->getContent();
 
-    expect($html)->toContain('Rs. 249.00')       // NPR in parentheses
-        ->and($html)->toContain('Sikka');        // the fallback chip / word pairing
+    expect($html)->toContain('Sikka')       // the fallback chip / word pairing
+        ->and($html)->toContain('249')
+        ->and($html)->not->toContain('Rs.'); // S1 (v1.9.0): no NPR parenthetical
 
-    // The card grid renders the dual label too.
+    // The card grid is Sikka-only too.
     $library = $this->get(route('library.index'))->assertOk()->getContent();
 
-    expect($library)->toContain('Rs. 249.00')
-        ->and($library)->toContain('Sikka');
+    expect($library)->toContain('Sikka')
+        ->and($library)->toContain('249')
+        ->and($library)->not->toContain('Rs.');
 });
 
 test('the checkout selector offers the top-up CTA when the balance is short', function () {
@@ -163,45 +165,6 @@ test('the Sikka top-up storefront buys a pack and approval credits it exactly on
     expect($rows)->toHaveCount(2)
         ->and($rows->sum('amount_sikka'))->toBe(330)
         ->and(Notification::query()->where('user_id', $buyer->id)->where('type', Notification::TYPE_SIKKA_TOPUP)->count())->toBe(1);
-});
-
-test('the kill-switch sweep: disabled means zero Sikka markup on every buyer surface', function () {
-    $creator = User::factory()->create(['role' => User::ROLE_CREATOR]);
-    $prompt = Prompt::factory()->sikkaPriced(249)->hasVersion()->create([
-        'user_id' => $creator->id,
-        'status' => Prompt::STATUS_PUBLISHED,
-        'visibility' => Prompt::VISIBILITY_PUBLIC,
-    ]);
-    $buyer = User::factory()->create();
-
-    foreach ([
-        route('home'),
-        route('library.index'),
-        route('prompts.show', $prompt),
-    ] as $url) {
-        $html = $this->get($url)->assertOk()->getContent();
-
-        expect($html)->not->toContain('Sikka')
-            ->and($html)->toContain('Rs. 249'); // the legacy NPR label stays
-    }
-
-    // The top-up storefront does not exist while disabled.
-    $this->get(route('sikka.topup'))->assertStatus(404);
-
-    // Earnings: the Sikka cards + ledger browser never render.
-    $earnings = $this->actingAs($buyer)->get(route('dashboard.earnings'))->assertOk()->getContent();
-    expect($earnings)->not->toContain('Sikka');
-
-    // Checkout: no Sikka rail on a prompt order.
-    $product = Product::factory()->create(['prompt_id' => $prompt->id, 'price_paisa' => 24_900]);
-    $order = Order::factory()->create(['buyer_id' => $buyer->id, 'status' => Order::STATUS_PENDING]);
-    $order->items()->create([
-        'product_id' => $product->id, 'prompt_id' => $prompt->id,
-        'price_paisa' => 24_900, 'currency' => 'npr', 'quantity' => 1,
-    ]);
-
-    $checkout = $this->actingAs($buyer)->get(route('checkout.show', $order))->assertOk()->getContent();
-    expect($checkout)->not->toContain('Sikka');
 });
 
 test('the Sikka price mirror is enforced at the DB boundary too', function () {

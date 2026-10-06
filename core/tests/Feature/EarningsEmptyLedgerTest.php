@@ -5,7 +5,10 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Prompt;
 use App\Models\User;
+use App\Services\SettingsService;
+use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -22,6 +25,13 @@ uses(RefreshDatabase::class);
  *
  * This file locks the empty state everywhere money renders.
  */
+function emptyLedgerQuietEngagement(): void
+{
+    // The daily-visit middleware credits +1 Sikka on the first authenticated
+    // GET of the day, which would make "zero rows" one row. An empty-ledger
+    // lock must hold the emitters still (EngagementRewardTest owns them).
+    app(SettingsService::class)->set('engage_daily_sikka', '0');
+}
 
 function emptyLedgerCreator(): array
 {
@@ -53,7 +63,9 @@ test('guest is redirected away from the earnings page', function () {
     $this->get(route('dashboard.earnings'))->assertRedirect(route('login'));
 });
 
-test('creator with zero wallet rows gets a 200 showing Rs. 0 and the pre-ledger banner', function () {
+test('creator with zero ledger rows gets a 200 showing Sikka 0 and the honest empty ledger', function () {
+    emptyLedgerQuietEngagement();
+
     [$creator] = emptyLedgerCreator();
 
     $response = $this->actingAs($creator)->get(route('dashboard.earnings'));
@@ -62,14 +74,17 @@ test('creator with zero wallet rows gets a 200 showing Rs. 0 and the pre-ledger 
 
     $html = $response->getContent();
 
-    // Zero-state money, rendered crash-proof.
-    expect($html)->toContain('Rs. 0.00')
-        ->and($html)->toContain('Ledger balance')
-        ->and($html)->toContain('No ledger rows yet');
+    // Zero-state, rendered crash-proof — and Sikka-only (S1 v1.9.0): the
+    // legacy "Rs. 0.00 / Ledger balance" cards are retired with the NPR UI.
+    expect($html)->toContain('Sikka spendable')
+        ->and($html)->toContain('Cash-out eligible')
+        ->and($html)->toContain('>0</span>')
+        ->and($html)->toContain('No Sikka credits yet')
+        ->and($html)->not->toContain('Rs.');
 
-    // The pre-ledger order must NOT have leaked into the balance.
-    expect(app(\App\Services\WalletService::class)->balancePaisa($creator))->toBe(0)
-        ->and(app(\App\Services\WalletService::class)->availablePaisa($creator))->toBe(0);
+    // The pre-ledger order must NOT have leaked into the legacy wallet either.
+    expect(app(WalletService::class)->balancePaisa($creator))->toBe(0)
+        ->and(app(WalletService::class)->availablePaisa($creator))->toBe(0);
 
     assertNoBladeLeak($response);
 });
@@ -87,25 +102,25 @@ test('finance desk renders 200 in the same empty state', function () {
     assertNoBladeLeak($response);
 });
 
-test('payout request form renders with the min-threshold label in the empty state', function () {
+test('the withdraw form renders with the Sikka minimum in the empty state', function () {
     [$creator] = emptyLedgerCreator();
 
     $html = $this->actingAs($creator)->get(route('dashboard.earnings'))->getContent();
 
-    // The documented default (Rs. 500 = 50000 paisa) renders even if the
-    // settings row is absent (K3 code fallback). The label and the amount
-    // are separated by the <x-money> span markup.
-    expect($html)->toContain('Request a payout')
+    // S1 (v1.9.0): the UI speaks Sikka. The documented default cash-out
+    // minimum (500 credits) renders even if the settings row is absent
+    // (the code-level fallback), through the <x-sikka> span markup.
+    expect($html)->toContain('Withdraw earnings')
         ->and($html)->toContain('Minimum')
-        ->and($html)->toContain('Rs. 500.00');
+        ->and($html)->toContain('>500</span>');
 
-    // Delete the settings row entirely and re-render: still Rs. 500.
-    \Illuminate\Support\Facades\DB::table('settings')->where('key', 'payout_min_paisa')->delete();
+    // Delete the settings row entirely and re-render: still 500 credits.
+    DB::table('settings')->where('key', 'sikka_cashout_min')->delete();
 
     $html = $this->actingAs($creator)->get(route('dashboard.earnings'))->getContent();
 
     expect($html)->toContain('Minimum')
-        ->and($html)->toContain('Rs. 500.00');
+        ->and($html)->toContain('>500</span>');
 });
 
 test('the helper fallback renders money even when composer autoload.files never loaded', function () {

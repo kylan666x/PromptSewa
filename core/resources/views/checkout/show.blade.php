@@ -12,6 +12,12 @@
         $sikkaTotal = $sikkaTotal ?? 0;
         $sikkaSpendable = $sikkaSpendable ?? 0;
         $sikkaUnlimited = $sikkaUnlimited ?? false;
+        // S1 (v1.9.0): prompt orders price in Sikka ONLY — the summary and
+        // the total render credits, never the NPR mirror. Orders carrying
+        // pack / plan / top-up lines stay on their NPR-rail prices (those
+        // products are bought with NPR; their rails are gated separately).
+        $sikkaLinePrice = fn ($item) => (int) ($item->product?->prompt?->price_sikka
+            ?? $item->prompt?->price_sikka ?? 0) * max(1, (int) $item->quantity);
     @endphp
 
     <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -40,13 +46,25 @@
                             </p>
                             <p class="font-mono text-xs text-ink/50">Qty {{ $item->quantity }}</p>
                         </div>
-                        <span class="shrink-0 font-mono font-medium text-ink">Rs. {{ number_format(intdiv($item->lineTotalPaisa(), 100)) }}</span>
+                        <span class="shrink-0 font-mono font-medium text-ink">
+                            @if ($sikkaEligible && $sikkaLinePrice($item) > 0)
+                                <x-sikka :amount="$sikkaLinePrice($item)"/>
+                            @else
+                                Rs. {{ number_format(intdiv($item->lineTotalPaisa(), 100)) }}
+                            @endif
+                        </span>
                     </li>
                 @endforeach
             </ul>
             <div class="mt-3 flex items-center justify-between border-t border-ink/10 pt-4">
                 <span class="text-sm text-ink/60">Total</span>
-                <span class="font-mono text-2xl font-bold tracking-tight text-ink">Rs. {{ number_format(intdiv($order->total_paisa, 100)) }}</span>
+                <span class="font-mono text-2xl font-bold tracking-tight text-ink">
+                    @if ($sikkaEligible && $sikkaTotal > 0)
+                        <x-sikka :amount="$sikkaTotal" :size="24"/>
+                    @else
+                        Rs. {{ number_format(intdiv($order->total_paisa, 100)) }}
+                    @endif
+                </span>
             </div>
         </div>
 

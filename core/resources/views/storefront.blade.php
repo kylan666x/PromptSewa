@@ -172,7 +172,7 @@
             <div class="relative">
                 <h2 class="text-3xl font-bold tracking-tight text-paper">Turn your prompt library into <em class="italic text-saffron">income</em></h2>
                 <p class="mx-auto mt-3 max-w-xl text-paper/60">
-                    Publish your best prompts, set your price in NPR, and earn from every
+                    Publish your best prompts, set your price in Sikka credits, and earn from every
                     copy — with version control your buyers can trust.
                 </p>
                 <div class="mt-8 flex justify-center">

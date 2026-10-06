@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
 use App\Models\Payout;
 use App\Models\SikkaTransaction;
-use App\Models\WalletTransaction;
 use App\Services\SettingsService;
 use App\Services\SikkaService;
 use App\Services\WalletService;
@@ -16,14 +15,19 @@ use InvalidArgumentException;
 /**
  * M4 (v1.6.0) — creator Earnings tab (dashboard, ?tab=earnings).
  *
- * Read side: balance, available, lifetime credits, sales count (comp
- * grants excluded by construction — comps never touch orders/ledger),
- * payout history, recent ledger rows.
+ * S1 (v1.9.0): the tab is SIKKA-ONLY. Read side: spendable + cash-out
+ * eligible balances, sales count (comp grants excluded by construction —
+ * comps never touch orders/ledger), the withdrawal queue and the recent
+ * Sikka ledger rows. The legacy NPR wallet reads (balance, available,
+ * lifetime credits, wallet ledger, wallet payouts) are gone from the
+ * page — settlement still happens in NPR in the backend and is never
+ * echoed here.
  *
- * Write side: payout request (hold) and cancel (release) — both delegate
- * to WalletService, the only money choke point. Destination plaintext
- * exists only inside the request frame; it is Crypt-encrypted by the
- * service before storage.
+ * Write side: Sikka withdrawal request (hold) and cancel (release) — both
+ * delegate to SikkaService, the only credit choke point. The legacy NPR
+ * payout endpoints are retained for backward compatibility but no longer
+ * linked from any served page. Destination plaintext exists only inside
+ * the request frame; it is Crypt-encrypted by the service before storage.
  */
 class EarningsController extends Controller
 {
@@ -36,17 +40,6 @@ class EarningsController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-
-        // K2 (v1.6.1): aggregates are cast at the boundary — SUM over an
-        // EMPTY ledger returns NULL, and the controller hands the view
-        // ints only (null arithmetic is the prod-500 class).
-        $balance = (int) $this->wallet->balancePaisa($user);
-        $available = (int) $this->wallet->availablePaisa($user);
-
-        $lifetimeCredits = (int) WalletTransaction::query()
-            ->where('user_id', $user->id)
-            ->where('type', WalletTransaction::TYPE_SALE_CREDIT)
-            ->sum('amount_paisa');
 
         // Sales excluding comps: comps never create order items, so counting
         // paid order lines that credit this creator IS comp-free.
@@ -64,53 +57,28 @@ class EarningsController extends Controller
             ->limit(20)
             ->get();
 
-        $ledger = WalletTransaction::query()
+        // S1 (v1.9.0): the Sikka half loads UNCONDITIONALLY — Sikka is the
+        // permanent economy (the kill-switch is retired), so the ledger, the
+        // cash-out balance and the withdrawal queue ARE the page. K2 (int)
+        // casts hold at every SUM boundary.
+        $sikkaSpendable = $this->sikka->spendableAvailable($user);
+        $sikkaCashoutable = $this->sikka->cashoutableAvailable($user);
+        $sikkaMin = max(0, (int) ($this->settings->get('sikka_cashout_min', '500') ?? '500'));
+
+        $sikkaLedger = SikkaTransaction::query()
             ->where('user_id', $user->id)
             ->latest('created_at')
-            ->limit(15)
+            ->limit(25)
             ->get();
 
-        // K3: settings fallback in code — a missing payout_min row renders
-        // the documented Rs. 500 default, never null math in the form.
-        $minPayoutPaisa = (int) ($this->settings->get('payout_min_paisa', '50000') ?? '50000');
-
-        // S4/S6 (v1.8.0): the Sikka half of the earnings tab — read-only
-        // while the kill-switch is off (zero Sikka markup anywhere).
-        $sikkaEnabled = $this->settings->isOn('sikka_enabled');
-        $sikkaSpendable = $sikkaEnabled ? $this->sikka->spendableAvailable($user) : 0;
-        $sikkaCashoutable = $sikkaEnabled ? $this->sikka->cashoutableAvailable($user) : 0;
-        $sikkaMin = max(0, (int) ($this->settings->get('sikka_cashout_min', '500') ?? '500'));
-        $sikkaRate = $this->sikka->cashoutRatePaisaPerToken();
-
-        $sikkaLedger = $sikkaEnabled
-            ? SikkaTransaction::query()
-                ->where('user_id', $user->id)
-                ->latest('created_at')
-                ->limit(25)
-                ->get()
-            : collect();
-
-        // Two queues, one table: the wallet history stays NPR-only; Sikka
-        // withdrawals render in the Sikka card with their own cancel door.
-        $walletPayouts = collect($payouts)
-            ->reject(fn (Payout $payout) => $payout->isSikkaSource())
-            ->values();
+        // One table, two rails: only the Sikka withdrawal queue renders.
         $sikkaPayouts = collect($payouts)->where('source_currency', Payout::SOURCE_SIKKA)->values();
 
         return view('dashboard.earnings', [
-            'balance' => $balance,
-            'available' => $available,
-            'lifetimeCredits' => $lifetimeCredits,
             'salesCount' => $salesCount,
-            'payouts' => $walletPayouts,
-            'walletPayouts' => $walletPayouts,
-            'ledger' => $ledger,
-            'minPayoutPaisa' => $minPayoutPaisa,
-            'sikkaEnabled' => $sikkaEnabled,
             'sikkaSpendable' => $sikkaSpendable,
             'sikkaCashoutable' => $sikkaCashoutable,
             'sikkaMin' => $sikkaMin,
-            'sikkaRate' => $sikkaRate,
             'sikkaLedger' => $sikkaLedger,
             'sikkaPayouts' => $sikkaPayouts,
         ]);

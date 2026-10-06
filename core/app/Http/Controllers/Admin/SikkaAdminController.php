@@ -23,9 +23,11 @@ use Illuminate\Validation\Rule;
  * One admin-only door (moderators 403, §6.36 pill shipped in the same
  * commit) for the whole economy:
  *
- *   - rates + bounds: the kill-switch, the buy rate (50–500 paisa/credit)
- *     and the cash-out rate (10 … buy, so the spread can never invert),
- *     the engagement amounts + daily cap, and the cash-out minimum;
+ *   - rates + bounds: the buy rate (50–500 paisa/credit) and the
+ *     cash-out rate (10 … buy, so the spread can never invert), the
+ *     engagement amounts + daily cap, and the cash-out minimum. (The
+ *     Sikka kill-switch is RETIRED — Sikka is the permanent economy and
+ *     the desk no longer exposes sikka_enabled.)
  *   - packs + plans CRUD (delete degrades to deactivate once a purchase
  *     references the row — restrictOnDelete keeps the audit trail);
  *   - the insert-only ledger browser (type + eligibility chips);
@@ -58,7 +60,6 @@ class SikkaAdminController extends Controller
             ->withQueryString();
 
         return view('admin.sikka', [
-            'enabled' => $this->settings->isOn('sikka_enabled'),
             'buyRate' => (int) ($this->settings->get('sikka_buy_paisa_per_token', '100') ?? '100'),
             'cashoutRate' => $this->sikka->cashoutRatePaisaPerToken(),
             'engage' => [
@@ -85,7 +86,7 @@ class SikkaAdminController extends Controller
         ]);
     }
 
-    /** Rates, bounds, engagement amounts, kill-switch. */
+    /** Rates, bounds, engagement amounts. The kill-switch is retired. */
     public function updateSettings(Request $request)
     {
         abort_unless($request->user()?->isAdmin(), 403);
@@ -93,7 +94,6 @@ class SikkaAdminController extends Controller
         $buy = (int) $request->input('sikka_buy_paisa_per_token');
 
         $validated = $request->validate([
-            'sikka_enabled' => ['nullable', 'boolean'],
             // Bounds are the contract (S1/S6): buy 50–500, cash-out 10…buy.
             'sikka_buy_paisa_per_token' => ['required', 'integer', 'min:50', 'max:500'],
             'sikka_cashout_paisa_per_token' => ['required', 'integer', 'min:10', 'max:'.max(10, $buy)],
@@ -103,8 +103,6 @@ class SikkaAdminController extends Controller
             'engage_daily_cap_sikka' => ['required', 'integer', 'min:0', 'max:500'],
             'sikka_cashout_min' => ['required', 'integer', 'min:0', 'max:1000000'],
         ]);
-
-        $this->settings->set('sikka_enabled', $request->boolean('sikka_enabled') ? '1' : '0');
 
         foreach (['sikka_buy_paisa_per_token', 'sikka_cashout_paisa_per_token', 'engage_daily_sikka',
             'engage_publish_sikka', 'engage_rating_sikka', 'engage_daily_cap_sikka', 'sikka_cashout_min'] as $key) {

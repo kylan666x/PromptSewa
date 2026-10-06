@@ -189,7 +189,7 @@ test('checkout page serves the Sikka form when enabled + sufficient and hides it
         ->get(route('checkout.show', $order))
         ->assertOk()
         ->assertSee(route('checkout.sikka.pay', $order), false)
-        ->assertSee('Sikka credits');
+        ->assertSee('Pay with Sikka credits');
 
     // Insufficient: the rail shows the shortfall hint, the NPR rails stay.
     $poor = User::factory()->create();
@@ -198,16 +198,18 @@ test('checkout page serves the Sikka form when enabled + sufficient and hides it
     $this->actingAs($poor)
         ->get(route('checkout.show', $poorOrder))
         ->assertOk()
-        ->assertSee('Sikka credits')
+        ->assertSee('Top up Sikka credits')
         ->assertDontSee(route('checkout.sikka.pay', $poorOrder), false);
 
-    // Disabled: zero Sikka markup on the page.
+    // Disabled: the Sikka rail is gone from the page. (The footer's
+    // "Prices in Sikka credits" line is site chrome — S1 v1.9.0 prices the
+    // whole shop in Sikka — so this lock is scoped to the rail itself.)
     app(SettingsService::class)->set('sikka_enabled', '0');
 
     $this->actingAs($buyer)
         ->get(route('checkout.show', $order))
         ->assertOk()
-        ->assertDontSee('Sikka credits')
+        ->assertDontSee('Pay with Sikka credits')
         ->assertDontSee(route('checkout.sikka.pay', $order), false);
 });
 

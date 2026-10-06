@@ -51,7 +51,7 @@
 
         <div class="mt-10 flex flex-col gap-2 border-t border-ink/10 pt-6 text-xs text-ink/50 sm:flex-row sm:items-center sm:justify-between">
             <p>© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
-            <p class="font-mono">Prices in NPR · one-time purchases</p>
+            <p class="font-mono">Prices in Sikka credits · one-time purchases</p>
         </div>
     </div>
 </footer>

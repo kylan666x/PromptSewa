@@ -18,9 +18,9 @@
     $palette = $palettes[$prompt->id % count($palettes)];
     $initials = collect(explode(' ', $prompt->title))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('');
 
-    // S6 (v1.8.0): paid cards lead with Sikka while the economy is on;
-    // free chips and the kill-switch-off world stay exactly as before.
-    $sikkaEnabled = app(\App\Services\SettingsService::class)->isOn('sikka_enabled');
+    // S1 (v1.9.0): Sikka is the ONLY currency on buyer surfaces — a paid
+    // card shows the credit price and nothing else (no NPR parenthetical,
+    // no kill-switch branch).
 @endphp
 
 {{-- G1 (v1.7.4): NO overflow-hidden on the card root — the creator's
@@ -53,13 +53,10 @@
             {{-- Price pill — top-right --}}
             @if ($prompt->isFree())
                 <span class="absolute right-3 top-3 rounded-full bg-emerald-500 px-2.5 py-1 font-mono text-[11px] font-bold text-white shadow-sm">Free</span>
-            @elseif ($sikkaEnabled)
+            @else
                 <span class="absolute right-3 top-3 rounded-full bg-saffron px-2.5 py-1 font-mono text-[11px] font-bold text-ink shadow-sm">
                     <x-sikka :amount="$prompt->price_sikka"/>
-                    <span class="ml-1 font-normal text-ink/60">(<x-money :paisa="$prompt->price_cents"/>)</span>
                 </span>
-            @else
-                <span class="absolute right-3 top-3 rounded-full bg-saffron px-2.5 py-1 font-mono text-[11px] font-bold text-ink shadow-sm">{{ $prompt->priceLabel() }}</span>
             @endif
         </div>
     </a>
@@ -90,10 +87,10 @@
             @else
                 <a href="{{ route('prompts.show', $prompt) }}"
                    class="inline-flex items-center gap-1.5 rounded-full bg-saffron px-3.5 py-2 font-mono text-xs font-bold text-ink transition hover:bg-saffron-deep">
-                    @if ($sikkaEnabled && ! $prompt->isFree())
-                        <x-sikka :amount="$prompt->price_sikka"/> — view
+                    @if ($prompt->isFree())
+                        Free — view
                     @else
-                        {{ $prompt->priceLabel() }} — view
+                        <x-sikka :amount="$prompt->price_sikka"/> — view
                     @endif
                 </a>
             @endif

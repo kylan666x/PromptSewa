@@ -12,8 +12,8 @@
             <p class="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-saffron-deep">Sikka credits</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-ink">Top up your balance</h1>
             <p class="mt-1 max-w-2xl text-sm text-ink/60">
-                Sikka credits are the library's spend-only credit: buy prompts, earn from sales,
-                and withdraw eligible balances as NPR through the earnings tab.
+                Sikka credits are the library's credit economy: buy prompts, earn from sales,
+                and withdraw cash-out-eligible credits from the earnings tab.
             </p>
             @if ($spendable !== null)
                 <p class="mt-3 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-1.5 text-sm text-ink/70">

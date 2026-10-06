@@ -203,12 +203,10 @@ function raidMatrixRoutes(array $w): array
         // S5 (v1.8.0): the membership storefront is public — guests browse the
         // plan catalog, signed-in visitors also see their own memberships.
         'memberships.index' => $route('memberships.index'),
-        // S6 (v1.8.0): the Sikka top-up storefront 404s while the kill-switch
-        // is off (the shipped default), so EVERY role gets 404 in this world;
-        // SikkaSurfacesTest sweeps the enabled state and the kill-switch.
-        'sikka.topup' => ['url' => raidMatrixUrl('sikka.topup', $w), 'title' => false, 'roles' => [
-            'guest' => 404, 'member' => 404, 'creator' => 404, 'moderator' => 404, 'admin' => 404, 'banned' => 302, 'impersonator' => 404,
-        ]],
+        // S6 (v1.8.0) / S1 (v1.9.0): the Sikka top-up storefront is PUBLIC
+        // now that the kill-switch is retired and the economy ships ON —
+        // every role renders it, guests included.
+        'sikka.topup' => $route('sikka.topup'),
         'search.preview' => $route('search.preview', 'public', false),
         'robots' => $route('robots', 'public', false),
         'sitemap' => $route('sitemap', 'public', false),

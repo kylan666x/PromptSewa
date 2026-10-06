@@ -5,6 +5,15 @@
     'brandMarkPath' => '',
 ])
 
+@php
+    // S1 (v1.9.0): the wallet chip is visible at all times for signed-in
+    // users. Display-only read (no lock, no row hydration) — the number is
+    // chrome, never a decision input.
+    $sikkaBalance = auth()->check()
+        ? app(\App\Services\SikkaService::class)->spendableForDisplay(auth()->user())
+        : 0;
+@endphp
+
 {{-- T12 (v1.5.0): the burger drawer is RETIRED — mobile navigation is the
      bottom dock (x-mobile-dock). Category chips live at the top of the
      library page; Packs/About/Admin/Logout live in the profile "You" menu. --}}
@@ -68,8 +77,10 @@
                                    :class="isActive(index) ? 'bg-saffron/10' : ''"
                                    @mouseenter="activeIndex = index">
                                     <span class="min-w-0 truncate" x-text="prompt.title"></span>
+                                    {{-- S1 (v1.9.0): the typeahead prices in
+                                         Sikka credits — never NPR. --}}
                                     <span class="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wide"
-                                          x-text="prompt.price > 0 ? 'Rs '+prompt.price : 'Free'"></span>
+                                          x-text="prompt.sikka > 0 ? 'Sikka '+prompt.sikka : 'Free'"></span>
                                 </a>
                             </template>
                         </div>
@@ -141,8 +152,13 @@
         </form>
 
         {{-- F6 (v1.7.8): the mobile navbar row keeps the bell one tap away
-             (the bottom dock stays exactly five slots). --}}
-        <div class="order-4 md:hidden">
+             (the bottom dock stays exactly five slots). S1 (v1.9.0): the
+             wallet chip rides beside it — the balance is visible on mobile
+             on every page. --}}
+        <div class="order-4 flex items-center gap-1.5 md:hidden">
+            @auth
+                <x-sikka-chip :amount="$sikkaBalance"/>
+            @endauth
             <x-notification-bell />
         </div>
 
@@ -172,6 +188,10 @@
         {{-- Auth area (desktop) --}}
         <div class="hidden shrink-0 items-center gap-2 md:flex">
             @auth
+                {{-- S1 (v1.9.0): the wallet chip leads the auth cluster —
+                     the Sikka balance is the first thing you see. --}}
+                <x-sikka-chip :amount="$sikkaBalance"/>
+
                 <a href="{{ route('dashboard.prompts.create') }}" class="rounded-full bg-saffron px-3.5 py-2 text-sm font-bold text-ink shadow-[0_3px_0_0_#a16207] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#a16207] active:translate-y-0.5 active:shadow-none">+ Add prompt</a>
 
                 {{-- F6 (v1.7.8): desktop notifications bell (same component as
@@ -182,14 +202,21 @@
                      P4 (v1.7.1): the dropdown keeps DISTINCT "My profile" (public)
                      and "Edit profile" entries — mobile's You slot also lands on
                      the public profile now. --}}
-                <div x-data="{ open: false, lightbox: false }" class="relative">
-                    <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-ink/5" aria-label="Account menu" :aria-expanded="open">
+                <div x-data="{ open: false, lightbox: false }" @click.outside="open = false" class="relative flex items-center">
+                    {{-- S2 (v1.9.0): the picture itself opens the lightbox —
+                         the direct click IS the view action. The account
+                         dropdown hangs off the caret beside it. --}}
+                    <button type="button" @click="lightbox = true" data-testid="nav-avatar-view"
+                            class="flex size-9 shrink-0 items-center justify-center rounded-full transition hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
+                            aria-label="View profile picture">
                         {{-- G1 (v1.7.4): no overflow-hidden here — the frame
                              protrudes past the avatar and this pill hugs it. --}}
-                        <span class="flex size-8 shrink-0 items-center justify-center">
-                            <x-user-avatar :user="auth()->user()" size="md" :frame="auth()->user()->activeFrame"/>
-                        </span>
-                        <svg class="size-4 text-creak" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                        <x-user-avatar :user="auth()->user()" size="md" :frame="auth()->user()->activeFrame"/>
+                    </button>
+                    <button type="button" @click="open = !open"
+                            class="flex size-8 shrink-0 items-center justify-center rounded-full text-creak transition hover:bg-ink/5 hover:text-ink"
+                            aria-label="Account menu" aria-haspopup="menu" :aria-expanded="open">
+                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
                         </svg>
                     </button>
@@ -202,15 +229,11 @@
                             </p>
                             <x-user-handle :user="auth()->user()" size="text-xs" class="block"/>
                         </div>
-                        {{-- F2 (v1.7.8): the founder's three profile-picture
-                             entries — the same menu the hero avatar opens,
-                             reachable from the navbar dropdown too. Server-
-                             rendered markup; Alpine only toggles it. --}}
-                        <button type="button" role="menuitem" @click="open = false; lightbox = true" data-testid="nav-avatar-view"
-                                class="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
-                            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
-                            View profile picture
-                        </button>
+                        {{-- S2 (v1.9.0): the profile-picture menu is TWO
+                             actions (upload/edit, frame). The view action is
+                             the direct click on the picture above — the
+                             menu entry is retired. Server-rendered markup;
+                             Alpine only toggles it. --}}
                         <a role="menuitem" href="{{ route('dashboard.profile.edit') }}#avatar" data-testid="nav-avatar-upload"
                            class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"/></svg>
@@ -236,6 +259,14 @@
                         <a href="{{ route('purchases.index') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
                             <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/></svg>
                             My library
+                        </a>
+                        {{-- S3 (v1.9.0): the membership storefront gets a visible
+                             entry point here — the mobile dock stays exactly
+                             five slots. --}}
+                        <a href="{{ route('memberships.index') }}" data-testid="nav-memberships"
+                           class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+                            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.7l7.1-.6L12 2.5z"/></svg>
+                            Memberships
                         </a>
                         @if (auth()->user()->isModerator())
                             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-saffron-deep transition hover:bg-saffron/15">

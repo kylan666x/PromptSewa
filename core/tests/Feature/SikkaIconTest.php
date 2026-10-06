@@ -177,9 +177,29 @@ test('the served Brand form previews both marks on paper and ink grounds', funct
         ->and($html)->toContain('accept="image/png,image/webp"')
         // Two swatches per mark — paper AND ink.
         ->and($html)->toContain('data-sikka-preview="paper"')
-        ->and($html)->toContain('data-sikka-preview="ink"')
-        ->and(substr_count($html, 'storage/sikka/color-mark.png'))->toBe(2)
-        ->and(substr_count($html, 'storage/sikka/mono-mark.png'))->toBe(2);
+        ->and($html)->toContain('data-sikka-preview="ink"');
+
+    // Count INSIDE the swatch spans: the served page also carries the navbar
+    // wallet chip, which renders the same uploaded mark.
+    preg_match_all(
+        '~data-sikka-preview="(?<preview>mono-)?(?<ground>paper|ink)"[^>]*>\s*<img src="(?<src>[^"]+)"~',
+        $html,
+        $swatches,
+        PREG_SET_ORDER,
+    );
+
+    $rendered = [];
+
+    foreach ($swatches as $swatch) {
+        $rendered[$swatch['preview'].$swatch['ground']] = $swatch['src'];
+    }
+
+    expect($rendered)->toBe([
+        'paper' => asset('storage/sikka/color-mark.png'),
+        'ink' => asset('storage/sikka/color-mark.png'),
+        'mono-paper' => asset('storage/sikka/mono-mark.png'),
+        'mono-ink' => asset('storage/sikka/mono-mark.png'),
+    ]);
 });
 
 test('x-sikka renders the color mark when set, the mono variant for mail, and the chip fallback when unset', function () {
@@ -284,8 +304,11 @@ test('the reset mail header carries the mono mark, and none when unset or while 
     $settings = app(SettingsService::class);
     $user = User::factory()->create();
 
-    // Economy off (default) — even a stored mono path never leaks into mail.
+    // S1 (v1.9.0): the economy ships ON, so the off state is now an explicit
+    // legacy '0' row (no UI writes one any more) — even then a stored mono
+    // path never leaks into mail.
     $settings->set('sikka-icon-mono-path', 'sikka/mono-mark.png');
+    $settings->set('sikka_enabled', '0');
     $off = (new ResetPasswordNotification('token-off'))->toMail($user)->render();
     expect($off)->not->toContain('storage/sikka');
 

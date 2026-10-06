@@ -70,6 +70,22 @@ class SikkaService
         });
     }
 
+    /**
+     * S1 (v1.9.0) — display-only spendable balance: a plain SUM with no
+     * lock and no row hydration, for chrome that renders on EVERY page
+     * (the navbar wallet chip). It is never a decision input: spending,
+     * top-ups, stipends and payouts all cross the locked balances above,
+     * and this method can only ever paint a number.
+     *
+     * (int) cast is the K2 boundary here too — SUM over zero rows is NULL.
+     */
+    public function spendableForDisplay(User $user): int
+    {
+        return (int) SikkaTransaction::query()
+            ->where('user_id', $user->id)
+            ->sum('amount_sikka');
+    }
+
     // -------------------------------------------------------------
     // Spending (the checkout Sikka rail)
     // -------------------------------------------------------------

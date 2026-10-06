@@ -67,10 +67,13 @@ test('earnings and finance survive an empty ledger on MySQL', function () {
             ->and($wallet->availablePaisa($creator))->toBe(0)
             ->and($wallet->commissionBps())->toBe(2000); // K3: absent row → documented default
 
-        // Full-stack renders.
+        // Full-stack renders. S1 (v1.9.0): the earnings tab is Sikka-only —
+        // zero rows must paint the Sikka cards, never an NPR figure.
         $earnings = $this->actingAs($creator)->get(route('dashboard.earnings'));
         expect($earnings->status())->toBe(200, '/earnings must be 200 on MySQL with an empty ledger')
-            ->and($earnings->getContent())->toContain('Rs. 0.00');
+            ->and($earnings->getContent())->toContain('Sikka spendable')
+            ->and($earnings->getContent())->toContain('Cash-out eligible')
+            ->and($earnings->getContent())->not->toContain('Rs.');
 
         $finance = $this->actingAs($admin)->get(route('admin.finance'));
         expect($finance->status())->toBe(200, 'finance desk must be 200 on MySQL with an empty ledger')

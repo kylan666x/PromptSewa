@@ -83,10 +83,11 @@ class SettingsService
         'mail_from_address' => '',
         'mail_from_name' => '',
 
-        // S1 (v1.8.0): Sikka economy. sikka_enabled is the kill-switch —
-        // OFF until the founder flips it; while off no Sikka surface renders
-        // and the NPR rails behave exactly as in v1.7.8.
-        'sikka_enabled' => '0',
+        // S1 (v1.8.0) / S1 (v1.9.0): Sikka economy. The kill-switch is
+        // RETIRED — Sikka is the permanent economy and ships ON. The key
+        // survives for backward compatibility (the v1.9.0 migration flips an
+        // existing install's row ON) but is no longer exposed in the desk.
+        'sikka_enabled' => '1',
         'sikka_buy_paisa_per_token' => '100',
         'sikka_cashout_paisa_per_token' => '80',
         'engage_daily_sikka' => '1',

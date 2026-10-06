@@ -1,6 +1,11 @@
+@props(['amount' => 0, 'mono' => false, 'word' => false, 'size' => 20])
+
 @php
     /**
      * S6/S9 (v1.8.0) — the ONLY way a view renders a Sikka amount.
+     *
+     * S1 (v1.9.0) — props are DECLARED so they never leak into the element
+     * as attributes (`amount="142"` on a span is not HTML anyone wants).
      *
      * Sikka is a credit, not a currency: integers only, no decimals, no
      * fiat glyph — the amount comes from SikkaFormat (PSR-4, no
