@@ -75,6 +75,10 @@ $excludedFiles = [
 // the build fail its own hygiene audit instead of simply not shipping it.
 $isHostLocalDb = static fn (string $relative): bool => str_contains($relative, '.sqlite');
 
+// Same reasoning for local env files: the audit bans `.env` outright, so a
+// local `.env.preview` / `.env.local` must never be collected either.
+$isLocalEnv = static fn (string $relative): bool => (bool) preg_match('/(^|\/)\.env($|\.)/', $relative);
+
 /** gitkeep-style placeholders that ARE allowed inside excluded trees. */
 $excludedTreeExceptions = [
     'bootstrap/cache/.gitignore',
@@ -179,7 +183,8 @@ foreach ($iterator as $item) {
 
     $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($core) + 1));
 
-    if ($skipDir($relative) || in_array($relative, $excludedFiles, true) || $isHostLocalDb($relative)) {
+    if ($skipDir($relative) || in_array($relative, $excludedFiles, true)
+        || $isHostLocalDb($relative) || $isLocalEnv($relative)) {
         continue;
     }
 

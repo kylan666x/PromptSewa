@@ -186,6 +186,12 @@ $skip = static function (string $rel) use ($excludedDirs, $excludedFiles): bool 
     if (str_contains($rel, '.sqlite')) {
         return true;
     }
+    // Same for local env files (`.env.preview`, `.env.local`, …): the audit
+    // bans them, and install.php writes the real `.env` anyway. `.env.example`
+    // is the documented template and DOES ship in a fresh install.
+    if (preg_match('/(^|\/)\.env($|\.)/', $rel) && ! str_ends_with($rel, '.env.example')) {
+        return true;
+    }
     foreach ($excludedDirs as $dir) {
         if ($rel === rtrim($dir, '/') || str_starts_with($rel, $dir)) {
             return true;
