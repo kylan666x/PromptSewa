@@ -94,13 +94,40 @@ checkout of the top-up itself.
     `database/preview.sqlite` used to fail the build's own audit instead of
     simply not shipping); `.gitignore` already excluded it from git.
 
-Release gates: full Pest suite **629 passed / 18,024 assertions / 3 skipped
-(exit 0)** on SQLite-in-memory — evidence `dist/v1.9.0-suite.txt`;
+- **S4 — Facebook/Instagram UI overhaul (light world).** The founder's
+  S4 directive, on top of S1b. Tokens: `paper` warms to `#faf8f3`
+  (`paper-deep` `#f0eee6`), the card lift goes `shadow-sm`-ish → a clear
+  `shadow-card-hover` step, **Inter** takes body copy at the 16px baseline
+  and a new `--font-display` token puts **Space Grotesk** on every `h1`–`h4`
+  (a `@layer base` rule; utilities still override, so `h2.font-mono` eyebrow
+  chips keep their mono face). `rounded-3xl` is now reserved for dark
+  statement blocks (`bg-ink`) — content cards are `rounded-2xl`.
+  - **Library (`/prompts`) is a feed.** `x-prompt-card` reads like a social
+    post: creator avatar + handle header (`pr-14` keeps clear of the
+    floating saved heart at top-right), artwork, title/copy, then the Sikka
+    price chip anchored **bottom-right**. Cards stack one-per-row on phones
+    (`gap-3`, `sm:grid-cols-2 xl:grid-cols-3`).
+  - **Prompt detail** is a two-column shell on desktop
+    (`lg:grid-cols-[minmax(0,1fr)_360px]`, `min-w-0` left column, sticky
+    right rail) and stacks below `lg`.
+  - **Dashboard** tabs are a segmented settings-style rail (no per-pill
+    border, active tab keeps the ink fill); stats are cards, two-up on
+    phones. The G3 mobile scroll contract on the rail is untouched.
+  - **Storefront** bands open up (`pt-20`, hero `pb-20 pt-16 … md:pt-24`);
+    packs and memberships grids tighten to `gap-4`.
+  - **Invariants held:** `x-user-avatar` composite-box geometry untouched
+    (`UserAvatarGeometryTest`), the mobile dock is still exactly five slots
+    with the single saffron centre fill, and buyer surfaces stay Sikka-only
+    (zero `Rs.`). `DESIGN.md` carries the new ruling in an S4 addendum.
+
+Release gates: full Pest suite **636 passed / 18,079 assertions / 3 skipped
+(exit 0)** on SQLite-in-memory — evidence `dist/v1.9.0-suite-S4.txt`;
 `--list-tests` enumerates the Arch suite (6 tests) —
 `dist/v1.9.0-list-tests.txt`; update zip
-`dist/promptsewa-1.9.0-update.zip` — `entries: 512 | hygiene audit: CLEAN`,
-SHA-256 `c61488a2a4159fbc6cd95d88b41bd967b0a1edd2d5ddbd6db6c93cee1257d278`
-(evidence `dist/v1.9.0-zip.txt`).
+`dist/promptsewa-1.9.0-update.zip` — `entries: 513 | hygiene audit: CLEAN`,
+SHA-256 `ec344da52a58373762864dd1389929e25818b7a94b163f638391cebb9cfa532c`
+(evidence `dist/v1.9.0-zip.txt`; supersedes the pre-S4 build
+`c61488a2…` / 512 entries).
 
 ### v1.8.0 — Sikka Economy & Membership (previous release)
 
@@ -813,8 +840,8 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 
 | # | Check | Expected | Locked by |
 |---|---|---|---|
-| 1 | Zip contents (builder output) | `entries: 512 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
-| 2 | SHA-256 of the uploaded zip | `c61488a2a4159fbc6cd95d88b41bd967b0a1edd2d5ddbd6db6c93cee1257d278` (identical across two consecutive builds) | builder output |
+| 1 | Zip contents (builder output) | `entries: 513 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | SHA-256 of the uploaded zip | `ec344da52a58373762864dd1389929e25818b7a94b163f638391cebb9cfa532c` (identical across two consecutive builds) | builder output |
 | 3 | `php artisan migrate:status` | `2026_10_05_120000_retire_sikka_kill_switch`, `2026_10_05_130000_add_price_sikka_to_packs_table`, `2026_10_05_131000_add_price_sikka_to_membership_plans_table` newly **Ran**; nothing else moves | `DeployParityAcceptanceTest` (parity DB runs the whole pending batch) |
 | 4 | Admin → Overview | `v1.9.0` chip | `config('app.version')` single source |
 | 5 | Navbar (desktop + mobile) while signed in | Sikka balance chip with the integer, clicking lands on `/dashboard/earnings`; guests see none | `SikkaEverywhereTest::the navbar shows the Sikka wallet chip for signed-in users on both viewports` |
@@ -828,7 +855,11 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 | 13 | Buy a top-up pack on `/sikka` | its checkout DOES show eSewa / manual transfer with NPR amounts — the only NPR surface left | `CheckoutFlowTest` (same test, second half) |
 | 14 | Admin → Sikka desk → Plans | prices are credits; the Plans tab has "View storefront" → `/memberships`; the kill-switch toggle is gone | `SikkaDeskTest::plans CRUD…`, `MembershipAccessTest` |
 | 15 | View source on a pack landing / prompt detail | one `application/ld+json` block, valid JSON, `"@context":"https://schema.org"`, offer `priceCurrency` `SIKKA` (no generated PHP leaking into the tag) | `PackLandingV2Test::JSON-LD and the x-seo head survive the redesign` |
-| 16 | `cd core && php artisan test` | **629 passed / 18,024 assertions / 3 skipped**; `--list-tests` shows the 6 Arch tests | whole suite (`dist/v1.9.0-suite.txt`, `dist/v1.9.0-list-tests.txt`) |
+| 16 | `cd core && php artisan test` | **636 passed / 18,079 assertions / 3 skipped**; `--list-tests` shows the 6 Arch tests | whole suite (`dist/v1.9.0-suite-S4.txt`, `dist/v1.9.0-list-tests.txt`) |
+| 17 | Library `/prompts` (S4) | feed cards: creator avatar + handle header on top, artwork, Sikka price chip bottom-right; one card per row at 360px | `UiOverhaulTest::the library ships feed cards in reading order…` |
+| 18 | Prompt detail, desktop | two columns — cover left, buy card right rail; below `lg` it stacks cover → title → copy → buy | `UiOverhaulTest::the prompt detail is a two-column shell…` |
+| 19 | Typography (S4) | body copy renders in **Inter**, every heading in **Space Grotesk**; page ground is `#faf8f3` | `UiOverhaulTest::the S4 token set compiles…`, `…every app surface loads Inter and Space Grotesk…` |
+| 20 | Dashboard (S4) | segmented tab rail (active tab ink-filled), stats as cards two-up on phones | `UiOverhaulTest::the dashboard ships the settings-style tab rail and card stats` |
 
 ### Post-check (v1.8.0) — run in order after the update.php pipeline finishes
 

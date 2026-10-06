@@ -20,9 +20,34 @@ Two worlds, one system:
 
 The dark pill navbar and dark footer sit on both worlds and stitch them together.
 
+### S4 (v1.9.0) — the Facebook/Instagram pass
+
+Founder-authorised restyle of the **light world** (catalog + marketing) toward a
+feed aesthetic. The dark world (dashboard, admin, checkout) keeps its palette;
+only shared tokens and the public surfaces move.
+
+- **Cards are `rounded-2xl`** with a quiet resting shadow (`shadow-card`) and a
+  clear lift on hover (`hover:shadow-card-hover`). `rounded-3xl` is now reserved
+  for **dark statement blocks** (`bg-ink`) — do not spend it on content cards.
+- **Rhythm tightens where it was loose** (card grids step down one gap step:
+  `gap-6`/`gap-5` → `gap-4`/`gap-3`) and **opens up between sections**
+  (`pt-20` on the storefront bands).
+- **Feed card (Library `/prompts`)**: the card reads top-to-bottom like a social
+  post — creator avatar + handle header, artwork, title/copy, then the Sikka
+  price chip anchored **bottom-right**. The saved heart floats top-right over
+  the header, which keeps `pr-14` clear for it. Everything else about the card
+  (composite-box avatar geometry, no clipped root, rose heart) is unchanged.
+- **Prompt detail** is a two-column shell on desktop
+  (`lg:grid-cols-[minmax(0,1fr)_360px]`, `min-w-0` left column, sticky right
+  rail) and stacks below `lg`.
+- **Dashboard** tabs are a segmented settings-style rail (no per-pill border);
+  the active tab keeps the ink fill for contrast. Stats are cards, two-up on
+  phones.
+
 ## Tokens (Tailwind v4 `@theme` in `core/resources/css/app.css`)
 
-- `paper` `#f4f2ec` — page ground (light world). Deep variant `paper-deep` `#eae7dd`.
+- `paper` `#faf8f3` — page ground (light world). Deep variant `paper-deep` `#f0eee6`.
+  **S4 (v1.9.0): warmed from `#fafaf7` to the founder-authorised `#faf8f3`.**
 - `ink` `#17150f` — near-black: dark cards, navbar/footer ground, light-world text. Soft variant `ink-soft` `#211e15` for raised dark panels.
 - `saffron` `#ffd43b` — THE accent. Primary CTA fill only (`text-ink` on top). Hover `saffron-deep` `#f0b429`. Never body text, never decoration.
 - `official` `#1d9bf0` — the official-account badge circle (white check on top). Founder-sanctioned as the single new token addition (v1.5.0): **official blue circle badge is founder-sanctioned; saffron seal remains the verified badge.** Used ONLY inside the badge SVG — never as a UI accent.
@@ -44,12 +69,17 @@ The dark pill navbar and dark footer sit on both worlds and stitch them together
 
 ## Typography
 
-- Display + UI: **Space Grotesk** (`font-display`), loaded via Google Fonts CDN
+- Headings: **Space Grotesk** (`font-display`), loaded via Google Fonts CDN
   (self-host when brand assets are procured). Tight tracking (-0.02 to -0.04em),
   bold, sentence case. *Italic* marks the emphasized phrase in hero headings.
-- Mono: **IBM Plex Mono** (`font-mono`) — version labels, chips, prompt bodies,
+  **S4 (v1.9.0): every `h1`–`h4` defaults to this face** (a `@layer base` rule
+  in `app.css`); utilities still override it.
+- Mono: **JetBrains Mono** (`font-mono`) — the face the Google Fonts request and
+  `app.css` actually load; version labels, chips, prompt bodies,
   small eyebrow rows. Mono is for code/data/labels only, never body copy.
-- Body: Inter via the same CDN request.
+- Body: **Inter** (`font-sans`) via the same CDN request, at the 16px browser
+  baseline. S4 (v1.9.0) — Inter carries body copy, Space Grotesk carries
+  headings.
 
 ## Components
 
@@ -62,8 +92,10 @@ The dark pill navbar and dark footer sit on both worlds and stitch them together
   radial glow allowed inside them; no glass/blur decoration.
 - **Chips:** mono, small, bordered (`border-ink/10 bg-white` on light,
   `border-white/10 bg-white/5` on dark). Used for categories, tags, stats, roadmap status.
-- **Prompt cards:** white paper cards with `border-ink/10`, ink text, saffron
-  price chip, creator row with verified-badge tick when the creator holds a badge.
+- **Prompt cards (S4 feed shape):** `rounded-2xl` white paper cards with
+  `border-ink/10`, ink text, the creator row (avatar + handle + verified tick)
+  as the card HEADER, and the saffron Sikka price chip bottom-right. Hover lifts
+  the card (`hover:-translate-y-0.5` + `shadow-card-hover`).
 - **Empty state:** dark dashed block — it doubles as a GoP-style dark card on light pages.
 
 ## Interaction & motion

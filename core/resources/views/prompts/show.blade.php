@@ -80,10 +80,15 @@
             <span class="text-ink/70">{{ Str::limit($prompt->title, 48) }}</span>
         </nav>
 
-        <div class="mt-6 grid gap-10 lg:grid-cols-[1fr_340px]">
+        {{-- S4 (v1.9.0) TWO-COLUMN SHELL: on desktop the cover and long-form
+             copy own the left column and the buy card rides the right rail;
+             below lg everything stacks in reading order (cover, title,
+             description, prompt, buy). gap-8 plus a min-w-0 left column keep
+             the rail honest instead of letting long bodies push it around. --}}
+        <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
             {{-- Main column --}}
-            <article>
-                <x-prompt-cover :prompt="$prompt" large class="rounded-2xl border border-ink/10"/>
+            <article class="min-w-0">
+                <x-prompt-cover :prompt="$prompt" large class="rounded-2xl border border-ink/10 shadow-sm"/>
 
                 <div class="mt-6 flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center gap-1.5 rounded-full border border-ink/15 bg-white px-2.5 py-1 font-mono text-[11px] font-medium text-ink/70">
@@ -305,8 +310,8 @@
                 @endif
             </article>
 
-            {{-- Metadata sidebar --}}
-            <aside class="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            {{-- Buy rail — the Sikka purchase card, then metadata. --}}
+            <aside class="space-y-4 lg:sticky lg:top-24 lg:self-start">
                 <div class="rounded-3xl bg-ink p-5 shadow-card-hover">
                     <p class="font-mono text-xs font-semibold uppercase tracking-widest text-paper/50">License</p>
                     <p class="mt-2 flex flex-wrap items-baseline gap-2">
@@ -357,7 +362,7 @@
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+                <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm">
                     <dl class="space-y-3 text-sm">
                         <div class="flex justify-between gap-3">
                             <dt class="text-ink/50">Category</dt>

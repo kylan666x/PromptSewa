@@ -7,10 +7,12 @@
             : ($q !== '' ? 'Prompts matching “'.$q.'”.' : 'Hand-reviewed prompts, ready to copy and run.');
     @endphp
 
-    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    {{-- S4 (v1.9.0): a touch more breathing room above the feed, and a
+         larger heading — the catalog now opens like a feed, not a table. --}}
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <header class="flex flex-col gap-1">
-            <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $heading }}</h1>
-            <p class="text-sm text-ink/60">{{ $subheading }}</p>
+            <h1 class="text-3xl font-bold tracking-tight text-ink sm:text-4xl">{{ $heading }}</h1>
+            <p class="mt-1 text-sm text-ink/60">{{ $subheading }}</p>
         </header>
 
         {{-- T12 (v1.5.0): horizontal category chip row — all breakpoints. The
@@ -26,7 +28,7 @@
             </div>
         </nav>
 
-        <div class="mt-8 flex flex-col gap-8 lg:flex-row">
+        <div class="mt-8 flex flex-col gap-6 lg:flex-row lg:gap-8">
             {{-- Category sidebar --}}
             <aside class="shrink-0 lg:w-56">
                 <nav aria-label="Categories" class="rounded-2xl border border-ink/10 bg-white p-3 shadow-sm">
@@ -57,6 +59,8 @@
                     <h2 class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Creators</h2>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         @foreach ($creators as $creator)
+                            {{-- S4: creators keep the composite-box avatar; only
+                                 the card rhythm tightens. --}}
                             <a href="{{ route('creators.show', $creator) }}"
                                class="group flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
                                 <x-user-avatar :user="$creator" size="lg" :frame="$creator->activeFrame"/>
@@ -85,7 +89,10 @@
                         </x-slot:actions>
                     </x-empty-state>
                 @else
-                    <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {{-- S4 (v1.9.0): the feed grid — one column of full-width
+                         posts on phones (the Facebook/Instagram read), two or
+                         three across on wider screens. Gap steps down to 3. --}}
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach ($prompts as $prompt)
                             {{-- H4: the card resolves its own pre-flip from the per-request
                                  bookmarked-id set (one query per request,
@@ -94,7 +101,7 @@
                         @endforeach
                     </div>
 
-                    <div class="mt-10">
+                    <div class="mt-8">
                         {{ $prompts->links() }}
                     </div>
                 @endif

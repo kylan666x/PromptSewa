@@ -3,7 +3,7 @@
     {{-- Hero — warm paper, saffron pill CTAs, mono eyebrow chips --}}
     <section class="relative overflow-hidden">
         <div class="absolute inset-0 -z-10 bg-[radial-gradient(60rem_30rem_at_50%_-10rem,rgba(245,197,24,0.18),transparent)]"></div>
-        <div class="mx-auto max-w-7xl px-4 pb-16 pt-14 text-center sm:px-6 md:pt-20">
+        <div class="mx-auto max-w-7xl px-4 pb-20 pt-16 text-center sm:px-6 md:pt-24">
             <span class="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-3 py-1 font-mono text-xs font-medium text-ink/70 shadow-sm">
                 <span class="relative flex size-2">
                     <span class="absolute inline-flex size-full animate-ping rounded-full bg-saffron-deep opacity-60"></span>
@@ -69,6 +69,8 @@
         </div>
     </section>
 
+    {{-- S4 (v1.9.0): sections breathe more (pt-20) and the type scale is
+         unchanged from the G3 mobile contract — only the rhythm moves. --}}
     {{-- Library stats — G3: on phones these are three inline MONO CHIPS
          in a snap rail (the 3-column strip squeezed 3 numerals into 120px);
          from md up it stays the original inkwell strip, unchanged. --}}
@@ -90,7 +92,7 @@
     </section>
 
     {{-- Featured prompts --}}
-    <section class="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
+    <section class="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
         <div class="flex items-end justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold tracking-tight text-ink">Fresh from the library</h2>
@@ -125,7 +127,7 @@
 
     {{-- Image prompt gallery — PromptPlum-style visual wall --}}
     @if ($imagePrompts->isNotEmpty())
-        <section class="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
+        <section class="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
             <div class="flex items-end justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight text-ink">Image prompt gallery</h2>
@@ -148,7 +150,7 @@
 
     {{-- Categories — paper tiles --}}
     @if ($categories->isNotEmpty())
-        <section class="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
+        <section class="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
             <h2 class="text-2xl font-bold tracking-tight text-ink">Browse by category</h2>
             <div class="mt-6 -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
                 @foreach ($categories as $category)
@@ -168,7 +170,7 @@
     {{-- Creator CTA — inkwell panel, saffron pill --}}
     <section class="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div class="relative overflow-hidden rounded-3xl bg-ink p-10 text-center shadow-card-hover sm:p-14">
-            <div class="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,rgba(250,250,247,0.14)_1px,transparent_0)] [background-size:16px_16px]"></div>
+            <div class="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,rgba(250,248,243,0.14)_1px,transparent_0)] [background-size:16px_16px]"></div>
             <div class="relative">
                 <h2 class="text-3xl font-bold tracking-tight text-paper">Turn your prompt library into <em class="italic text-saffron">income</em></h2>
                 <p class="mx-auto mt-3 max-w-xl text-paper/60">

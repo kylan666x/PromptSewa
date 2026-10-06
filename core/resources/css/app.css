@@ -3,14 +3,20 @@
 /*
  * PromptVellum design system — DESIGN.md tokens.
  * Warm paper light theme, near-black "inkwell" cards, saffron accent.
- * Fonts: Space Grotesk (display/UI) + JetBrains Mono (code/labels).
+ * Fonts: Inter (body 16px) + Space Grotesk (headings/display)
+ *        + JetBrains Mono (code/labels).
+ *
+ * S4 (v1.9.0): warm-white paper, tighter card radius (rounded-2xl), and a
+ * two-weight type system — Inter carries body copy, Space Grotesk carries
+ * headings (see the `@layer base` rule below).
  */
 @theme {
-    --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-    --color-paper: #fafaf7;
-    --color-paper-deep: #f2f1ec;
+    --color-paper: #faf8f3;
+    --color-paper-deep: #f0eee6;
     --color-ink: #171715;
     --color-ink-soft: #26261f;
     --color-inkline: #2f2f28;
@@ -19,8 +25,20 @@
     --color-creak: #6b6a63;
     --color-official: #1d9bf0; /* T2 v1.5.0: official-account badge only — never a UI accent (DESIGN.md addendum) */
 
-    --shadow-card: 0 1px 2px rgb(23 23 21 / 0.06), 0 8px 24px -12px rgb(23 23 21 / 0.12);
-    --shadow-card-hover: 0 2px 4px rgb(23 23 21 / 0.08), 0 16px 40px -16px rgb(23 23 21 / 0.2);
+    /* S4 (v1.9.0): a lighter resting shadow with a clear lift on hover
+     * (≈ shadow-sm → shadow-md) — the feed-card feel. */
+    --shadow-card: 0 1px 2px 0 rgb(23 23 21 / 0.05), 0 1px 3px 0 rgb(23 23 21 / 0.06);
+    --shadow-card-hover: 0 4px 6px -1px rgb(23 23 21 / 0.10), 0 2px 4px -2px rgb(23 23 21 / 0.10);
+}
+
+/* S4 (v1.9.0): headings speak Space Grotesk; body copy speaks Inter (16px
+ * baseline from preflight). Utilities still win — an `h2.font-mono` eyebrow
+ * chip keeps its mono face — so this only fills in the default. */
+@layer base {
+    h1, h2, h3, h4 {
+        font-family: var(--font-display);
+        letter-spacing: -0.02em;
+    }
 }
 
 /* Theme the browser chrome the design forgot (craft-floor: browser surfaces). */

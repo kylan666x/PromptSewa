@@ -14,7 +14,8 @@
                 <a href="{{ route('library.index') }}" class="mt-3 inline-block text-sm font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">Browse individual prompts &rarr;</a>
             </div>
         @else
-            <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {{-- S4 (v1.9.0): tighter card rhythm to match the feed. --}}
+            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($packs as $pack)
                     <a href="{{ route('packs.show', $pack) }}"
                        class="group flex flex-col rounded-2xl border border-ink/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">

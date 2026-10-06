@@ -38,7 +38,10 @@
 
     {{-- ===== Personal workspace (every user) ===== --}}
     <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {{-- S4 (v1.9.0): the workspace header — title on the left, the tab
+             rail and the create action on the right, settings-panel style.
+             The rail keeps its G3 mobile scroll contract untouched. --}}
+        <header class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $tab === 'saved' ? 'Saved prompts' : 'Your prompts' }}</h1>
                 <p class="mt-1 text-sm text-ink/60">{{ $tab === 'saved' ? "Listings you've bookmarked from the library." : "Everything you've created, including drafts and private listings." }}</p>
@@ -54,18 +57,18 @@
                 <div class="-mx-4 flex w-full snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
                      role="navigation" aria-label="Dashboard sections" tabindex="0">
                     <a href="{{ route('dashboard') }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Your prompts</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'prompts' ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-paper-deep hover:text-ink' }}">Your prompts</a>
                     <a href="{{ route('dashboard', ['tab' => 'saved']) }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Saved</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'saved' ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-paper-deep hover:text-ink' }}">Saved</a>
                     <a href="{{ route('dashboard', ['tab' => 'stats']) }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'stats' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Stats</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'stats' ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-paper-deep hover:text-ink' }}">Stats</a>
                     <a href="{{ route('dashboard', ['tab' => 'feed']) }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'feed' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Feed</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'feed' ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-paper-deep hover:text-ink' }}">Feed</a>
                     {{-- P2b (v1.7.1): Achievements tab --}}
                     <a href="{{ route('dashboard', ['tab' => 'achievements']) }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'achievements' ? 'bg-ink text-paper' : 'border border-ink/15 text-ink/70 hover:border-ink/30' }}">Achievements</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition {{ $tab === 'achievements' ? 'bg-ink text-paper' : 'text-ink/70 hover:bg-paper-deep hover:text-ink' }}">Achievements</a>
                     <a href="{{ route('dashboard.earnings') }}"
-                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition border border-ink/15 text-ink/70 hover:border-ink/30">Earnings</a>
+                       class="shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition text-ink/70 hover:bg-paper-deep hover:text-ink">Earnings</a>
                 </div>
                 <a href="{{ route('dashboard.prompts.create') }}"
                    class="inline-flex items-center justify-center gap-2 rounded-full bg-saffron px-4 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-saffron-deep">
@@ -230,21 +233,22 @@
         @else
         {{-- ===== Prompts tab (existing) ===== --}}
 
-        {{-- Stat cards --}}
-        <div class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        {{-- S4 (v1.9.0): card-based stats — a tighter two-up/four-up grid
+             so the numbers scan at a glance. --}}
+        <div class="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-5">
                 <p class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Total prompts</p>
                 <p class="mt-2 font-mono text-3xl font-bold tracking-tight text-ink">{{ $stats['total'] }}</p>
             </div>
-            <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-5">
                 <p class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Published</p>
                 <p class="mt-2 font-mono text-3xl font-bold tracking-tight text-emerald-700">{{ $stats['published'] }}</p>
             </div>
-            <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-5">
                 <p class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">In review</p>
                 <p class="mt-2 font-mono text-3xl font-bold tracking-tight text-saffron-deep">{{ $stats['pending'] }}</p>
             </div>
-            <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-5">
                 <p class="font-mono text-xs font-semibold uppercase tracking-widest text-ink/50">Drafts</p>
                 <p class="mt-2 font-mono text-3xl font-bold tracking-tight text-ink/40">{{ $stats['draft'] }}</p>
             </div>

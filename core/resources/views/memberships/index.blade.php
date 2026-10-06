@@ -37,7 +37,8 @@
             </section>
         @endif
 
-        <section class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {{-- S4 (v1.9.0): tighter card rhythm to match the feed. --}}
+        <section class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             @forelse ($plans as $plan)
                 <article class="flex flex-col rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
