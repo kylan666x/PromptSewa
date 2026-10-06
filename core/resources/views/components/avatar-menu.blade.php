@@ -3,15 +3,16 @@
 {{--
     F2 (v1.7.8) — the founder's profile-picture click menu.
 
-    S2 (v1.9.0) — the menu is TWO actions, and the picture itself is the
-    lightbox door:
+    S2 (v1.9.0) — the picture IS the lightbox door; F2 (v1.9.2) adds the
+    profile link the founder asked for. Three actions now:
       1. Clicking the profile picture  &rarr; lightbox modal (full-size)
       2. The caret beside it           &rarr; this menu
-         a. Upload / edit picture      &rarr; profile editor (#avatar)
-         b. Edit frame                 &rarr; profile editor frame picker (#avatar-frame)
+         a. My Profile                 &rarr; the user's own public profile
+         b. Upload / edit picture      &rarr; profile editor (#avatar)
+         c. Edit frame                 &rarr; profile editor frame picker (#avatar-frame)
 
-    "View profile picture" is gone from the menu: the direct click IS the
-    view action, on both worlds (hero + navbar).
+    "View profile picture" is not a menu entry: the direct click IS the view
+    action, on both worlds (hero + navbar).
 
     OWNER-ONLY BY CONSTRUCTION: the component is only invoked on surfaces
     where the viewer IS the avatar's owner (the hero of their own public
@@ -54,6 +55,18 @@
 
     <div x-show="open" x-cloak x-transition role="menu"
          class="absolute left-0 z-40 mt-2 w-60 overflow-hidden rounded-2xl border border-ink/10 bg-white py-1.5 text-left shadow-card-hover">
+        {{-- F2 (v1.9.2): the founder's "My Profile" entry — the account menu
+             can now reach the public profile from the picture cluster too,
+             not only from the navbar dropdown. --}}
+        <a role="menuitem" href="{{ route('creators.show', $user) }}"
+           data-testid="avatar-my-profile"
+           class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
+            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+            </svg>
+            My Profile
+        </a>
+
         <a role="menuitem" href="{{ route('dashboard.profile.edit') }}#avatar"
            data-testid="avatar-upload-edit"
            class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">

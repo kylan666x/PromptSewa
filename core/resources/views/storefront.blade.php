@@ -117,7 +117,8 @@
                  no md:/lg: column guards), centered on a max-w-3xl column. --}}
             <div class="mx-auto mt-8 grid w-full max-w-3xl grid-cols-1 gap-6">
                 @foreach ($featured as $prompt)
-                    <x-prompt-card :prompt="$prompt" large/>
+                    {{-- F3 (v1.9.2): the social post shape is chosen per listing. --}}
+                    <x-prompt-card :prompt="$prompt"/>
                 @endforeach
             </div>
 

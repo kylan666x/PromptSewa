@@ -72,15 +72,24 @@ test('welcome placeholder view no longer exists', function () {
     expect(view()->exists('welcome'))->toBeFalse();
 });
 
-test('prompt cards show a cover image when present and a placeholder otherwise', function () {
-    $withCover = seedOnePublicPrompt(['title' => 'Covered Probe', 'cover_image_path' => 'covers/demo.jpg']);
+test('prompt cards show a cover image when present and a generated banner otherwise', function () {
+    // F3 (v1.9.2): the POST SHAPES differ — image/video listings carry
+    // edge-to-edge artwork (uploaded cover, else the generated banner), while
+    // a text listing's post has none by design. The cover-resolution contract
+    // is therefore locked on an IMAGE listing (SocialFeedReplicaTest locks the
+    // no-artwork half for text posts).
+    $withCover = seedOnePublicPrompt([
+        'title' => 'Covered Probe',
+        'cover_image_path' => 'covers/demo.jpg',
+        'type' => Prompt::TYPE_IMAGE,
+    ]);
 
     $this->get('/prompts')
         ->assertOk()
         ->assertSee('<img', false)
         ->assertSee('/storage/covers/demo.jpg', false);
 
-    $placeholder = seedOnePublicPrompt(['title' => 'Bare Probe']);
+    $placeholder = seedOnePublicPrompt(['title' => 'Bare Probe', 'type' => Prompt::TYPE_IMAGE]);
     $response = $this->get('/prompts');
     $content = $response->getContent();
 

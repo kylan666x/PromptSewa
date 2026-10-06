@@ -73,8 +73,10 @@ test('Fresh from the library is a single-column newsfeed at every breakpoint', f
         ->and($feed)->not->toContain('w-[82%]')
         ->and($feed)->not->toContain('md:grid')
         ->and($feed)->not->toContain('lg:grid-cols-3')
-        // Large artwork on the post, and a pagination door into the library.
-        ->and($feed)->toContain('aspect-[16/9]')
+        // F3 (v1.9.2): the posts carry the social shell + action bar, and the
+        // feed still ends in a pagination door into the library.
+        ->and($feed)->toContain('rounded-xl border border-ink/5 bg-paper shadow-sm')
+        ->and($feed)->toContain('border-t border-ink/5 px-4 py-2')
         ->and($feed)->toContain('Load more prompts')
         ->and($feed)->toContain(route('library.index'));
 });

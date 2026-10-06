@@ -69,6 +69,41 @@ not a catalog grid.
   creators, packs, membership plans) are deliberate: those are walls of small
   tiles, not the feed.
 
+### F1/F2/F3 (v1.9.2) — sales truth, the profile menu and the social replica
+
+- **F1 — one sales truth (data, not paint).** A sale is a **paid order line
+  naming a listing**, on either rail. The legacy `prompts.sales_count` column
+  still exists but is **dead data** — nothing writes it, and NOTHING may read
+  it (it is what made "0 sales" possible after real sales). Read sales through
+  `OrderItem::paidSalesCountForCreator()` / `paidSalesCountForPrompt()` or
+  `withCount('paidSales')`.
+- **F2 — the lightbox is a real modal.** Full-viewport ink scrim with
+  `backdrop-blur-sm` (**founder-sanctioned exception to the "no glass/blur"
+  rule**, and only here), a `max-w-screen-md` content box, artwork capped at
+  `max-h-[80vh]` with `object-contain`, and a visible Close control pinned to
+  the modal's **top-right**. The avatar menus (hero + navbar) both carry a
+  **My Profile** link to `/creators/{username}`.
+- **F3 — the feed is a social replica, not a catalog grid.** One component,
+  two post shapes:
+  - **IMAGE / VIDEO listings → the Instagram post.** Identity header (`p-3`),
+    **edge-to-edge artwork** (`x-prompt-cover feed`: square on phones, 4:5 from
+    `md`, ink/5 ground), caption (`p-4`), then the action bar.
+  - **TEXT / AGENTIC / SKILL listings → the Facebook text post.** Identity
+    header (`p-4`), the copy as the post body (`whitespace-pre-wrap
+    text-base leading-relaxed`, split at 500 characters behind **See more**),
+    then the action bar. **No artwork** — the copy IS the post.
+  - **Card shell:** `rounded-xl border border-ink/5 bg-paper shadow-sm`. The
+    older `rounded-2xl bg-white` shell survives ONLY on the tile walls
+    (image gallery, category/pack/plan tiles) — the feed is its own shape.
+  - **Action bar** (both shapes): `border-t border-ink/5 px-4 py-2`, Like ·
+    Comment on the left, Share · Save on the right. **Share** is real (Web
+    Share API → clipboard → honest toast). **Save** is the bookmark heart (the
+    H4 contract, unchanged). **Like/Comment are honest stubs** — no likes
+    backend exists, so they are labelled spans that say "coming soon" on
+    hover, never dead buttons.
+  - The Sikka price chip stays on every post (the one buy signal); NPR never
+    appears on a feed card.
+
 ## Tokens (Tailwind v4 `@theme` in `core/resources/css/app.css`)
 
 - `paper` `#faf8f3` — page ground (light world). Deep variant `paper-deep` `#f0eee6`.
@@ -117,12 +152,12 @@ not a catalog grid.
   radial glow allowed inside them; no glass/blur decoration.
 - **Chips:** mono, small, bordered (`border-ink/10 bg-white` on light,
   `border-white/10 bg-white/5` on dark). Used for categories, tags, stats, roadmap status.
-- **Prompt cards (S4 feed shape, P1 newsfeed sizing):** `rounded-2xl` white
-  paper cards with `border-ink/10`, ink text, the creator row (avatar + handle
-  + verified tick) as the card HEADER, and the saffron Sikka price chip
-  bottom-right. Hover lifts the card (`hover:-translate-y-0.5` +
-  `shadow-card-hover`). On the two feed surfaces the card is **full-width in a
-  centered `max-w-3xl` single column** and passed `large` for the 16:9 cover.
+- **Prompt cards (F3 v1.9.2 social post — supersedes the S4/P1 card):**
+  `rounded-xl border border-ink/5 bg-paper shadow-sm`, hover lift
+  (`hover:-translate-y-0.5` + `shadow-card-hover`). Reading order: identity
+  header → artwork (image/video posts only) → copy/caption → Sikka price chip
+  → action bar. The two feed surfaces render them **full-width in a centered
+  `max-w-3xl` single column** (P1 v1.9.1, still binding).
 - **Empty state:** dark dashed block — it doubles as a GoP-style dark card on light pages.
 
 ## Interaction & motion

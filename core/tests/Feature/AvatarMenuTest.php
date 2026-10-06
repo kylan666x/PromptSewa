@@ -9,9 +9,10 @@ uses(RefreshDatabase::class);
 
 /**
  * F2 (v1.7.8) — BH-R9-02: the frame round-trip + the founder's
- * profile-picture click menu. S2 (v1.9.0): the menu is TWO actions —
- * clicking the picture itself IS the view action (lightbox), and the
- * caret beside it opens the upload/edit + frame menu.
+ * profile-picture click menu. S2 (v1.9.0) trimmed it to two actions;
+ * F2 (v1.9.2) adds the founder's "My Profile" entry back on top of them —
+ * clicking the picture itself IS still the view action (lightbox), and the
+ * caret opens My Profile + upload/edit + frame.
  *
  * The menu is server-rendered and owner-only BY CONSTRUCTION: the hero
  * avatar on your own public profile and the navbar account dropdown are the
@@ -20,7 +21,7 @@ uses(RefreshDatabase::class);
  * round trip that keeps the composite overlay on hero + card + navbar, and
  * the int cast that makes the picker's strict pre-check driver-safe.
  */
-test('the owner sees the two-entry profile-picture menu and the direct lightbox door', function () {
+test('the owner sees the profile-picture menu with My Profile and the direct lightbox door', function () {
     $user = User::factory()->create();
 
     $html = $this->actingAs($user)
@@ -35,9 +36,13 @@ test('the owner sees the two-entry profile-picture menu and the direct lightbox 
         ->and($html)->toContain('data-testid="avatar-upload-edit"')
         ->and($html)->toContain('data-testid="avatar-edit-frame"')
         ->and($html)->toContain('data-testid="avatar-lightbox"')
+        // F2 (v1.9.2): the menu regains a direct profile link.
+        ->and($html)->toContain('data-testid="avatar-my-profile"')
+        ->and($html)->toContain(route('creators.show', $user))
         // S2 (v1.9.0): "View profile picture" is no longer a MENU item —
         // the direct click replaced it.
         ->and($html)->not->toContain('data-testid="avatar-view-picture"')
+        ->and($html)->toContain('My Profile')
         ->and($html)->toContain('Upload / edit picture')
         ->and($html)->toContain('Edit frame')
         // "Direct click still opens the lightbox": the served trigger
@@ -70,6 +75,7 @@ test('strangers get no profile-picture menu — and guests get nothing at all', 
         ->and($html)->not->toContain('data-testid="avatar-open-lightbox"')
         ->and($html)->not->toContain('data-testid="avatar-upload-edit"')
         ->and($html)->not->toContain('data-testid="avatar-edit-frame"')
+        ->and($html)->not->toContain('data-testid="avatar-my-profile"')
         // …while their own navbar menu is present (they are signed in).
         ->and($html)->toContain('data-testid="nav-avatar-view"');
 

@@ -99,9 +99,10 @@
                             {{-- H4: the card resolves its own pre-flip from the per-request
                                  bookmarked-id set (one query per request,
                                  not one per card). --}}
-                            {{-- P1: `large` gives the feed a 16:9 cover — the post's
-                                 artwork is the loudest thing in the column. --}}
-                            <x-prompt-card :prompt="$prompt" large/>
+                            {{-- F3 (v1.9.2): the card picks its own social
+                                 shape — Instagram post for image/video
+                                 listings, Facebook text post otherwise. --}}
+                            <x-prompt-card :prompt="$prompt"/>
                         @endforeach
                     </div>
 

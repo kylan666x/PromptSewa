@@ -1,4 +1,4 @@
-@props(['prompt', 'large' => false, 'gallery' => false])
+@props(['prompt', 'large' => false, 'gallery' => false, 'feed' => false])
 
 @php
     /**
@@ -125,7 +125,10 @@
     $bannerUri = 'data:image/svg+xml;charset=utf-8,'.rawurlencode($banner);
 @endphp
 
-<div class="relative {{ $gallery ? 'aspect-[4/5]' : ($large ? 'aspect-[16/9]' : 'aspect-[16/10]') }} w-full overflow-hidden {{ $attributes->only('class') }}">
+{{-- F3 (v1.9.2): `feed` is the Instagram-post crop — square on phones,
+     4:5 from md up, edge-to-edge (no side padding), with an ink/5 ground so
+     a transparent PNG never shows a white letterbox. --}}
+<div class="relative {{ $gallery ? 'aspect-[4/5]' : ($feed ? 'aspect-square bg-ink/5 md:aspect-[4/5]' : ($large ? 'aspect-[16/9]' : 'aspect-[16/10]')) }} w-full overflow-hidden {{ $attributes->only('class') }}">
     @if ($prompt->cover_image_path)
         <img src="{{ Storage::url($prompt->cover_image_path) }}" alt="Cover for {{ $title }}"
              class="absolute inset-0 size-full object-cover">

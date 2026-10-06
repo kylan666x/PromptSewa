@@ -367,6 +367,53 @@ Alpine.data('bookmarkHeart', (config) => ({
  * form name as the action, writes the token into the hidden input, then
  * lets the submit proceed. No-op when grecaptcha is absent (provider off).
  */
+/**
+ * F3 (v1.9.2) — the feed's Share action.
+ *
+ * Native Web Share API where the platform has it (mobile browsers), a
+ * clipboard copy of the listing URL everywhere else, and an honest toast when
+ * neither is available — never a button that silently does nothing. Both APIs
+ * require a secure context; the production site is https, and `localhost`
+ * counts as secure, so a local `artisan serve` behaves the same way.
+ */
+Alpine.data('sharePost', (config) => ({
+    url: config.url,
+    title: config.title,
+    notice: '',
+    timer: null,
+
+    message(text) {
+        this.notice = text;
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => (this.notice = ''), 3000);
+    },
+
+    async share() {
+        const payload = { title: this.title, url: this.url };
+
+        try {
+            if (typeof navigator.share === 'function') {
+                await navigator.share(payload);
+                return;
+            }
+
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(this.url);
+                this.message('Link copied');
+                return;
+            }
+
+            this.message('Copy the link from your address bar to share');
+        } catch (error) {
+            // The user dismissed the native sheet — not a failure.
+            if (error && error.name === 'AbortError') {
+                return;
+            }
+            this.message('Could not share — copy the link from your address bar');
+        }
+    },
+}));
+
 Alpine.data('captchaToken', (config) => ({
     token: '',
 

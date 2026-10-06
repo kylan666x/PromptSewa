@@ -40,14 +40,19 @@ function uiOverhaulBuiltCss(): string
 }
 
 /** A paid published prompt with a published v1, for the buyer surfaces. */
-function uiOverhaulPaidPrompt(): Prompt
+function uiOverhaulPaidPrompt(string $type = Prompt::TYPE_TEXT): Prompt
 {
     $creator = User::factory()->create();
 
     return Prompt::factory()
         ->for($creator, 'creator')
         ->hasVersion()
-        ->create(['price_cents' => 24_900, 'status' => Prompt::STATUS_PUBLISHED, 'visibility' => Prompt::VISIBILITY_PUBLIC]);
+        ->create([
+            'type' => $type,
+            'price_cents' => 24_900,
+            'status' => Prompt::STATUS_PUBLISHED,
+            'visibility' => Prompt::VISIBILITY_PUBLIC,
+        ]);
 }
 
 test('the S4 token set compiles into the stylesheet the app serves', function () {
@@ -79,49 +84,72 @@ test('every app surface loads Inter and Space Grotesk from the font CDN', functi
         ->and($html)->toContain('preconnect" href="https://fonts.gstatic.com"');
 });
 
-test('the library ships feed cards in reading order: identity, artwork, price', function () {
-    $prompt = uiOverhaulPaidPrompt();
+test('the library ships social feed cards in reading order: identity, artwork, price, action bar', function () {
+    // F3 (v1.9.2): an IMAGE listing is the post that actually carries artwork.
+    $prompt = uiOverhaulPaidPrompt(Prompt::TYPE_IMAGE);
     $creator = $prompt->creator;
 
     $html = $this->get(route('library.index'))->assertOk()->getContent();
 
-    // The card root: rounded-2xl, no clipping (the composite-box avatar
-    // geometry rule) and no rounded-3xl (that radius is for dark blocks).
-    preg_match('/<article class="(group relative flex flex-col[^"]*)"[^>]*>(.*?)<\/article>/s', $html, $card);
+    // Every post on the feed carries an identity header — no anonymous card
+    // can sneak in (the feed count and the identity count must agree).
+    expect(substr_count($html, 'aria-label="View profile of '))
+        ->toBe(substr_count($html, 'rounded-xl border border-ink/5 bg-paper shadow-sm'));
 
-    expect($card[1] ?? 'no-card')->toContain('rounded-2xl')
+    // Take THIS listing's post: the reading order is a per-card contract, and
+    // the page may legitimately carry other posts (other tests' fixtures).
+    $chunk = '';
+
+    foreach (preg_split('/<article\b/', $html) as $part) {
+        if (str_contains($part, $prompt->title) && str_contains($part, '</article>')) {
+            $chunk = substr($part, 0, strpos($part, '</article>'));
+            break;
+        }
+    }
+
+    // The card root: the F3 social shell — rounded-xl on paper, no clipping
+    // (the composite-box avatar geometry rule), no rounded-3xl (that radius
+    // is for dark statement blocks).
+    preg_match('/^ class="(group relative flex flex-col[^"]*)"/', $chunk, $card);
+
+    expect($chunk)->not->toBe('', 'the library served no card for '.$prompt->title)
+        ->and($card[1] ?? 'no-card')->toContain('rounded-xl border border-ink/5 bg-paper shadow-sm')
         ->and($card[1] ?? 'no-card')->not->toContain('rounded-3xl')
         ->and($card[1] ?? 'no-card')->not->toContain('overflow-hidden');
 
-    $body = $card[2] ?? '';
+    $body = $chunk;
     expect($body)->not->toBe('');
 
     $identityAt = strpos($body, 'aria-label="View profile of '.$creator->name.'"');
     $artworkAt = strpos($body, route('prompts.show', $prompt));
     $priceAt = strpos($body, 'Sikka');
+    preg_match('/>\s*Like\s*</', $body, $actionMatch, PREG_OFFSET_CAPTURE);
+    $actionAt = $actionMatch[0][1] ?? false;
 
     expect($identityAt)->not->toBeFalse('the feed card lost its creator header')
         ->and($artworkAt)->not->toBeFalse()
-        ->and($priceAt)->not->toBeFalse('the feed card lost its Sikka price chip');
+        ->and($priceAt)->not->toBeFalse('the feed card lost its Sikka price chip')
+        ->and($actionAt)->not->toBeFalse('the feed card lost its action bar');
 
-    // Identity above the artwork; the price chip below it (bottom-right).
+    // The social reading order: who posted → artwork → price → actions.
     expect($identityAt)->toBeLessThan($artworkAt)
-        ->and($priceAt)->toBeGreaterThan($artworkAt);
+        ->and($priceAt)->toBeGreaterThan($artworkAt)
+        ->and($actionAt)->toBeGreaterThan($priceAt);
 
     // Sikka is the only price on the card — no NPR mirror sneaks back in.
     expect($body)->not->toContain('Rs.');
 
-    // P1 (v1.9.1): the feed is a TRUE single column — one full-width post per
-    // row at EVERY breakpoint, on a centered max-w-3xl column with gap-6 air.
-    // No multi-column grid survives on this surface.
+    // P1 (v1.9.1, still binding): the feed is a TRUE single column — one
+    // full-width post per row at EVERY breakpoint, on a centered max-w-3xl
+    // column with gap-6 air. No multi-column grid survives on this surface.
     expect($html)->toContain('mx-auto grid w-full max-w-3xl grid-cols-1 gap-6')
         ->and($html)->not->toContain('sm:grid-cols-2')
         ->and($html)->not->toContain('xl:grid-cols-3');
 });
 
-test('v1.9.1: the library and the homepage feed are single-column newsfeeds', function () {
+test('v1.9.1 → F3: the library and the homepage feed are single-column social feeds', function () {
     cache()->flush();
-    uiOverhaulPaidPrompt();
+    uiOverhaulPaidPrompt(Prompt::TYPE_IMAGE);
 
     $library = $this->get(route('library.index'))->assertOk()->getContent();
     $home = $this->get(route('home'))->assertOk()->getContent();
@@ -148,10 +176,13 @@ test('v1.9.1: the library and the homepage feed are single-column newsfeeds', fu
         ->and($feed)->not->toContain('md:grid')
         ->and($feed)->not->toContain('lg:grid-cols-3');
 
-    // Prominent artwork: the feed covers take the wide 16:9 crop (the plain
-    // card keeps its 16:10 cover — `large` is opt-in per surface).
-    expect($library)->toContain('aspect-[16/9]')
-        ->and($feed)->toContain('aspect-[16/9]');
+    // F3 (v1.9.2): the posts carry the SOCIAL shell and action bar — the
+    // artwork is the Instagram crop on image listings, and a text listing
+    // carries no artwork at all (see SocialFeedReplicaTest for the shapes).
+    expect($library)->toContain('rounded-xl border border-ink/5 bg-paper shadow-sm')
+        ->and($library)->toContain('border-t border-ink/5 px-4 py-2')
+        ->and($feed)->toContain('rounded-xl border border-ink/5 bg-paper shadow-sm')
+        ->and($feed)->toMatch('/>\s*Like\s*</');
 
     // Vertical scroll only, closed by a pagination door into the library.
     expect($feed)->toContain('Load more prompts')
