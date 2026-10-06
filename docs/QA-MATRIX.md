@@ -689,3 +689,21 @@ named test; if a test regresses, the row goes red and the release blocks.
 | S4 the feed-card timestamp clears WCAG 2.1 AA at 11px (`text-ink/60` ≈4.7:1, not `ink/40` ≈2.6:1) | ✅ | surfaced in the final pass; report §1 S4 "Contrast" entry (pre-existing sub-AA greys elsewhere are flagged, not swept) |
 | Suite | ✅ | **636 passed / 18,079 assertions / 3 skipped** (skips: two install-artifact tests — no install zip built, by design; one v1.4.4 incident lock, artifact absent) — `--list-tests` enumerates the **6 Arch tests** (`BladeFormVerbTest` 1, `MigrationDropGuardTest` 1, `NoBladeLeakTest` 1, `UserAvatarGeometryTest` 3); evidence `dist/v1.9.0-suite-S4.txt`, `dist/v1.9.0-list-tests.txt` |
 | Update artifact | ✅ | `dist/promptsewa-1.9.0-update.zip` — **513 entries** (509 core + 4 docroot), **0.96 MB**, hygiene audit **CLEAN (0 forbidden entries)**, **SHA-256 `b40e36572c7dca34484e808b6f308f01f586a77033700ef12821fe00999b3fb2`** (identical across two consecutive builds — reproducible), 0 `.sqlite` / 0 `.env` entries, all 3 v1.9.0 migrations present; evidence `dist/v1.9.0-zip.txt` (supersedes the pre-S4 `c61488a2…` / 512-entry build) |
+
+## P1-block (v1.9.1) — True Newsfeed Layout
+
+> **Supersedes the v1.9.0 S4 feed rows above:** the library is no longer
+> `sm:grid-cols-2 xl:grid-cols-3` and the homepage "Fresh from the library"
+> block is no longer a carousel below md. Both are single-column at every
+> breakpoint. The S4 tokens, card reading order and all invariants stand.
+
+| Area | Status | Locked by |
+|---|---|---|
+| P1 the library (`/prompts`) is a TRUE single column at every breakpoint — one full-width post per row on a centered `max-w-3xl` column with `gap-6` air; no `sm:grid-cols-2` / `xl:grid-cols-3` survives on the surface | ✅ | `UiOverhaulTest::v1.9.1: the library and the homepage feed are single-column newsfeeds`, `UiOverhaulTest::the library ships feed cards in reading order: identity, artwork, price` |
+| P1 the homepage "Fresh from the library" block uses the same container and the carousel/grid dual mode is retired — no snap rail, no `overflow-x-auto`, no `w-[82%]` slides inside the section (vertical scroll only) | ✅ | `MobileEngagementPassTest::Fresh from the library is a single-column newsfeed at every breakpoint`, `UiOverhaulTest::v1.9.1: the library and the homepage feed are single-column newsfeeds` |
+| P1 feed artwork is prominent and keeps its aspect ratio — the feed surfaces pass the new opt-in `large` prop to `x-prompt-cover` for the wide **16:9** crop (the plain card keeps 16:10) | ✅ | `UiOverhaulTest::v1.9.1: … newsfeeds` (`aspect-[16/9]` on both served surfaces) |
+| P1 the feed closes with an honest pagination door ("Load more prompts" → `/prompts`) rather than a fake in-place infinite scroll | ✅ | `UiOverhaulTest::v1.9.1: … newsfeeds`, `MobileEngagementPassTest::Fresh from the library is a single-column newsfeed…` |
+| P1 no invariant moved: composite-box avatar geometry, the five-slot dock with one saffron centre fill, Sikka-only buyer surfaces, and the card's identity → artwork → copy → price reading order | ✅ | `UiOverhaulTest::the overhaul leaves the composite box, the five-slot dock and Sikka-only pricing alone`, `UserAvatarGeometryTest`, `MobileDockTest` |
+| Suite | ✅ | **637 passed / 18,101 assertions / 3 skipped** (same 3 by-design skips as v1.9.0) — `--list-tests tests/Arch` enumerates the **6 Arch tests**; evidence `dist/v1.9.1-suite.txt`, `dist/v1.9.1-list-tests.txt` |
+| Update artifact | ✅ | `dist/promptsewa-1.9.1-update.zip` — **513 entries** (509 core + 4 docroot), **0.97 MB**, hygiene audit **CLEAN (0 forbidden entries)**, **SHA-256 `dfdbbc324dab09d547891e24184e22c30deeaa96ed01ea2515bd53a7304b8155`**, 0 `.sqlite` / 0 `.env` entries; evidence `dist/v1.9.1-zip.txt` |
+| Browser gate | ✅ | DOM assertions under `artisan serve` + the seeded preview DB at 360px and 1280px on both surfaces — evidence `dist/v1.9.1-browser-gate.txt` (screenshots unavailable: the preview panel reported "no frames / not composited") |

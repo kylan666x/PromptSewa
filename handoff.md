@@ -35,7 +35,40 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.9.0 — Social Surface & Sikka-Only Economy (this release)
+### v1.9.1 — True Newsfeed Layout (P1) (this release)
+
+The founder's P1 directive, on top of the v1.9.0 release commits. **The two
+FEED surfaces are now a real vertical newsfeed — a single column at every
+breakpoint — and the homepage carousel is gone.**
+
+- **Library (`/prompts`)** — the `sm:grid-cols-2 xl:grid-cols-3` grid is
+  retired: one full-width post per row at every width, centered on a
+  `max-w-3xl` column with `gap-6` air (`mx-auto grid w-full max-w-3xl
+  grid-cols-1 gap-6`).
+- **Homepage "Fresh from the library"** — same container, and the G3
+  carousel/grid dual mode is retired: no snap rail, no horizontal scroll, no
+  `w-[82%]` slides. The feed closes with an honest pagination door ("Load more
+  prompts" → `/prompts`) instead of a fake in-place infinite scroll.
+- **Feed artwork is larger.** `x-prompt-card` gained an opt-in `large` prop
+  forwarded to `x-prompt-cover`: the feed surfaces take the wide **16:9** crop
+  (the plain card keeps 16:10). Rendered at 1280px the post is 768px wide with
+  a 767×431 cover; at 360px it is 311px wide with a 310×174 cover.
+- **Untouched:** the card's reading order (identity → artwork → copy → price
+  chip), the composite-box avatar geometry, the five-slot dock, Sikka-only
+  pricing, and every S4 token. The multi-column grids elsewhere (image
+  gallery, category tiles, matching creators, packs, plans) are deliberate —
+  those are tile walls, not the feed.
+
+Release gates: full Pest suite **637 passed / 18,101 assertions / 3 skipped
+(exit 0)** on SQLite-in-memory — evidence `dist/v1.9.1-suite.txt`;
+`--list-tests tests/Arch` enumerates **6 Arch tests** —
+`dist/v1.9.1-list-tests.txt`; update zip
+`dist/promptsewa-1.9.1-update.zip` — `entries: 513 | hygiene audit: CLEAN`,
+SHA-256 `dfdbbc324dab09d547891e24184e22c30deeaa96ed01ea2515bd53a7304b8155`
+(evidence `dist/v1.9.1-zip.txt`). Browser gate (DOM assertions,
+`artisan serve`, seeded preview DB) in `dist/v1.9.1-browser-gate.txt`.
+
+### v1.9.0 — Social Surface & Sikka-Only Economy (previous release)
 
 > **Supersedes two v1.8.0 statements:** the kill-switch no longer ships
 > OFF (it is retired — see S1 below), and the earnings tab is no longer
@@ -106,7 +139,9 @@ checkout of the top-up itself.
     post: creator avatar + handle header (`pr-14` keeps clear of the
     floating saved heart at top-right), artwork, title/copy, then the Sikka
     price chip anchored **bottom-right**. Cards stack one-per-row on phones
-    (`gap-3`, `sm:grid-cols-2 xl:grid-cols-3`).
+    (`gap-3`, `sm:grid-cols-2 xl:grid-cols-3`). **(Superseded by v1.9.1 P1:
+    the multi-column grid is retired — the feed is one column at every
+    breakpoint with `gap-6` and a 16:9 cover.)**
   - **Prompt detail** is a two-column shell on desktop
     (`lg:grid-cols-[minmax(0,1fr)_360px]`, `min-w-0` left column, sticky
     right rail) and stacks below `lg`.
@@ -835,6 +870,18 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
+
+### Post-check (v1.9.1) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Zip contents (builder output) | `entries: 513 \| hygiene audit: CLEAN (0 forbidden entries)` | `ReleaseHygieneTest::the built update zip carries no host-local artifacts…` |
+| 2 | SHA-256 of the uploaded zip | `dfdbbc324dab09d547891e24184e22c30deeaa96ed01ea2515bd53a7304b8155` | builder output (`dist/v1.9.1-zip.txt`) |
+| 3 | Admin → Overview | `v1.9.1` chip | `config('app.version')` single source |
+| 4 | Library `/prompts` at desktop width | ONE full-width post per row, centered on a 768px column, ~24px between posts, 16:9 artwork — no second column at any breakpoint | `UiOverhaulTest::v1.9.1: the library and the homepage feed are single-column newsfeeds` |
+| 5 | Homepage "Fresh from the library" | same single column; no snap rail / horizontal scroll; ends with a centered **Load more prompts** door → `/prompts` | `MobileEngagementPassTest::Fresh from the library is a single-column newsfeed at every breakpoint` |
+| 6 | Phone (360px) | one card per row, full width, no horizontal overflow; dock still exactly 5 slots with the single saffron centre fill | `UiOverhaulTest` (feed + dock invariants), `MobileDockTest` |
+| 7 | `cd core && php artisan test` | **637 passed / 18,101 assertions / 3 skipped**; `--list-tests tests/Arch` shows the 6 Arch tests | whole suite (`dist/v1.9.1-suite.txt`, `dist/v1.9.1-list-tests.txt`) |
 
 ### Post-check (v1.9.0) — run in order after the update.php pipeline finishes
 
