@@ -16,7 +16,7 @@ php artisan serve              # http://127.0.0.1:8000
 ```
 
 The seeders are **idempotent** (safe to re-run; existing rows untouched):
-demo creators, the bulk catalog (240 prompts) and the flagship
+demo creators, the bulk catalog (every category) and the flagship
 JustShipItAI account.
 
 Demo logins:
@@ -30,7 +30,7 @@ Demo logins:
 ## Tests & Quality
 
 ```bash
-php artisan test        # Pest feature suite, in-memory SQLite (102 tests / 416 assertions)
+php artisan test        # Pest suite, in-memory SQLite (644 tests across 100 files)
 vendor/bin/pint         # code style (Laravel preset)
 npm run build           # compile CSS/JS — commit source, never public/build/
 ```
@@ -49,10 +49,14 @@ app/
 │   ├── Dashboard/               create/edit prompts (type-aware), profile editing
 │   └── Admin/                   moderation, users, packs, payments, brand, update
 ├── Http/Requests/               PromptFormRequest (validation + normalization)
-├── Models/                      Prompt, PromptVersion, Category, Product, Rating, …
+├── Models/                      Prompt, Order/OrderItem, SikkaTransaction, Membership, …
 ├── Policies/                    PromptPolicy (view/update/delete)
 └── Services/
-    ├── CheckoutService          eSewa + manual payments
+    ├── CheckoutService          order creation, eSewa + manual settlement
+    ├── SikkaService             credit rail: top-up, spend, cash-out
+    ├── WalletService            NPR ledger: sale credits, payout holds
+    ├── MembershipService        plans, 30-day stipends, unlimited_unlock
+    ├── GamificationService      XP, badges, criteria thresholds
     ├── EntitlementService       license grants
     ├── ImageUploadService       GD compress & re-encode (covers/banners/avatars/logos)
     └── PromptSearchService      Scout search + creator search
@@ -68,7 +72,15 @@ resources/
 
 ## Conventions & Gotchas (regression-critical)
 
-- Money is integer paisa end-to-end; never floats.
+- Money is integer paisa end-to-end; never floats. Sikka credits are whole
+  integers.
+- `wallet_transactions` / `sikka_transactions` are **insert-only** — the models
+  throw on UPDATE or DELETE; balances are SUMs over the ledger under
+  `lockForUpdate()`, never a cached column.
+- A **sale is a paid order line** naming the listing (`OrderItem::paidSales*`),
+  not `prompts.sales_count` — that legacy column has no writer and reads 0.
+- Checkout, top-ups, ledger writes and webhooks take an **idempotency key** with
+  a UNIQUE constraint; grants are created only after a verified payment.
 - Search goes through `Prompt::search()` / `PromptSearchService` — no raw
   `LIKE`/`MATCH()` in controllers.
 - Editing a prompt appends a new `prompt_versions` row; history is immutable.
