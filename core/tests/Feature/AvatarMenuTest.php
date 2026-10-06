@@ -9,7 +9,9 @@ uses(RefreshDatabase::class);
 
 /**
  * F2 (v1.7.8) — BH-R9-02: the frame round-trip + the founder's
- * profile-picture click menu.
+ * profile-picture click menu. S2 (v1.9.0): the menu is TWO actions —
+ * clicking the picture itself IS the view action (lightbox), and the
+ * caret beside it opens the upload/edit + frame menu.
  *
  * The menu is server-rendered and owner-only BY CONSTRUCTION: the hero
  * avatar on your own public profile and the navbar account dropdown are the
@@ -18,8 +20,7 @@ uses(RefreshDatabase::class);
  * round trip that keeps the composite overlay on hero + card + navbar, and
  * the int cast that makes the picker's strict pre-check driver-safe.
  */
-
-test('the owner sees all three profile-picture menu entries on their own profile', function () {
+test('the owner sees the two-entry profile-picture menu and the direct lightbox door', function () {
     $user = User::factory()->create();
 
     $html = $this->actingAs($user)
@@ -27,20 +28,27 @@ test('the owner sees all three profile-picture menu entries on their own profile
         ->assertOk()
         ->getContent();
 
-    // Hero menu: server-rendered entries + lightbox.
+    // Hero: the picture is the lightbox door; the caret opens the menu.
     expect($html)->toContain('data-testid="own-avatar-menu"')
-        ->and($html)->toContain('data-testid="avatar-view-picture"')
+        ->and($html)->toContain('data-testid="avatar-open-lightbox"')
+        ->and($html)->toContain('data-testid="avatar-menu-toggle"')
         ->and($html)->toContain('data-testid="avatar-upload-edit"')
         ->and($html)->toContain('data-testid="avatar-edit-frame"')
         ->and($html)->toContain('data-testid="avatar-lightbox"')
-        ->and($html)->toContain('View profile picture')
+        // S2 (v1.9.0): "View profile picture" is no longer a MENU item —
+        // the direct click replaced it.
+        ->and($html)->not->toContain('data-testid="avatar-view-picture"')
         ->and($html)->toContain('Upload / edit picture')
         ->and($html)->toContain('Edit frame')
+        // "Direct click still opens the lightbox": the served trigger
+        // carries the Alpine open handler.
+        ->and($html)->toContain('@click="lightbox = true"')
         // The two links must carry the anchors that make them work.
         ->and($html)->toContain(route('dashboard.profile.edit').'#avatar"')
         ->and($html)->toContain(route('dashboard.profile.edit').'#avatar-frame"');
 
-    // Navbar dropdown carries the same three entries.
+    // Navbar: the picture opens the lightbox directly; the dropdown keeps
+    // the two actions.
     expect($html)->toContain('data-testid="nav-avatar-view"')
         ->and($html)->toContain('data-testid="nav-avatar-upload"')
         ->and($html)->toContain('data-testid="nav-avatar-frame"');
@@ -59,7 +67,7 @@ test('strangers get no profile-picture menu — and guests get nothing at all', 
         ->getContent();
 
     expect($html)->not->toContain('data-testid="own-avatar-menu"')
-        ->and($html)->not->toContain('data-testid="avatar-view-picture"')
+        ->and($html)->not->toContain('data-testid="avatar-open-lightbox"')
         ->and($html)->not->toContain('data-testid="avatar-upload-edit"')
         ->and($html)->not->toContain('data-testid="avatar-edit-frame"')
         // …while their own navbar menu is present (they are signed in).
@@ -137,7 +145,7 @@ test('equipping a frame through the served profile form frames hero, cards and n
 });
 
 test('active_frame_id is int-cast so the picker precheck survives string drivers', function () {
-    $user = new User();
+    $user = new User;
     $user->active_frame_id = '2';
 
     // Strict comparison in the picker: this must be an int even when the

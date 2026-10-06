@@ -3,9 +3,15 @@
 {{--
     F2 (v1.7.8) — the founder's profile-picture click menu.
 
-    Clicking your own profile avatar opens a server-rendered Alpine menu:       1. View profile picture  &rarr; lightbox modal (full-size)
-       2. Upload / edit picture &rarr; profile editor (#avatar)
-       3. Edit frame            &rarr; profile editor frame picker (#avatar-frame)
+    S2 (v1.9.0) — the menu is TWO actions, and the picture itself is the
+    lightbox door:
+      1. Clicking the profile picture  &rarr; lightbox modal (full-size)
+      2. The caret beside it           &rarr; this menu
+         a. Upload / edit picture      &rarr; profile editor (#avatar)
+         b. Edit frame                 &rarr; profile editor frame picker (#avatar-frame)
+
+    "View profile picture" is gone from the menu: the direct click IS the
+    view action, on both worlds (hero + navbar).
 
     OWNER-ONLY BY CONSTRUCTION: the component is only invoked on surfaces
     where the viewer IS the avatar's owner (the hero of their own public
@@ -20,32 +26,34 @@
 
 <div x-data="{ open: false, lightbox: false }"
      @keydown.escape.window="open = false"
+     @click.outside="open = false"
      data-testid="own-avatar-menu"
-     class="relative">
+     class="relative inline-block">
 
     <button type="button"
-            @click="open = !open"
-            @click.outside="open = false"
+            @click="lightbox = true"
+            data-testid="avatar-open-lightbox"
             class="block rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-saffron"
+            aria-label="View profile picture">
+        <x-user-avatar :user="$user" :size="$size" :frame="$frame"/>
+    </button>
+
+    {{-- S2: the two menu actions hang off this caret — the picture keeps the
+         direct view click. --}}
+    <button type="button"
+            @click="open = !open"
+            data-testid="avatar-menu-toggle"
+            class="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border border-ink/10 bg-white text-ink shadow-sm transition hover:bg-paper-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron"
             aria-haspopup="menu"
             :aria-expanded="open"
             aria-label="Profile picture options">
-        <x-user-avatar :user="$user" :size="$size" :frame="$frame"/>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+        </svg>
     </button>
 
     <div x-show="open" x-cloak x-transition role="menu"
          class="absolute left-0 z-40 mt-2 w-60 overflow-hidden rounded-2xl border border-ink/10 bg-white py-1.5 text-left shadow-card-hover">
-        <button type="button" role="menuitem"
-                @click="open = false; lightbox = true"
-                data-testid="avatar-view-picture"
-                class="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
-            <svg class="size-4 text-ink/40" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-            </svg>
-            View profile picture
-        </button>
-
         <a role="menuitem" href="{{ route('dashboard.profile.edit') }}#avatar"
            data-testid="avatar-upload-edit"
            class="flex items-center gap-2.5 px-4 py-2 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink">
