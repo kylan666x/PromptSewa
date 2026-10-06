@@ -707,3 +707,32 @@ named test; if a test regresses, the row goes red and the release blocks.
 | Suite | ✅ | **637 passed / 18,101 assertions / 3 skipped** (same 3 by-design skips as v1.9.0) — `--list-tests tests/Arch` enumerates the **6 Arch tests**; evidence `dist/v1.9.1-suite.txt`, `dist/v1.9.1-list-tests.txt` |
 | Update artifact | ✅ | `dist/promptsewa-1.9.1-update.zip` — **513 entries** (509 core + 4 docroot), **0.97 MB**, hygiene audit **CLEAN (0 forbidden entries)**, **SHA-256 `dfdbbc324dab09d547891e24184e22c30deeaa96ed01ea2515bd53a7304b8155`**, 0 `.sqlite` / 0 `.env` entries; evidence `dist/v1.9.1-zip.txt` |
 | Browser gate | ✅ | DOM assertions under `artisan serve` + the seeded preview DB at 360px and 1280px on both surfaces — evidence `dist/v1.9.1-browser-gate.txt` (screenshots unavailable: the preview panel reported "no frames / not composited") |
+
+## F-block (v1.9.2) — Social Replica & Sales Fix
+
+> **Supersedes parts of the v1.9.0/v1.9.1 blocks above:** the feed card is
+> now the F3 social post (`rounded-xl … bg-paper`, action bar, 16:9 cover
+> replaced by the Instagram crop on image listings), the avatar menu has a
+> third entry again, and every sales number reads paid order lines instead of
+> the dead `prompts.sales_count` column. The P1 single-column contract stands.
+
+| Area | Status | Locked by |
+|---|---|---|
+| F1 the dashboard **Sales** stat is the real count: a completed Sikka credit purchase moves it from 0 to 1 (it read a column nothing writes, so it was 0 forever) | ✅ | `SalesCountTruthTest::a Sikka credit purchase moves the sales count from 0 to 1 on every surface` |
+| F1 the public profile's sale stat, the achievements progress rows and the top-prompts table all read the same truth (no two surfaces disagree) | ✅ | `SalesCountTruthTest` (profile regex + `1/10` row + `1 sales` cell), `AchievementsAndIdentityLinksTest` |
+| F1 the count is rail-agnostic — an approved manual NPR order counts exactly like a credit purchase | ✅ | `SalesCountTruthTest::the sales count is rail-agnostic: an approved manual NPR order counts too` |
+| F1 comp grants are not sales (no order line, no count) | ✅ | `SalesCountTruthTest::comp grants are not sales`, `CompGrantTest` |
+| F1 the legacy `sales_count` column is dead data — no surface trusts it (a phantom 99 reads 0; a real paid line counts while the column still reads 0) | ✅ | `SalesCountTruthTest::the legacy sales_count column is dead data and no surface reads it` |
+| F1 the badge/milestone evaluator reads the same truth, so first_sale / sales_10 / sales_50 can finally auto-award | ✅ | `BadgeCriteriaTest`, `FrameTruthTest::criterion evaluator is the single threshold source` |
+| F2 the avatar menu carries a **My Profile** entry → `/creators/{username}`, alongside upload/edit and edit frame | ✅ | `ProfileMenuTest` (hero + navbar), `AvatarMenuTest` |
+| F2 the lightbox is a responsive modal: full-viewport `bg-ink/80 backdrop-blur-sm` scrim at `z-50`, `max-w-screen-md` content box, artwork capped at `max-h-[80vh]` with `object-contain`, and a visible Close pinned top-right | ✅ | `AvatarLightboxTest` (served markup on both the hero and navbar instances) |
+| F3 a text listing renders as a Facebook-style post: identity header, copy as the body (`whitespace-pre-wrap leading-relaxed`), price chip, action bar — and no artwork | ✅ | `SocialFeedReplicaTest::a text prompt renders as a Facebook-style post with the full action bar` |
+| F3 an image listing renders as an Instagram-style post: edge-to-edge `aspect-square md:aspect-[4/5]` artwork with an ink/5 ground, caption, same action bar | ✅ | `SocialFeedReplicaTest::an image prompt renders as an Instagram-style post with edge-to-edge art` |
+| F3 the action bar ships on every card of every feed surface (Like · Comment | Share · Save), and Save keeps the real bookmark wiring | ✅ | `SocialFeedReplicaTest::the action bar is present on every card on every feed surface`, `…Save keeps the real bookmark wiring…`, `SavedHeartParityTest` |
+| F3 Share is a real control (Web Share API → clipboard → honest toast), never a silent button | ✅ | `SocialFeedReplicaTest::Share is a real control wired to the Web Share API with a clipboard fallback` (built-asset contract) |
+| F3 Like/Comment stay honest stubs — labelled, explained on hover, never dead buttons and never `href="#"` | ✅ | `SocialFeedReplicaTest::Like and Comment are honest stubs — no dead buttons, no href="#"` |
+| F3 long copy is split at 500 characters behind **See more** (and short copy is not decorated with a toggle) | ✅ | `SocialFeedReplicaTest::long copy is split at 500 characters behind a See more control` |
+| F3 the feed section still carries no grid/carousel markers: one column at every breakpoint, vertical scroll only | ✅ | `SocialFeedReplicaTest::the feed carries no grid or carousel markers on either feed surface`, `MobileEngagementPassTest` |
+| Suite | ✅ | **655 passed / 18,257 assertions / 3 skipped** (exit 0); `--list-tests tests/Arch` = **6 Arch tests**; evidence `dist/v1.9.2-suite.txt`, `dist/v1.9.2-list-tests.txt` |
+| Update artifact | ✅ | `dist/promptsewa-1.9.2-update.zip` — **517 entries** (513 core + 4 docroot), **0.98 MB**, hygiene **CLEAN**, **SHA-256 `f23959b8fc3fd6a7d1bfc0e0cf0eecbbe2f39c89eca8f18462a5c0db7a12eddd`** (identical across two builds), 0 `.sqlite` / 0 `.env`, no new migrations; evidence `dist/v1.9.2-zip.txt` |
+| Browser gate | ✅ | DOM/computed-style assertions under `artisan serve` + seeded preview DB + a seeded paid sale — `dist/v1.9.2-browser-gate.txt` |

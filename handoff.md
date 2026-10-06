@@ -35,7 +35,55 @@ Everything must run on $3/mo shared cPanel hosting: **no SSH, no Node, no Compos
 
 ## 4. Release history highlights
 
-### v1.9.1 — True Newsfeed Layout (P1) (this release)
+### v1.9.2 — Social Replica & Sales Fix (F1/F2/F3) (this release)
+
+The founder's F1→F3 directive, on top of the v1.9.1 release commit.
+
+- **F1 — sales count truth (the money bug).** Every sales surface summed
+  `prompts.sales_count`, a denormalized column **nothing in the codebase ever
+  writes** (no `increment('sales_count')` exists repo-wide), so a creator who
+  had actually sold prompts on the credit rail still read **0 sales** on the
+  dashboard, the profile, the achievements progress and the top-prompts table —
+  and the first_sale/sales_10/sales_50 badges could never auto-award. The fix
+  is READ-ONLY (no ledger change): a sale is a **paid order line naming a
+  listing** (`OrderItem::paidSalesCountForCreator()` /
+  `paidSalesCountForPrompt()` / `withCount('paidSales')`), which both rails
+  write identically. Comp grants never counted (no order line) and legacy rows
+  keep their columns untouched. Locked by `SalesCountTruthTest` (a real
+  checkout → Sikka pay moves the dashboard from 0 to 1) plus the three locks
+  that used to seed the dead column.
+- **F2 — profile menu + lightbox.** The avatar menu regains a **My Profile**
+  entry (→ `/creators/{username}`); the picture stays the lightbox door. The
+  lightbox is now a real modal: full-viewport `bg-ink/80 backdrop-blur-sm`
+  scrim at `z-50`, a `max-w-screen-md w-full mx-auto p-4` content box, artwork
+  at `max-h-[80vh] w-auto object-contain`, and a visible Close (`×`) pinned
+  top-right. Locked by `ProfileMenuTest` and `AvatarLightboxTest`.
+- **F3 — the true Facebook/Instagram feed replica.** One card component, two
+  post shapes: IMAGE/VIDEO listings render the **Instagram post** (identity
+  header `p-3`, edge-to-edge artwork `aspect-square md:aspect-[4/5]` with an
+  ink/5 ground, caption `p-4`); TEXT/AGENTIC/SKILL listings render the
+  **Facebook text post** (identity header `p-4`, the copy as the post body
+  with `whitespace-pre-wrap leading-relaxed`, split at 500 characters behind
+  **See more**, no artwork at all). Both end in the **action bar**
+  (`border-t border-ink/5 px-4 py-2`): Like · Comment (honest stubs — labelled
+  spans that say "coming soon", never dead buttons), Share (native Web Share
+  API → clipboard → honest toast) and Save (the existing bookmark heart, H4
+  contract intact). Card shell is now `rounded-xl border border-ink/5 bg-paper
+  shadow-sm`; the tile walls (gallery, category/pack/plan tiles) keep the
+  S4 `rounded-2xl bg-white` shell. Locked by `SocialFeedReplicaTest`.
+  The P1 single-column feed contract (max-w-3xl, gap-6, no carousel) is
+  unchanged and still locked.
+
+Release gates: full Pest suite **655 passed / 18,257 assertions / 3 skipped
+(exit 0)** — evidence `dist/v1.9.2-suite.txt`; `--list-tests tests/Arch`
+enumerates **6 Arch tests** — `dist/v1.9.2-list-tests.txt`; update zip
+`dist/promptsewa-1.9.2-update.zip` — `entries: 517 | hygiene audit: CLEAN`,
+SHA-256 `f23959b8fc3fd6a7d1bfc0e0cf0eecbbe2f39c89eca8f18462a5c0db7a12eddd`
+(no new migrations in this release) — evidence `dist/v1.9.2-zip.txt`.
+Browser gate (DOM assertions + seeded preview DB) in
+`dist/v1.9.2-browser-gate.txt`.
+
+### v1.9.1 — True Newsfeed Layout (P1) (previous release)
 
 The founder's P1 directive, on top of the v1.9.0 release commits. **The two
 FEED surfaces are now a real vertical newsfeed — a single column at every
@@ -870,6 +918,22 @@ Logins (local demo): `admin@promptsewa.test` / `password` (local DB may still us
 2. Open `https://promptsewa.techadda.com.np/update.php`, paste the token from `public_html/.update-token`, run. NOTE: if live update.php still shows the "Cannot use string as array" error on line 362, upload `deploy/public_html/update.php` manually via cPanel once — after that, every future zip keeps it current.
 3. Pipeline merges core/ AND the docroot files, migrates, seeds (idempotent), rebuilds caches, syncs `public_html/build`.
 4. Post-check (v1.4.0): type in the navbar search — dropdown shows prompt/creator hits for "I want a blog"; `/creators/{username}` resolves; profile edit at `/dashboard/profile` saves avatar/banner and the new username; creator profile name never collides with the banner; `/admin/update` loads.
+
+### Post-check (v1.9.2) — run in order after the update.php pipeline finishes
+
+| # | Check | Expected | Locked by |
+|---|---|---|---|
+| 1 | Admin → Overview | `v1.9.2` chip | `config('app.version')` single source |
+| 2 | `php artisan migrate:status` | **no new migrations** — the v1.9.0 batch stays the latest | `DeployParityAcceptanceTest` |
+| 3 | Sell a prompt with Sikka credits, then open `/dashboard/earnings` | the **Sales** stat moves from 0 to 1 (it used to stay 0 forever) | `SalesCountTruthTest::a Sikka credit purchase moves the sales count from 0 to 1 on every surface` |
+| 4 | The same creator's public profile | the "1 sale" stat matches the dashboard, and the achievements tab shows the same number | `SalesCountTruthTest` (profile + `1/10` progress row) |
+| 5 | Any avatar menu (profile hero caret, navbar dropdown) | a **My Profile** entry → `/creators/{username}` | `ProfileMenuTest` |
+| 6 | Click the profile picture | a centered modal on an ink/80 blurred scrim, image capped at 80vh with `object-contain`, a visible × pinned top-right, Escape closes | `AvatarLightboxTest` |
+| 7 | Library `/prompts` (text listing) | a Facebook-style post: avatar + name · time, the copy as the body (`whitespace-pre-wrap`), the Sikka chip, then Like · Comment | Share · Save | `SocialFeedReplicaTest::a text prompt renders as a Facebook-style post…` |
+| 8 | Library `/prompts` (image listing) | an Instagram-style post: edge-to-edge square/4:5 artwork, caption under it, same action bar | `SocialFeedReplicaTest::an image prompt renders as an Instagram-style post…` |
+| 9 | Tap Share | the native share sheet where the browser has it, otherwise "Link copied" — never a silent button | `SocialFeedReplicaTest::Share is a real control…` (built-asset contract) |
+| 10 | Phone (360px) | one post per row, edge-to-edge artwork on image posts, no horizontal overflow; dock still exactly 5 slots | `SocialFeedReplicaTest`, `MobileDockTest` |
+| 11 | `cd core && php artisan test` | the recorded suite passes; `--list-tests tests/Arch` shows the 6 Arch tests | whole suite (`dist/v1.9.2-suite.txt`, `dist/v1.9.2-list-tests.txt`) |
 
 ### Post-check (v1.9.1) — run in order after the update.php pipeline finishes
 
