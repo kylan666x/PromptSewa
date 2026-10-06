@@ -50,8 +50,10 @@ function raidDeadLinkFormViewers(): array
         'dashboard.prompts.store' => $auth,
         'dashboard.prompts.update' => $auth,
         'dashboard.profile.update' => $auth,
-        'dashboard.earnings.request' => $auth,
-        'dashboard.earnings.cancel' => $auth,
+        // S1 (v1.9.0): the earnings tab is Sikka-only — the live form is the
+        // Sikka withdrawal request. The legacy NPR payout routes have no
+        // served form any more (FormRoundTripInventoryTest exempts them).
+        'dashboard.earnings.sikka.request' => $auth,
         'prompts.rate' => $auth,
         'prompts.report.store' => $auth,
         'prompts.versions.restore' => $auth,

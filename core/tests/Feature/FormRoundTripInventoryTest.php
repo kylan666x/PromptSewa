@@ -219,6 +219,8 @@ function raidWriteRouteExemptions(): array
         'checkout.esewa.verify' => 'eSewa gateway success_url POST — the gateway posts here, never a browser form.',
         'payments.esewa.webhook' => 'External gateway webhook POST — no browser surface; settlement mutations are locked by WalletServiceTest.',
         'storage.local.upload' => 'Framework signed-URL upload route for the local private disk (`serve => true`) — framework-owned, never app-advertised (the F5 proofs fix exposed it: same-URI framework routes shadow each other).',
+        'dashboard.earnings.request' => 'Legacy NPR payout request — retired from the UI by S1 (v1.9.0): the served earnings tab is Sikka-only. The route stays for bookmarked/manual POSTs and is exercised by the legacy-rail test below.',
+        'dashboard.earnings.cancel' => 'Legacy NPR payout cancel — retired from the UI by S1 (v1.9.0) with its request half; same direct-POST coverage.',
     ];
 }
 
@@ -235,8 +237,6 @@ function raidFormInventory(): array
         'dashboard.profile.update' => 'SearchPreviewTest (profile update)',
         'dashboard.prompts.store' => 'PromptCreateEditTest',
         'dashboard.prompts.update' => 'PromptCreateEditTest',
-        'dashboard.earnings.request' => 'FormRoundTripInventoryTest (R3)',
-        'dashboard.earnings.cancel' => 'FormRoundTripInventoryTest (R3)',
         'dashboard.earnings.sikka.request' => 'SikkaCashoutTest (S4)',
         'dashboard.earnings.sikka.cancel' => 'SikkaCashoutTest (S4)',
         'prompts.rate' => 'AdminFlowsTest',
@@ -410,7 +410,7 @@ test('frame create + delete and award + revoke round-trip through the served for
     expect(Frame::query()->whereKey($frame->id)->exists())->toBeFalse();
 });
 
-test('payout request + cancel round-trip through the earnings forms', function () {
+test('the legacy NPR payout rail still round-trips by direct POST (no served form — S1 v1.9.0)', function () {
     $creator = User::factory()->create(['role' => User::ROLE_CREATOR]);
     WalletTransaction::query()->create([
         'user_id' => $creator->id,
@@ -422,9 +422,11 @@ test('payout request + cancel round-trip through the earnings forms', function (
     ]);
     Setting::query()->updateOrCreate(['key' => 'payout_min_paisa'], ['value' => '2000']);
 
-    $html = $this->actingAs($creator)->get(route('dashboard.earnings'))->assertOk()->getContent();
-    $form = raidFormExtract($html, route('dashboard.earnings.request'));
-    raidFormSubmit($this, $creator, $form, [
+    // S1 (v1.9.0): the earnings tab serves the Sikka withdrawal form only,
+    // so the retired NPR pair is posted directly — the request/cancel rail
+    // still answers (the write inventory exempts both routes with this
+    // reason). The Sikka pair's round-trip lives in SikkaCashoutTest.
+    $this->actingAs($creator)->post(route('dashboard.earnings.request'), [
         'amount_npr' => 40,
         'method' => Payout::METHOD_ESEWA_WALLET,
         'destination' => '9800000000',
@@ -433,9 +435,7 @@ test('payout request + cancel round-trip through the earnings forms', function (
     $payout = Payout::query()->where('user_id', $creator->id)->sole();
     expect($payout->status)->toBe(Payout::STATUS_REQUESTED);
 
-    $html = $this->actingAs($creator)->get(route('dashboard.earnings'))->assertOk()->getContent();
-    $cancel = raidFormExtract($html, route('dashboard.earnings.cancel', $payout));
-    raidFormSubmit($this, $creator, $cancel)->assertRedirect();
+    $this->actingAs($creator)->post(route('dashboard.earnings.cancel', $payout))->assertRedirect();
 
     expect($payout->refresh()->status)->toBe(Payout::STATUS_CANCELLED);
 });
