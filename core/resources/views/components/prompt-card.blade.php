@@ -1,4 +1,4 @@
-@props(['prompt', 'saved' => null])
+@props(['prompt', 'saved' => null, 'large' => false])
 
 @php
     /** @var \App\Models\Prompt $prompt */
@@ -56,8 +56,11 @@
         @endif
     </div>
 
+    {{-- P1 (v1.9.1): newsfeed surfaces pass `large` so the post's artwork
+         gets the 16:9 feed crop (and the bigger generated-banner type);
+         every other caller keeps the 16:10 card cover unchanged. --}}
     <a href="{{ route('prompts.show', $prompt) }}" class="focus:outline-none" aria-label="View {{ $prompt->title }}">
-        <x-prompt-cover :prompt="$prompt"/>
+        <x-prompt-cover :prompt="$prompt" :large="$large"/>
     </a>
 
     <div class="flex flex-1 flex-col gap-3 p-5 pt-4">

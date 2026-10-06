@@ -89,15 +89,19 @@
                         </x-slot:actions>
                     </x-empty-state>
                 @else
-                    {{-- S4 (v1.9.0): the feed grid — one column of full-width
-                         posts on phones (the Facebook/Instagram read), two or
-                         three across on wider screens. Gap steps down to 3. --}}
-                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {{-- P1 (v1.9.1): the TRUE newsfeed — one full-width post per
+                         row at EVERY breakpoint, centered on a max-w-3xl
+                         column with gap-6 air between posts. The multi-column
+                         grid is retired: no `sm:grid-cols-2`, no
+                         `xl:grid-cols-3`, on any screen. --}}
+                    <div class="mx-auto grid w-full max-w-3xl grid-cols-1 gap-6">
                         @foreach ($prompts as $prompt)
                             {{-- H4: the card resolves its own pre-flip from the per-request
                                  bookmarked-id set (one query per request,
                                  not one per card). --}}
-                            <x-prompt-card :prompt="$prompt"/>
+                            {{-- P1: `large` gives the feed a 16:9 cover — the post's
+                                 artwork is the loudest thing in the column. --}}
+                            <x-prompt-card :prompt="$prompt" large/>
                         @endforeach
                     </div>
 

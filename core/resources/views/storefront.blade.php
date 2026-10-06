@@ -111,16 +111,24 @@
                 />
             </div>
         @else
-            {{-- G3: below md this is a scroll-snap CAROUSEL (one card per
-                 screen-ish); from md up it is the original grid. Pure CSS —
-                 the cards are the same component, so nothing is duplicated
-                 in the DOM. --}}
-            <div class="-mx-4 mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
+            {{-- P1 (v1.9.1): the featured block IS the newsfeed — the G3
+                 carousel/grid dual mode is retired. One full-width post per
+                 row at every breakpoint, vertical scroll only (no snap rail,
+                 no md:/lg: column guards), centered on a max-w-3xl column. --}}
+            <div class="mx-auto mt-8 grid w-full max-w-3xl grid-cols-1 gap-6">
                 @foreach ($featured as $prompt)
-                    <div class="w-[82%] shrink-0 snap-start sm:w-[60%] md:w-auto">
-                        <x-prompt-card :prompt="$prompt"/>
-                    </div>
+                    <x-prompt-card :prompt="$prompt" large/>
                 @endforeach
+            </div>
+
+            {{-- The feed continues in the library — the pagination door. A
+                 feed posts the newest handful here; the library is where the
+                 next page of posts lives. --}}
+            <div class="mt-8 flex justify-center">
+                <a href="{{ route('library.index') }}"
+                   class="rounded-full border border-ink/20 bg-white px-6 py-3 text-sm font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-card">
+                    Load more prompts
+                </a>
             </div>
         @endif
     </section>

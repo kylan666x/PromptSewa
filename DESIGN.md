@@ -44,6 +44,31 @@ only shared tokens and the public surfaces move.
   the active tab keeps the ink fill for contrast. Stats are cards, two-up on
   phones.
 
+### P1 (v1.9.1) — the true newsfeed
+
+Founder directive: the two FEED surfaces render as a real vertical newsfeed,
+not a catalog grid.
+
+- **`/prompts` (library) and the homepage "Fresh from the library" block are a
+  single column at EVERY breakpoint** — `mx-auto grid w-full max-w-3xl
+  grid-cols-1 gap-6`, centered on the paper ground. No `sm:grid-cols-2`, no
+  `xl:grid-cols-3`, on a feed surface at any width.
+- **The homepage carousel/grid dual mode is retired.** That section no longer
+  carries a snap rail, a horizontal scroll or `w-[82%]` slides — it is vertical
+  scroll only, the same container as the library feed.
+- **Feed artwork takes the wide crop.** `x-prompt-card` gained an opt-in
+  `large` prop forwarded to `x-prompt-cover`, which moves the cover from the
+  plain 16:10 card crop to **16:9** (and steps the generated-banner type up).
+  Only the two feed surfaces pass it; every other card keeps 16:10.
+- **The feed closes with a pagination door** ("Load more prompts" →
+  `/prompts`). Nothing is appended in place — an honest link, never a fake
+  infinite scroll.
+- The card's internal reading order (identity → artwork → copy → price chip),
+  the `rounded-2xl` root and every S4 token are unchanged. The multi-column
+  grids that remain elsewhere (image gallery, category tiles, matching
+  creators, packs, membership plans) are deliberate: those are walls of small
+  tiles, not the feed.
+
 ## Tokens (Tailwind v4 `@theme` in `core/resources/css/app.css`)
 
 - `paper` `#faf8f3` — page ground (light world). Deep variant `paper-deep` `#f0eee6`.
@@ -92,10 +117,12 @@ only shared tokens and the public surfaces move.
   radial glow allowed inside them; no glass/blur decoration.
 - **Chips:** mono, small, bordered (`border-ink/10 bg-white` on light,
   `border-white/10 bg-white/5` on dark). Used for categories, tags, stats, roadmap status.
-- **Prompt cards (S4 feed shape):** `rounded-2xl` white paper cards with
-  `border-ink/10`, ink text, the creator row (avatar + handle + verified tick)
-  as the card HEADER, and the saffron Sikka price chip bottom-right. Hover lifts
-  the card (`hover:-translate-y-0.5` + `shadow-card-hover`).
+- **Prompt cards (S4 feed shape, P1 newsfeed sizing):** `rounded-2xl` white
+  paper cards with `border-ink/10`, ink text, the creator row (avatar + handle
+  + verified tick) as the card HEADER, and the saffron Sikka price chip
+  bottom-right. Hover lifts the card (`hover:-translate-y-0.5` +
+  `shadow-card-hover`). On the two feed surfaces the card is **full-width in a
+  centered `max-w-3xl` single column** and passed `large` for the 16:9 cover.
 - **Empty state:** dark dashed block — it doubles as a GoP-style dark card on light pages.
 
 ## Interaction & motion

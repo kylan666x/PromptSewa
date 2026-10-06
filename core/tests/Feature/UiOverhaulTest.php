@@ -111,8 +111,51 @@ test('the library ships feed cards in reading order: identity, artwork, price', 
     // Sikka is the only price on the card — no NPR mirror sneaks back in.
     expect($body)->not->toContain('Rs.');
 
-    // Phone width: the feed is a single column of full-width posts.
-    expect($html)->toContain('grid gap-3 sm:grid-cols-2 xl:grid-cols-3');
+    // P1 (v1.9.1): the feed is a TRUE single column — one full-width post per
+    // row at EVERY breakpoint, on a centered max-w-3xl column with gap-6 air.
+    // No multi-column grid survives on this surface.
+    expect($html)->toContain('mx-auto grid w-full max-w-3xl grid-cols-1 gap-6')
+        ->and($html)->not->toContain('sm:grid-cols-2')
+        ->and($html)->not->toContain('xl:grid-cols-3');
+});
+
+test('v1.9.1: the library and the homepage feed are single-column newsfeeds', function () {
+    cache()->flush();
+    uiOverhaulPaidPrompt();
+
+    $library = $this->get(route('library.index'))->assertOk()->getContent();
+    $home = $this->get(route('home'))->assertOk()->getContent();
+
+    // Both surfaces carry the same feed container — one column, full-width
+    // posts, centered on a max-w-3xl column, gap-6 between posts. (The
+    // homepage adds `mt-8` for section rhythm, so the shared contract is the
+    // container tail both must carry.)
+    expect(substr_count($library, 'mx-auto grid w-full max-w-3xl grid-cols-1 gap-6'))->toBe(1)
+        ->and(substr_count($home, 'grid w-full max-w-3xl grid-cols-1 gap-6'))->toBe(1);
+
+    // The featured feed is NOT a carousel any more. Scoped to the section so
+    // the chips/stat/category rails elsewhere on the page cannot answer for
+    // it: no snap rail, no horizontal scroll, no width-keyed carousel slide
+    // and no md:/lg: grid guards.
+    preg_match('/Fresh from the library(.*?)<\/section>/s', $home, $featured);
+    $feed = $featured[1] ?? '';
+
+    expect($feed)->not->toBe('')
+        ->and($feed)->not->toContain('snap-x')
+        ->and($feed)->not->toContain('snap-mandatory')
+        ->and($feed)->not->toContain('overflow-x-auto')
+        ->and($feed)->not->toContain('w-[82%]')
+        ->and($feed)->not->toContain('md:grid')
+        ->and($feed)->not->toContain('lg:grid-cols-3');
+
+    // Prominent artwork: the feed covers take the wide 16:9 crop (the plain
+    // card keeps its 16:10 cover — `large` is opt-in per surface).
+    expect($library)->toContain('aspect-[16/9]')
+        ->and($feed)->toContain('aspect-[16/9]');
+
+    // Vertical scroll only, closed by a pagination door into the library.
+    expect($feed)->toContain('Load more prompts')
+        ->and($feed)->toContain(route('library.index'));
 });
 
 test('the prompt detail is a two-column shell on desktop and stacks below lg', function () {

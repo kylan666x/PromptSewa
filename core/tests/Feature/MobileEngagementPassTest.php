@@ -13,6 +13,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  * desktop rhythm is unchanged. These tests assert the RENDERED markup —
  * a snap rail that silently loses its md: guard would wrap the desktop
  * layout into one column and nobody would notice without a screenshot.
+ *
+ * P1 (v1.9.1) EXCEPTION: the "Fresh from the library" carousel is gone. The
+ * founder retired the dual mode in favour of a TRUE single-column newsfeed,
+ * so that section is now deliberately one column at EVERY breakpoint — the
+ * md: guard rule below still binds every other engagement pattern.
  */
 uses(RefreshDatabase::class);
 
@@ -44,7 +49,7 @@ test('the trending chips are a keyboard-reachable snap rail that un-rails on des
         ->and($html)->toContain('aria-label="Trending searches" tabindex="0"');
 });
 
-test('Fresh from the library is a carousel below md and a grid from md up', function () {
+test('Fresh from the library is a single-column newsfeed at every breakpoint', function () {
     cache()->flush();
 
     $creator = User::factory()->create();
@@ -52,14 +57,26 @@ test('Fresh from the library is a carousel below md and a grid from md up', func
 
     $html = $this->get(route('home'))->getContent();
 
-    // Same DOM for both layouts — the wrapper only changes behaviour.
-    // (Token-level assertions: asserting one long class substring would
-    // break every time a responsive utility is inserted mid-string.)
-    expect($html)->toContain('flex snap-x snap-mandatory gap-4 overflow-x-auto')
-        ->and($html)->toContain('md:grid md:grid-cols-2')
-        ->and($html)->toContain('md:overflow-visible')
-        ->and($html)->toContain('lg:grid-cols-3')
-        ->and($html)->toContain('w-[82%] shrink-0 snap-start sm:w-[60%] md:w-auto');
+    // P1 (v1.9.1): the carousel/grid dual mode is retired — one full-width
+    // post per row at every breakpoint (no sm:/md:/lg: column guards), on a
+    // centered max-w-3xl column with gap-6 air between posts.
+    expect($html)->toContain('mx-auto mt-8 grid w-full max-w-3xl grid-cols-1 gap-6');
+
+    // Scoped to the section, so the trending/stat/category rails elsewhere
+    // on the page cannot answer for the feed. Vertical scroll only.
+    preg_match('/Fresh from the library(.*?)<\/section>/s', $html, $featured);
+    $feed = $featured[1] ?? '';
+
+    expect($feed)->not->toBe('')
+        ->and($feed)->not->toContain('snap-x')
+        ->and($feed)->not->toContain('overflow-x-auto')
+        ->and($feed)->not->toContain('w-[82%]')
+        ->and($feed)->not->toContain('md:grid')
+        ->and($feed)->not->toContain('lg:grid-cols-3')
+        // Large artwork on the post, and a pagination door into the library.
+        ->and($feed)->toContain('aspect-[16/9]')
+        ->and($feed)->toContain('Load more prompts')
+        ->and($feed)->toContain(route('library.index'));
 });
 
 test('the stats band is three mono chips on mobile and the inkwell strip on desktop', function () {
