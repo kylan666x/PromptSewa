@@ -69,8 +69,14 @@ test('the dashboard achievements tab shows the earned wall and real progress row
         'awarded_at' => now(),
     ]);
 
-    // 3 real sales → sales_10 progress row must read 3/10.
-    Prompt::factory()->for($creator, 'creator')->published()->create(['sales_count' => 3]);
+    // 3 REAL sales (paid order lines — F1 v1.9.2) → sales_10 progress must
+    // read 3/10. Seeding `prompts.sales_count` would prove nothing: nothing
+    // in the app writes that column.
+    $sold = Prompt::factory()->for($creator, 'creator')->published()->create();
+
+    foreach (range(1, 3) as $_) {
+        recordPaidSale($sold, User::factory()->create());
+    }
 
     $html = $this->actingAs($creator)->get(route('dashboard', ['tab' => 'achievements']))->getContent();
 

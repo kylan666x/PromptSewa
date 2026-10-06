@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bookmark;
+use App\Models\OrderItem;
 use App\Models\Prompt;
 use Illuminate\Http\Request;
 
@@ -68,7 +69,10 @@ class DashboardController extends Controller
         if ($tab === 'achievements') {
             $earned = $user->userBadges()->with('badge')->orderByDesc('awarded_at')->get();
 
-            $salesCount = (int) $user->prompts()->published()->sum('sales_count');
+            // F1 (v1.9.2): the REAL sales count — paid order lines naming the
+            // creator's listings (both rails). The old `sum('sales_count')`
+            // read a column nothing ever writes, so this was 0 forever.
+            $salesCount = OrderItem::paidSalesCountForCreator($user);
             $publishedCount = $user->prompts()->where('status', Prompt::STATUS_PUBLISHED)->count();
 
             // Real trigger values per criterion (OrderObserver semantics).
@@ -106,8 +110,14 @@ class DashboardController extends Controller
             'viewsSeries' => $analytics?->viewsSeries(),
             'salesSeries' => $analytics?->salesSeries($user, countOnly: true),
             'ratingSeries' => $analytics?->ratingSeries($user),
+            // F1 (v1.9.2): each row's sales number is the same paid-lines
+            // truth (withCount), never the dead legacy column.
             'topPrompts' => $analytics !== null
-                ? $user->prompts()->published()->orderByDesc('views_count')->limit(5)->get(['id', 'title', 'slug', 'views_count', 'sales_count'])
+                ? $user->prompts()->published()
+                    ->withCount('paidSales')
+                    ->orderByDesc('views_count')
+                    ->limit(5)
+                    ->get(['id', 'title', 'slug', 'views_count'])
                 : null,
             'feedEvents' => $feedEvents,
             'achievements' => $achievements,

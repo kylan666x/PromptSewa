@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\FeedEvent;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Prompt;
 use App\Services\GamificationService;
 use App\Services\MembershipService;
@@ -42,8 +43,12 @@ class OrderObserver
 
             $gamification = app(GamificationService::class);
 
-            // Fresh sales count AFTER this sale.
-            $salesCount = (int) $prompt->fresh()->sales_count;
+            // F1 (v1.9.2): fresh sales count AFTER this sale — read from the
+            // paid order lines. The old read of `$prompt->fresh()->sales_count`
+            // was always 0 (nothing writes that column), so sale milestones
+            // and the first_sale/sales_10/sales_50 awards never fired for a
+            // credit-rail sale.
+            $salesCount = OrderItem::paidSalesCountForPrompt($prompt);
 
             $gamification->grantXp($creator, 'sale');
             $gamification->evaluateCriteria($creator, 'first_sale');

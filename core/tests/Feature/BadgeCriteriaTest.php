@@ -92,7 +92,12 @@ test('a criterion set through the served form auto-awards when the sale event fi
 
 test('pv:award-scan backfills historical eligibility exactly once', function () {
     $creator = User::factory()->create();
-    Prompt::factory()->for($creator, 'creator')->hasVersion()->priced(19900)->published()->create(['sales_count' => 12]);
+    $prompt = Prompt::factory()->for($creator, 'creator')->hasVersion()->priced(19900)->published()->create();
+
+    // F1 (v1.9.2): 12 REAL sales — paid order lines, the only sales truth.
+    foreach (range(1, 12) as $_) {
+        recordPaidSale($prompt, User::factory()->create(), 19_900);
+    }
 
     // Badge created AFTER the sales were recorded — no observer ever fired.
     Badge::query()->create([

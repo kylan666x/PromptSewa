@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Badge;
+use App\Models\OrderItem;
 use App\Models\Prompt;
 use App\Models\User;
 
@@ -62,9 +63,14 @@ class CriterionEvaluator
     {
         return match ($criterion) {
             'first_publish' => min($user->prompts()->where('status', Prompt::STATUS_PUBLISHED)->count(), 1),
-            'first_sale' => min((int) $user->prompts()->published()->sum('sales_count'), 1),
-            'sales_10' => min((int) $user->prompts()->published()->sum('sales_count'), 10),
-            'sales_50' => min((int) $user->prompts()->published()->sum('sales_count'), 50),
+            // F1 (v1.9.2): one sales truth for the whole product. The old
+            // `sum('sales_count')` read a column with no writer, so every
+            // creator was permanently stuck at 0/1, 0/10 and 0/50 — the
+            // first_sale and sales_10 badges could never auto-award, however
+            // many credits they had actually earned.
+            'first_sale' => min(OrderItem::paidSalesCountForCreator($user), 1),
+            'sales_10' => min(OrderItem::paidSalesCountForCreator($user), 10),
+            'sales_50' => min(OrderItem::paidSalesCountForCreator($user), 50),
             'verified' => $user->is_verified ? 1 : 0,
             'top_rated' => null,
             default => null,

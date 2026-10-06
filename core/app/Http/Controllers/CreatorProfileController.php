@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderItem;
 use App\Models\User;
 
 /**
@@ -19,11 +20,14 @@ class CreatorProfileController extends Controller
         // loads too, but the eager load keeps the N+1 away on card grids).
         $creator->loadMissing('activeFrame');
 
+        // F1 (v1.9.2): order by the REAL sales count (paid order lines), not
+        // the legacy `sales_count` column nothing ever increments — the whole
+        // catalog used to sort as if every listing had zero sales.
         $prompts = $creator->prompts()
             ->publicListing()
             ->with(['category', 'latestVersion', 'creator.activeFrame'])
-            ->withCount('versions')
-            ->latest('sales_count')
+            ->withCount(['versions', 'paidSales'])
+            ->orderByDesc('paid_sales_count')
             ->latest()
             ->paginate(12);
 
@@ -37,7 +41,10 @@ class CreatorProfileController extends Controller
         // adopted-count by non-published statuses; recorded here, NOT fixed).
         $stats = [
             'prompts' => $creator->prompts()->publicListing()->count(),
-            'total_sales' => (int) $creator->prompts()->publicListing()->sum('sales_count'),
+            // F1 (v1.9.2): the public profile's sales stat reads the same
+            // paid-lines truth as the creator's own dashboard (they used to
+            // be two different sums of a dead column — both zero).
+            'total_sales' => OrderItem::paidSalesCountForCreator($creator),
             'joined' => $creator->created_at,
         ];
 

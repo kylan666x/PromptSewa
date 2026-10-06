@@ -50,6 +50,18 @@ class Prompt extends Model
     /** @var list<string> */
     final public const TYPES = [self::TYPE_TEXT, self::TYPE_IMAGE, self::TYPE_VIDEO, self::TYPE_AGENTIC, self::TYPE_SKILL];
 
+    /**
+     * F1 (v1.9.2) — this listing's real sales: paid order lines naming it.
+     *
+     * Use `withCount('paidSales')` (alias `paid_sales_count`) for per-listing
+     * numbers. Never read the legacy `sales_count` column: nothing writes it,
+     * so it reads 0 forever (see OrderItem::paidSalesCountForCreator).
+     */
+    public function paidSales(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'prompt_id')->paid();
+    }
+
     protected $fillable = [
         'user_id',
         'category_id',

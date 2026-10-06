@@ -107,7 +107,8 @@
                                 @foreach ($topPrompts as $top)
                                     <tr>
                                         <td class="py-2 font-medium text-ink"><a href="{{ route('prompts.show', $top) }}" class="hover:text-saffron-deep">{{ $top->title }}</a></td>
-                                        <td class="py-2 text-right font-mono text-xs text-ink/60">{{ number_format($top->views_count) }} views · {{ number_format($top->sales_count) }} sales</td>
+                                        {{-- F1 (v1.9.2): the per-listing sales number is the paid-lines count. --}}
+                                        <td class="py-2 text-right font-mono text-xs text-ink/60">{{ number_format($top->views_count) }} views · {{ number_format($top->paid_sales_count) }} sales</td>
                                     </tr>
                                 @endforeach
                             </tbody>

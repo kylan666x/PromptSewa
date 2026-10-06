@@ -41,15 +41,11 @@ class EarningsController extends Controller
     {
         $user = $request->user();
 
-        // Sales excluding comps: comps never create order items, so counting
-        // paid order lines that credit this creator IS comp-free.
-        $salesCount = (int) OrderItem::query()
-            ->whereHas('order', fn ($q) => $q->where('status', 'paid'))
-            ->where(function ($q) use ($user) {
-                $q->whereHas('product.prompt', fn ($p) => $p->where('user_id', $user->id))
-                    ->orWhereHas('prompt', fn ($p) => $p->where('user_id', $user->id));
-            })
-            ->count();
+        // F1 (v1.9.2): one definition of "sale" for the whole product — paid
+        // order lines naming this creator's listings, comp-free by
+        // construction. This tab was already honest; it now shares the
+        // helper the dashboard, the profile and the badge evaluator read.
+        $salesCount = OrderItem::paidSalesCountForCreator($user);
 
         $payouts = Payout::query()
             ->where('user_id', $user->id)

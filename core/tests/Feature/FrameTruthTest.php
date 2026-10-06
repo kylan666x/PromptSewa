@@ -582,7 +582,13 @@ test('granting an unlock lets the user equip the frame', function () {
 
 test('criterion evaluator is the single threshold source', function () {
     $seller = User::factory()->create(['is_verified' => true]);
-    $prompt = Prompt::factory()->for($seller, 'creator')->hasVersion()->priced(19900)->published()->create(['sales_count' => 12]);
+    $prompt = Prompt::factory()->for($seller, 'creator')->hasVersion()->priced(19900)->published()->create();
+
+    // F1 (v1.9.2): 12 REAL sales (paid order lines) — the evaluator no longer
+    // reads the legacy `sales_count` column, which nothing writes.
+    foreach (range(1, 12) as $_) {
+        recordPaidSale($prompt, User::factory()->create(), 19_900);
+    }
 
     expect(CriterionEvaluator::metCriteria($seller))->toContain('first_publish')
         ->and(CriterionEvaluator::metCriteria($seller))->toContain('first_sale')
