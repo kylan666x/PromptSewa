@@ -127,10 +127,12 @@ test('pack landing carries full x-seo and Product/Offer JSON-LD', function () {
         ->and($headHtml)->toContain('rel="canonical"')
         ->and($headHtml)->toContain('property="og:title"')
         // T8's Product/Offer JSON-LD — locked here so it can't regress.
+        // S1b (v1.9.0): the offer prices in SIKKA credits (99,900 paisa =
+        // 999 credits); the NPR mirror never leaks into structured data.
         ->and($html)->toContain('application/ld+json')
         ->and($html)->toContain('"@type":"Product"')
-        ->and($html)->toContain('"price":"999.00"')
-        ->and($html)->toContain('"priceCurrency":"NPR"')
+        ->and($html)->toContain('"price":"999"')
+        ->and($html)->toContain('"priceCurrency":"SIKKA"')
         ->and($html)->toContain('InStock');
 });
 

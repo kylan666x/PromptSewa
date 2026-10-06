@@ -36,8 +36,14 @@
             'category' => $prompt->category?->name,
             'offers' => [
                 '@type' => 'Offer',
-                'price' => number_format($prompt->price_cents / 100, 2, '.', ''),
-                'priceCurrency' => 'NPR',
+                // S1 (v1.9.0): the detail page prices in Sikka credits, and
+                // structured data follows the surface — the NPR mirror is a
+                // derived figure (credits are bought at the desk rate) and
+                // must not be advertised to search engines. SIKKA is a
+                // token code: schema.org wants a currency and no ISO one
+                // exists for credits.
+                'price' => (string) $sikkaPrice,
+                'priceCurrency' => 'SIKKA',
                 'availability' => 'https://schema.org/InStock',
                 'url' => url()->current(),
             ],

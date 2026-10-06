@@ -157,7 +157,8 @@
             <input type="text" name="name" required maxlength="80" placeholder="Name" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
             <input type="text" name="slug" required maxlength="80" pattern="[a-z0-9-]+" placeholder="slug" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
             <input type="number" name="duration_days" required min="1" max="3650" placeholder="Days" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
-            <input type="number" name="price_paisa" required min="0" max="100000000" placeholder="Price (paisa)" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
+            {{-- S1b (v1.9.0): plans are bought with Sikka credits. --}}
+            <input type="number" name="price_sikka" required min="0" max="100000" placeholder="Price (Sikka credits)" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
             <input type="number" name="stipend_sikka" required min="0" max="100000" value="0" placeholder="Stipend" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
             <select name="badge_id" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
                 <option value="">No badge perk</option>
@@ -186,7 +187,7 @@
                         <input type="text" name="name" required maxlength="80" value="{{ $plan->name }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
                         <input type="text" name="slug" required maxlength="80" pattern="[a-z0-9-]+" value="{{ $plan->slug }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
                         <input type="number" name="duration_days" required min="1" max="3650" value="{{ $plan->duration_days }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
-                        <input type="number" name="price_paisa" required min="0" max="100000000" value="{{ $plan->price_paisa }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
+                        <input type="number" name="price_sikka" required min="0" max="100000" value="{{ $plan->price_sikka }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
                         <input type="number" name="stipend_sikka" required min="0" max="100000" value="{{ $plan->stipend_sikka }}" class="rounded-xl border border-ink/10 bg-paper-deep px-3 py-2 text-sm text-ink">
                         <div class="flex flex-wrap items-center gap-2">
                             <select name="badge_id" class="rounded-lg border border-ink/10 bg-paper-deep px-2 py-1.5 text-xs text-ink">
@@ -212,7 +213,7 @@
                         @csrf
                         @method('DELETE')
                         <span class="text-xs text-ink/50">
-                            {{ $plan->duration_days }} days · <x-money :paisa="$plan->price_paisa"/> · stipend <x-sikka :amount="$plan->stipend_sikka"/>
+                            {{ $plan->duration_days }} days · <x-sikka :amount="$plan->priceSikka()"/> · stipend <x-sikka :amount="$plan->stipend_sikka"/>
                             @if ($plan->hasUnlimitedUnlock()) · unlimited unlock @endif
                         </span>
                         <button class="rounded-lg border border-ink/10 px-2.5 py-1 text-xs font-semibold text-ink/70 hover:border-rose-500 hover:text-rose-700">Delete</button>

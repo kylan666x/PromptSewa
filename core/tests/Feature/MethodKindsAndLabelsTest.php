@@ -2,8 +2,10 @@
 
 use App\Models\ManualPaymentMethod;
 use App\Models\Order;
-use App\Models\Prompt;
+use App\Models\SikkaPack;
 use App\Models\User;
+use App\Services\ImageUploadService;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -19,14 +21,19 @@ function kindsAdmin(): User
     return User::factory()->create(['role' => User::ROLE_ADMIN]);
 }
 
+/**
+ * S1b (v1.9.0): the money rails render only on an order carrying a top-up
+ * pack — a product order rides the Sikka credit rail and shows no manual
+ * methods. The checkout rendering locks below need the money order.
+ */
 function kindsBuyerOrder(User $buyer): Order
 {
-    $prompt = Prompt::factory()->published()->create();
-    $order = Order::factory()->for($buyer, 'buyer')->create(['total_paisa' => 50_000]);
+    $pack = SikkaPack::factory()->create();
+    $order = Order::factory()->for($buyer, 'buyer')->create(['total_paisa' => $pack->price_paisa]);
     $order->items()->create([
-        'prompt_id' => $prompt->id,
-        'price_paisa' => 50_000,
-        'currency' => 'NPR',
+        'sikka_pack_id' => $pack->id,
+        'price_paisa' => $pack->price_paisa,
+        'currency' => 'npr',
         'quantity' => 1,
     ]);
 
@@ -92,7 +99,7 @@ test('checkout renders the kind icon and Scan-to-pay QR block per active method'
         'name' => 'Nabil Bank',
         'kind' => 'bank',
         'instructions' => 'Transfer to 123-456-789, keep the slip.',
-        'qr_path' => app(App\Services\ImageUploadService::class)->store($bankQr, 'qr'),
+        'qr_path' => app(ImageUploadService::class)->store($bankQr, 'qr'),
         'active' => true,
     ]);
 
@@ -102,9 +109,9 @@ test('checkout renders the kind icon and Scan-to-pay QR block per active method'
         'instructions' => "Scan the QR.\nSend the amount.\nSubmit the TXN id below.",
         'active' => true,
     ]);
-    $esewa->update(['qr_path' => app(App\Services\ImageUploadService::class)->store($qr, 'qr')]);
+    $esewa->update(['qr_path' => app(ImageUploadService::class)->store($qr, 'qr')]);
 
-    app(App\Services\SettingsService::class)->set('manual_payment_enabled', '1');
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
 
     $html = $this->actingAs($buyer)->get(route('checkout.show', $order))->getContent();
 
@@ -122,8 +129,8 @@ test('legacy fallback renders when zero methods exist', function () {
     $buyer = User::factory()->create();
     $order = kindsBuyerOrder($buyer);
 
-    app(App\Services\SettingsService::class)->set('manual_payment_enabled', '1');
-    app(App\Services\SettingsService::class)->set('manual_payment_instructions', 'Global legacy instructions.');
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
+    app(SettingsService::class)->set('manual_payment_instructions', 'Global legacy instructions.');
 
     $html = $this->actingAs($buyer)->get(route('checkout.show', $order))->getContent();
 

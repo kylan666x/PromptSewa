@@ -4,8 +4,13 @@ use App\Models\LicenseGrant;
 use App\Models\Order;
 use App\Models\Pack;
 use App\Models\Prompt;
+use App\Models\Setting;
+use App\Models\SikkaPack;
+use App\Models\SikkaTransaction;
 use App\Models\User;
+use App\Services\EntitlementService;
 use App\Services\SettingsService;
+use App\Services\SikkaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -90,6 +95,100 @@ test('buying a pack creates a pending order with a pack line', function () {
         ->and($order->items->first()->pack_id)->toBe($pack->id);
 });
 
+test('a pack order pays with Sikka credits and grants the contents', function () {
+    // The daily-visit reward rides every authenticated request — mute it so
+    // the balance arithmetic is exact.
+    app(SettingsService::class)->set('engage_daily_sikka', '0');
+
+    // Enable BOTH money rails: they must not appear on a product checkout
+    // any more (S1b v1.9.0 — /sikka is the single NPR door).
+    app(SettingsService::class)->set('esewa_enabled', '1');
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
+
+    $buyer = User::factory()->create();
+    $pack = Pack::factory()->create(['price_sikka' => 499, 'is_active' => true]);
+    $inPack = Prompt::factory()->published()->count(2)->create();
+    $pack->prompts()->sync($inPack->pluck('id'));
+
+    SikkaTransaction::query()->create([
+        'user_id' => $buyer->id,
+        'type' => SikkaTransaction::TYPE_TOPUP,
+        'amount_sikka' => 700,
+        'cashout_eligible' => true,
+        'idempotency_key' => 'packflow:fund',
+        'meta' => [],
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($buyer)->post(route('checkout.packs.buy', $pack))->assertRedirect();
+
+    $order = Order::query()->where('buyer_id', $buyer->id)->sole();
+
+    // The checkout prices in credits and offers the Sikka rail — with the
+    // money rails suppressed even though both settings are ON.
+    $this->actingAs($buyer)->get(route('checkout.show', $order))
+        ->assertOk()
+        ->assertSee(route('checkout.sikka.pay', $order), false)
+        ->assertSee('Pay with Sikka credits')
+        ->assertDontSee('Pay with eSewa')
+        ->assertDontSee('Bank / wallet transfer')
+        ->assertDontSee('Rs.');
+
+    $this->actingAs($buyer)
+        ->post(route('checkout.sikka.pay', $order))
+        ->assertRedirect(route('purchases.index'));
+
+    expect($order->refresh()->status)->toBe(Order::STATUS_PAID)
+        ->and($order->currency)->toBe(Order::CURRENCY_SIKKA)
+        ->and($order->sikka_amount)->toBe(499)
+        ->and(LicenseGrant::where('user_id', $buyer->id)->count())->toBe(2)
+        ->and(app(SikkaService::class)->spendableAvailable($buyer))->toBe(201);
+});
+
+test('a short balance sends the pack buyer to the top-up page, and only a top-up order shows the money rails', function () {
+    app(SettingsService::class)->set('engage_daily_sikka', '0');
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
+
+    $buyer = User::factory()->create();
+    $pack = Pack::factory()->create(['price_sikka' => 499, 'is_active' => true]);
+    $pack->prompts()->sync(Prompt::factory()->published()->count(1)->create()->pluck('id'));
+
+    $this->actingAs($buyer)->post(route('checkout.packs.buy', $pack))->assertRedirect();
+
+    $order = Order::query()->where('buyer_id', $buyer->id)->sole();
+
+    $this->actingAs($buyer)->get(route('checkout.show', $order))
+        ->assertOk()
+        ->assertSee(route('sikka.topup'))
+        ->assertSee('Top up Sikka credits')
+        ->assertDontSee(route('checkout.sikka.pay', $order), false)
+        ->assertDontSee('Rs.')
+        // The shortfall hint must not send the buyer to rails this order
+        // does not have, and a credit-rail order is never "being
+        // configured" just because the money rails are off.
+        ->assertDontSee('use eSewa or a manual transfer below')
+        ->assertDontSee('Checkout is being configured');
+
+    // Buying SIKKA itself keeps the money rails: a top-up pack order.
+    $sikkaPack = SikkaPack::query()->create([
+        'name' => 'Flow top-up pack',
+        'slug' => 'flow-top-up-pack',
+        'sikka_amount' => 300,
+        'bonus_sikka' => 0,
+        'price_paisa' => 25_000,
+        'active' => true,
+    ]);
+
+    $this->actingAs($buyer)->post(route('checkout.sikka.packs.buy', $sikkaPack))->assertRedirect();
+
+    $topUp = Order::query()->where('buyer_id', $buyer->id)->whereKeyNot($order->id)->sole();
+
+    $this->actingAs($buyer)->get(route('checkout.show', $topUp))
+        ->assertOk()
+        ->assertSee('Bank / wallet transfer')
+        ->assertDontSee(route('checkout.sikka.pay', $topUp), false);
+});
+
 test('approving a manual pack order grants every published prompt inside', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $buyer = User::factory()->create();
@@ -132,7 +231,7 @@ test('pack fulfillment skips prompts the buyer already owns', function () {
         'quantity' => 1,
     ]);
 
-    app(\App\Services\EntitlementService::class)->fulfill($order);
+    app(EntitlementService::class)->fulfill($order);
 
     $owned = LicenseGrant::where('user_id', $buyer->id)->get();
     expect($owned)->toHaveCount(2)
@@ -191,7 +290,7 @@ test('payment secrets are encrypted at rest', function () {
     $settings = app(SettingsService::class);
     $settings->set('esewa_secret_key', 'super-secret-hmac-key');
 
-    $row = \App\Models\Setting::query()->where('key', 'esewa_secret_key')->first();
+    $row = Setting::query()->where('key', 'esewa_secret_key')->first();
 
     expect($row->value)->not->toBe('super-secret-hmac-key')
         ->and(str_contains($row->value, 'super-secret'))->toBeFalse()

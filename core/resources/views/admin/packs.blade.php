@@ -26,7 +26,14 @@
                             <p class="text-xs text-ink0">{{ Str::limit($pack->description, 60) }}</p>
                         </td>
                         <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $pack->published_prompts_count }}</td>
-                        <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">{{ $pack->priceLabel() }}</td>
+                        {{-- S1b (v1.9.0): the pack price of record is Sikka. --}}
+                        <td class="hidden px-5 py-3.5 text-ink/60 sm:table-cell">
+                            @if ($pack->isFree())
+                                Free
+                            @else
+                                <x-sikka :amount="$pack->priceSikka()"/>
+                            @endif
+                        </td>
                         <td class="px-5 py-3.5">
                             <span class="rounded-md px-2 py-0.5 text-xs font-medium {{ $pack->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-paper-deep text-ink/60' }}">
                                 {{ $pack->is_active ? 'active' : 'hidden' }}

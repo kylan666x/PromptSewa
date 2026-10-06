@@ -12,12 +12,17 @@
         $sikkaTotal = $sikkaTotal ?? 0;
         $sikkaSpendable = $sikkaSpendable ?? 0;
         $sikkaUnlimited = $sikkaUnlimited ?? false;
-        // S1 (v1.9.0): prompt orders price in Sikka ONLY — the summary and
-        // the total render credits, never the NPR mirror. Orders carrying
-        // pack / plan / top-up lines stay on their NPR-rail prices (those
-        // products are bought with NPR; their rails are gated separately).
-        $sikkaLinePrice = fn ($item) => (int) ($item->product?->prompt?->price_sikka
-            ?? $item->prompt?->price_sikka ?? 0) * max(1, (int) $item->quantity);
+        // S1b (v1.9.0): EVERY product line prices in Sikka — prompts, packs
+        // and membership plans. The only line that keeps an NPR price is the
+        // top-up pack (buying Sikka itself, priced on /sikka and at the
+        // money rails below).
+        $sikkaLinePrice = fn ($item) => (int) (
+            $item->pack_id !== null
+                ? ($item->pack?->price_sikka ?? 0)
+                : ($item->membership_plan_id !== null
+                    ? ($item->membershipPlan?->price_sikka ?? 0)
+                    : ($item->product?->prompt?->price_sikka ?? $item->prompt?->price_sikka ?? 0))
+        ) * max(1, (int) $item->quantity);
     @endphp
 
     <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -128,7 +133,8 @@
                                 </button>
                             </form>
                         @else
-                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You hold <x-sikka :amount="$sikkaSpendable"/> of the <x-sikka :amount="$sikkaTotal"/> credits this order costs. Top up, or use eSewa or a manual transfer below.</p>
+                            {{-- S1b (v1.9.0): the money rails render ONLY on a top-up order, so the shortfall hint must not point at rails that are not on this page — the top-up door is the one way to fund this order. --}}
+                            <p class="mt-2 text-xs leading-relaxed text-ink/60">You hold <x-sikka :amount="$sikkaSpendable"/> of the <x-sikka :amount="$sikkaTotal"/> credits this order costs. Top up your credits, then pay this order with them.</p>
                             <a href="{{ route('sikka.topup') }}"
                                class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-saffron-deep/40 bg-saffron/15 px-4 py-2 text-xs font-bold text-ink transition hover:bg-saffron/30">
                                 Top up Sikka credits &rarr;
@@ -247,7 +253,11 @@
                     </div>
                 @endif
 
-                @if (! $esewaEnabled && ! $manualEnabled)
+                {{-- S1b (v1.9.0): this empty state is about the MONEY rails. A
+                     credit-rail order that is short on balance shows the
+                     top-up CTA above — telling the buyer checkout is "being
+                     configured" there would read as a broken page. --}}
+                @if (! $sikkaEligible && ! $esewaEnabled && ! $manualEnabled)
                     <div class="rounded-2xl border border-saffron-deep/30 bg-saffron/10 p-6 text-center">
                         <p class="text-sm font-semibold text-ink">Checkout is being configured.</p>
                         <p class="mt-1 text-xs text-ink/60">No payment methods are enabled yet — check back soon.</p>

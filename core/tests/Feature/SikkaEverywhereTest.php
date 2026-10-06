@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Membership;
+use App\Models\MembershipPlan;
 use App\Models\Order;
+use App\Models\Pack;
 use App\Models\Product;
 use App\Models\Prompt;
 use App\Models\SikkaTransaction;
@@ -201,6 +204,69 @@ test('the kill-switch is retired: the economy ships ON and the desk hides the to
     ])->assertRedirect();
 
     expect($settings->get('sikka_enabled'))->toBe('1');
+});
+
+test('packs and memberships price in Sikka only, and a short balance points at the top-up door', function () {
+    sikkaEverywhereQuietEngagement();
+
+    $inPack = sikkaEverywherePrompt(300);
+    $pack = Pack::factory()->create(['price_sikka' => 499]);
+    $pack->prompts()->sync($inPack->pluck('id'));
+    $plan = MembershipPlan::factory()->create(['price_sikka' => 1_200]);
+
+    // Pack grid + landing: credits only — and the FAQ routes money through
+    // the top-up door instead of offering a card form on the pack itself.
+    $index = $this->get(route('packs.index'))->assertOk()->getContent();
+
+    expect($index)->toContain('499')
+        ->and($index)->toContain('Sikka')
+        ->and($index)->not->toContain('Rs.');
+
+    $landing = $this->get(route('packs.show', $pack))->assertOk()->getContent();
+
+    expect($landing)->toContain('499')
+        ->and($landing)->toContain(route('sikka.topup'))
+        ->and($landing)->not->toContain('Rs.');
+
+    // Membership storefront: grouped credits, no NPR parenthetical.
+    $storefront = $this->get(route('memberships.index'))->assertOk()->getContent();
+
+    expect($storefront)->toContain('1,200')
+        ->and($storefront)->toContain('Sikka')
+        ->and($storefront)->not->toContain('Rs.');
+
+    // Short balance: the checkout shows the top-up CTA and no money rail.
+    $buyer = User::factory()->create();
+
+    $this->actingAs($buyer)->post(route('checkout.memberships.buy', $plan))->assertRedirect();
+
+    $order = Order::query()->where('buyer_id', $buyer->id)->sole();
+
+    $short = $this->actingAs($buyer)->get(route('checkout.show', $order))->assertOk()->getContent();
+
+    expect($short)->toContain(route('sikka.topup'))
+        ->and($short)->toContain('Top up Sikka credits')
+        ->and($short)->not->toContain(route('checkout.sikka.pay', $order), false)
+        ->and($short)->not->toContain('Rs.');
+
+    // Funded: the credit rail replaces the CTA and pays the plan, which
+    // activates atomically on the paid transition.
+    sikkaEverywhereCredit($buyer, 1_500);
+
+    $funded = $this->actingAs($buyer)->get(route('checkout.show', $order))->assertOk()->getContent();
+
+    expect($funded)->toContain(route('checkout.sikka.pay', $order))
+        ->and($funded)->not->toContain('Rs.');
+
+    $this->actingAs($buyer)
+        ->post(route('checkout.sikka.pay', $order))
+        ->assertRedirect(route('purchases.index'));
+
+    expect($order->refresh()->status)->toBe(Order::STATUS_PAID)
+        ->and($order->currency)->toBe(Order::CURRENCY_SIKKA)
+        ->and($order->sikka_amount)->toBe(1_200)
+        ->and(Membership::query()->where('user_id', $buyer->id)->where('status', Membership::STATUS_ACTIVE)->count())->toBe(1)
+        ->and(app(SikkaService::class)->spendableAvailable($buyer))->toBe(300);
 });
 
 /**

@@ -78,8 +78,12 @@ test('savings appear only when the contents really cost more', function () {
     $expensive = Prompt::factory()->published()->for($creator, 'creator')->create(['price_cents' => 300_000]);
     $pack->prompts()->attach($expensive->id);
 
+    // S1b (v1.9.0): savings render in Sikka — 3,000 credits of contents
+    // against a 1,500-credit pack leaves 1,500 saved.
     $html = $this->get(route('packs.show', $pack))->getContent();
-    expect($html)->toContain('Save Rs. 1,500 vs buying individually');
+    expect($html)->toContain('vs buying individually')
+        ->and($html)->toContain('>1,500</span>')
+        ->and($html)->not->toContain('Rs.');
 
     // Pack dearer than its contents: NO savings claim is printed.
     $rich = v174Pack(['name' => 'Rich Pack', 'slug' => 'rich-pack', 'price_paisa' => 900_000]);
@@ -87,7 +91,7 @@ test('savings appear only when the contents really cost more', function () {
     $rich->prompts()->attach($free->id);
 
     $html2 = $this->get(route('packs.show', $rich))->getContent();
-    expect($html2)->not->toContain('Save Rs.')
+    expect($html2)->not->toContain('vs buying individually')
         ->and($html2)->not->toContain('line-through');
 });
 
@@ -161,9 +165,25 @@ test('JSON-LD and the x-seo head survive the redesign', function () {
 
     $html = $this->get(route('packs.show', $pack))->getContent();
 
+    // S1b (v1.9.0): the offer prices in SIKKA credits — the NPR mirror is
+    // not a stable figure (credits are bought at the desk's rate), so it
+    // must not leak into structured data either. 450,000 paisa = 4,500.
     expect($html)->toContain('"@type":"Product"')
         ->and($html)->toContain('"@type":"Offer"')
-        ->and($html)->toContain('"price":"4500.00"');
+        ->and($html)->toContain('"price":"4500"')
+        ->and($html)->toContain('"priceCurrency":"SIKKA"')
+        ->and($html)->not->toContain('4500.00');
+
+    // S1b (v1.9.0) regression: a literal `'@context'` key inside a raw echo
+    // was compiled as Blade's @context DIRECTIVE, so the script tag carried
+    // generated PHP source instead of the schema URL. Decode it: the block
+    // must be real JSON with the schema context intact.
+    preg_match('/<script type="application\/ld\+json">(.*?)<\/script>/s', $html, $ld);
+    $decoded = json_decode($ld[1] ?? '', true);
+
+    expect($decoded)->toBeArray()
+        ->and($decoded['@context'] ?? null)->toBe('https://schema.org')
+        ->and($decoded['offers']['price'] ?? null)->toBe('4500');
 
     preg_match('/<head>(.*?)<\/head>/s', $html, $head);
     expect($head[1] ?? '')->toContain('<title>Launch Kit')

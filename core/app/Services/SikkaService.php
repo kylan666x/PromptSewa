@@ -129,16 +129,24 @@ class SikkaService
                 throw new InvalidArgumentException('Sikka spends must come from the order buyer.');
             }
 
-            $items = $order->items()->with(['product.prompt', 'prompt'])->get();
+            $items = $order->items()->with(['product.prompt', 'prompt', 'pack', 'membershipPlan'])->get();
 
+            // S1b (v1.9.0): packs and membership plans ride the Sikka rail
+            // too — every line is a Sikka purchase now. The ONE thing the
+            // rail never sells is SIKKA ITSELF (a top-up pack): that is the
+            // money door, priced in NPR on /sikka.
             foreach ($items as $item) {
-                if ($item->pack_id !== null || $item->membership_plan_id !== null || $item->sikka_pack_id !== null) {
-                    throw new InvalidArgumentException('The Sikka rail supports prompt lines only — packs and memberships ride the NPR rails.');
+                if ($item->sikka_pack_id !== null) {
+                    throw new InvalidArgumentException('Top-up packs are bought with money on /sikka — they are never paid with Sikka.');
                 }
             }
 
-            // (a) Entitlement bypass: never a balance movement.
-            $membership = $this->activeUnlimitedMembership($user);
+            // (a) Entitlement bypass: never a balance movement — and only
+            //     for prompt lines. A pack or a membership is a purchase,
+            //     not an unlock, so members still pay their Sikka price.
+            $promptLinesOnly = $items->every(fn (OrderItem $item) => $item->pack_id === null
+                && $item->membership_plan_id === null);
+            $membership = $promptLinesOnly ? $this->activeUnlimitedMembership($user) : null;
 
             if ($membership !== null) {
                 $this->markPaidOnSikkaRail($order, 0, [
@@ -176,11 +184,13 @@ class SikkaService
                     'cashout_eligible' => true,
                     'order_id' => $order->id,
                     'idempotency_key' => "spend:{$order->id}:{$item->id}",
-                    'meta' => [
+                    'meta' => array_filter([
                         'order_item_id' => $item->id,
                         'prompt_id' => $item->prompt_id,
+                        'pack_id' => $item->pack_id,
+                        'membership_plan_id' => $item->membership_plan_id,
                         'price_sikka' => $price,
-                    ],
+                    ], fn ($value) => $value !== null),
                     'created_at' => now(),
                 ]);
             }
@@ -191,8 +201,16 @@ class SikkaService
 
             app(EntitlementService::class)->fulfill($order);
 
-            // (e) Creator sale credits — one per line.
+            // (e) Creator sale credits — prompt lines only. This mirrors
+            //     the settled NPR rail's existing ruling (OrderObserver: pack
+            //     lines credit nobody): a bundle is platform-priced, so no
+            //     per-creator split is invented here, and a membership is a
+            //     plan sale, not a prompt sale.
             foreach ($items as $item) {
+                if ($item->pack_id !== null || $item->membership_plan_id !== null) {
+                    continue;
+                }
+
                 $price = $this->itemSikkaPrice($item);
 
                 if ($price <= 0) {
@@ -619,11 +637,20 @@ class SikkaService
     /** Total Sikka this order charges (prompt lines; 0 for other rails). */
     public function orderTotalSikka(Order $order): int
     {
-        return (int) $order->items()->with(['product.prompt', 'prompt'])->get()
+        return (int) $order->items()
+            ->with(['product.prompt', 'prompt', 'pack', 'membershipPlan'])
+            ->get()
             ->sum(fn (OrderItem $item) => $this->itemSikkaPrice($item));
     }
 
-    /** Can this order ride the Sikka rail? Prompt lines only. */
+    /**
+     * Can this order ride the Sikka rail?
+     *
+     * S1b (v1.9.0): prompts, packs AND membership plans — every product on
+     * the site is bought with Sikka. The single exclusion is SIKKA ITSELF:
+     * a top-up pack line is bought with money on /sikka, so it never rides
+     * the credit rail.
+     */
     public function supportsSikkaRail(Order $order): bool
     {
         $items = $order->items()->get();
@@ -632,9 +659,7 @@ class SikkaService
             return false;
         }
 
-        return $items->every(fn (OrderItem $item) => $item->pack_id === null
-            && $item->membership_plan_id === null
-            && $item->sikka_pack_id === null);
+        return $items->every(fn (OrderItem $item) => $item->sikka_pack_id === null);
     }
 
     /** Is the user an active unlimited_unlock member? (entitlement, not balance) */
@@ -721,6 +746,17 @@ class SikkaService
 
     private function itemSikkaPrice(OrderItem $item): int
     {
+        // S1b (v1.9.0): prompt lines price from the prompt, pack lines from
+        // the pack, membership lines from the plan — one Sikka total across
+        // every product type.
+        if ($item->pack_id !== null) {
+            return max(0, (int) ($item->pack?->price_sikka ?? 0));
+        }
+
+        if ($item->membership_plan_id !== null) {
+            return max(0, (int) ($item->membershipPlan?->price_sikka ?? 0));
+        }
+
         return (int) ($item->product?->prompt?->price_sikka
             ?? $item->prompt?->price_sikka
             ?? 0);

@@ -9,14 +9,13 @@
          * computed from the database in PackController::show — the count is the
          * real published-prompt count, the star figure is a real AVG over the
          * pack's ratings ("No ratings yet" when the table is empty for these
-         * prompts), and the savings line is integer paisa. There are NO
+         * prompts), and the savings line is integer SIKKA credits (S1b
+         * v1.9.0 — credits are the price of record). There are NO
          * fabricated testimonials, seat counts or urgency banners here.
          *
          * @var \App\Models\Pack $pack
          * @var int $ratingCount
          * @var float|null $ratingAvg
-         * @var int $individualSumPaisa
-         * @var int $savingsPaisa
          * @var \Illuminate\Support\Collection $relatedPacks
          */
         $promptCount = $pack->publishedPrompts->count();
@@ -71,21 +70,37 @@
                     <p class="max-w-2xl text-base leading-relaxed text-ink/70">{{ $pack->description }}</p>
                 @endif
 
-                {{-- ── T8 (v1.5.0): Product/Offer JSON-LD — retained. ────────── --}}
-                <script type="application/ld+json">{!! json_encode([
-                    '@context' => 'https://schema.org',
-                    '@type' => 'Product',
-                    'name' => $pack->name,
-                    'description' => $pack->tagline ?? $pack->description ?? $pack->name,
-                    'brand' => ['@type' => 'Brand', 'name' => ($siteName ?? 'PromptSewa')],
-                    'offers' => [
-                        '@type' => 'Offer',
-                        'price' => number_format($pack->price_paisa / 100, 2, '.', ''),
-                        'priceCurrency' => $pack->currency,
-                        'availability' => 'https://schema.org/InStock',
-                        'url' => url()->current(),
-                    ],
-                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+                {{-- ── T8 (v1.5.0): Product/Offer JSON-LD — retained. ──────────
+                     S1b (v1.9.0) bug fix: the array is built in a stored PHP
+                     block because Blade compiles a literal `'@context'` key in
+                     a raw echo as the context DIRECTIVE — the script tag was
+                     carrying generated PHP source instead of the schema URL,
+                     so the JSON-LD was invalid. Stored blocks are not
+                     directive-compiled, so the key survives. --}}
+                @php
+                    $packJsonLd = [
+                        '@context' => 'https://schema.org',
+                        '@type' => 'Product',
+                        'name' => $pack->name,
+                        'description' => $pack->tagline ?? $pack->description ?? $pack->name,
+                        'brand' => ['@type' => 'Brand', 'name' => ($siteName ?? 'PromptSewa')],
+                        'offers' => [
+                            '@type' => 'Offer',
+                            // The price of record is Sikka — the NPR mirror is
+                            // not a stable figure (credits are bought at the
+                            // desk's rate), so no NPR leaks into structured
+                            // data either. "SIKKA" is a token code,
+                            // documented here because schema.org expects a
+                            // currency code and there is no ISO one for
+                            // credits.
+                            'price' => (string) $pack->priceSikka(),
+                            'priceCurrency' => 'SIKKA',
+                            'availability' => 'https://schema.org/InStock',
+                            'url' => url()->current(),
+                        ],
+                    ];
+                @endphp
+                <script type="application/ld+json">{!! json_encode($packJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
                 {{-- ── Contents: dark card grid ────────────────────────────── --}}
                 <section class="mt-10" aria-label="Prompts in this pack">
@@ -115,8 +130,12 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <p class="mt-3 font-mono text-xs {{ $prompt->price_cents === 0 ? 'text-emerald-300' : 'text-paper/70' }}">
-                                        {{ $prompt->priceLabel() }}
+                                    <p class="mt-3 text-xs {{ $prompt->price_sikka === 0 ? 'text-emerald-300' : 'text-paper/70' }}">
+                                        @if ($prompt->price_sikka === 0)
+                                            Free
+                                        @else
+                                            <x-sikka :amount="$prompt->price_sikka"/>
+                                        @endif
                                     </p>
                                 </li>
                             @endforeach
@@ -150,7 +169,11 @@
                         </div>
                         <div class="px-5 py-4">
                             <dt class="font-semibold text-ink">How can I pay?</dt>
-                            <dd class="mt-1 text-sm leading-relaxed text-ink/70">eSewa checkout, or a manual method (bank transfer or eSewa send) where you upload your payment proof and an admin approves the order. Approval credits your library.</dd>
+                            <dd class="mt-1 text-sm leading-relaxed text-ink/70">
+                                Top up Sikka credits on the <a href="{{ route('sikka.topup') }}" class="font-semibold text-ink underline decoration-saffron decoration-2 underline-offset-4 hover:text-saffron-deep">top-up page</a>
+                                — eSewa, or a manual transfer where you upload your payment proof and an admin approves it. Then pay for this pack with your credits at checkout,
+                                where the balance leaves your account the moment the order is paid.
+                            </dd>
                         </div>
                         <div class="px-5 py-4">
                             <dt class="font-semibold text-ink">Can I get a refund?</dt>
@@ -159,10 +182,10 @@
                         <div class="px-5 py-4">
                             <dt class="font-semibold text-ink">Is the pack price really lower than buying separately?</dt>
                             <dd class="mt-1 text-sm leading-relaxed text-ink/70">
-                                @if ($savingsPaisa > 0)
-                                    Yes — the contents add up to Rs. {{ number_format(intdiv($individualSumPaisa, 100)) }} bought one by one, which is {{ number_format(intdiv($savingsPaisa, 100)) }} more than this pack.
+                                @if ($savingsSikka > 0)
+                                    Yes — the contents add up to <x-sikka :amount="$individualSumSikka"/> bought one by one, which is <x-sikka :amount="$savingsSikka"/> more than this pack.
                                 @else
-                                    The pack price is {{ $pack->priceLabel() }}; the buy card shows the separately-priced total so you can compare honestly.
+                                    The pack price is <x-sikka :amount="$pack->priceSikka()"/>; the buy card shows the separately-priced total so you can compare honestly.
                                 @endif
                             </dd>
                         </div>
@@ -179,8 +202,14 @@
                                     <a href="{{ route('packs.show', $other) }}" class="block h-full rounded-2xl border border-ink/10 bg-white p-4 transition hover:border-saffron-deep">
                                         <p class="truncate font-medium text-ink">{{ $other->name }}</p>
                                         <p class="mt-1 line-clamp-2 text-xs text-ink/60">{{ $other->tagline ?? 'Prompt pack' }}</p>
-                                        <p class="mt-3 font-mono text-xs {{ $other->price_paisa === 0 ? 'text-emerald-700' : 'text-ink/70' }}">
-                                            {{ $other->priceLabel() }} · {{ $other->published_prompts_count }} {{ Str::plural('prompt', $other->published_prompts_count) }}
+                                        <p class="mt-3 flex items-center gap-1.5 text-xs {{ $other->isFree() ? 'text-emerald-700' : 'text-ink/70' }}">
+                                            @if ($other->isFree())
+                                                <span class="font-mono">Free</span>
+                                            @else
+                                                <x-sikka :amount="$other->priceSikka()"/>
+                                            @endif
+                                            <span class="text-ink/40">·</span>
+                                            <span>{{ $other->published_prompts_count }} {{ Str::plural('prompt', $other->published_prompts_count) }}</span>
                                         </p>
                                     </a>
                                 </li>
@@ -196,19 +225,23 @@
                     <p class="font-mono text-xs font-semibold uppercase tracking-widest text-paper/50">One-time price</p>
 
                     <p class="mt-2 flex flex-wrap items-baseline gap-2">
-                        <span class="font-mono text-3xl font-bold tracking-tight {{ $pack->price_paisa === 0 ? 'text-emerald-300' : 'text-saffron' }}">{{ $pack->priceLabel() }}</span>
-                        @if ($savingsPaisa > 0)
-                            <span class="text-sm text-paper/40 line-through">Rs. {{ number_format(intdiv($individualSumPaisa, 100)) }}</span>
+                        @if ($pack->isFree())
+                            <span class="font-mono text-3xl font-bold tracking-tight text-emerald-300">Free</span>
+                        @else
+                            <span class="text-3xl font-bold tracking-tight text-saffron"><x-sikka :amount="$pack->priceSikka()" :word="true" :size="24"/></span>
+                        @endif
+                        @if ($savingsSikka > 0)
+                            <span class="text-sm text-paper/40 line-through"><x-sikka :amount="$individualSumSikka"/></span>
                         @endif
                     </p>
 
-                    @if ($savingsPaisa > 0)
-                        <p class="mt-1 font-mono text-xs font-medium text-emerald-300">
-                            Save Rs. {{ number_format(intdiv($savingsPaisa, 100)) }} vs buying individually
+                    @if ($savingsSikka > 0)
+                        <p class="mt-1 text-xs font-medium text-emerald-300">
+                            Save <x-sikka :amount="$savingsSikka"/> vs buying individually
                         </p>
-                    @elseif ($individualSumPaisa > 0)
-                        <p class="mt-1 font-mono text-xs text-paper/50">
-                            Contents total Rs. {{ number_format(intdiv($individualSumPaisa, 100)) }} separately
+                    @elseif ($individualSumSikka > 0)
+                        <p class="mt-1 text-xs text-paper/50">
+                            Contents total <x-sikka :amount="$individualSumSikka"/> separately
                         </p>
                     @endif
 
@@ -221,7 +254,11 @@
                             <form method="POST" action="{{ route('checkout.packs.buy', $pack) }}">
                                 @csrf
                                 <button class="w-full rounded-full bg-saffron px-4 py-3 text-sm font-bold text-ink transition hover:bg-saffron-deep">
-                                    {{ $pack->price_paisa === 0 ? 'Get this pack' : 'Buy pack — '.$pack->priceLabel() }}
+                                    @if ($pack->isFree())
+                                        Get this pack
+                                    @else
+                                        Buy pack — <x-sikka :amount="$pack->priceSikka()"/> credits
+                                    @endif
                                 </button>
                             </form>
                         @else

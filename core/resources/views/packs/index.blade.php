@@ -20,14 +20,19 @@
                        class="group flex flex-col rounded-2xl border border-ink/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-saffron-deep hover:shadow-card-hover">
                         <div class="flex items-center justify-between">
                             <span class="rounded-md bg-ink px-2.5 py-1 font-mono text-xs font-bold text-saffron">PACK</span>
-                            <span class="font-mono text-xs text-ink/50">{{ $pack->published_prompts_count }} prompts</span>
+                            <span class="font-mono text-xs text-ink/50">{{ $pack->published_prompts_count }} {{ \Illuminate\Support\Str::plural('prompt', $pack->published_prompts_count) }}</span>
                         </div>
                         <h2 class="mt-4 text-xl font-bold tracking-tight text-ink group-hover:text-saffron-deep">{{ $pack->name }}</h2>
                         @if ($pack->description)
                             <p class="mt-2 line-clamp-3 text-sm leading-relaxed text-ink/60">{{ $pack->description }}</p>
                         @endif
                         <div class="mt-auto flex items-center justify-between pt-6">
-                            <span class="font-mono text-2xl font-bold tracking-tight {{ $pack->price_paisa === 0 ? 'text-emerald-700' : 'text-ink' }}">{{ $pack->priceLabel() }}</span>
+                            {{-- S1b (v1.9.0): packs price in Sikka — never NPR. --}}
+                            @if ($pack->isFree())
+                                <span class="font-mono text-2xl font-bold tracking-tight text-emerald-700">Free</span>
+                            @else
+                                <span class="text-2xl font-bold tracking-tight text-ink"><x-sikka :amount="$pack->priceSikka()" :word="true" :size="22"/></span>
+                            @endif
                             <span class="rounded-full bg-saffron px-4 py-2 text-sm font-bold text-ink transition group-hover:bg-saffron-deep">View pack &rarr;</span>
                         </div>
                     </a>

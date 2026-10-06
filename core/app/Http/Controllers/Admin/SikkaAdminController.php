@@ -276,7 +276,9 @@ class SikkaAdminController extends Controller
             'slug' => ['required', 'string', 'min:2', 'max:80', 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('membership_plans', 'slug')->ignore($existing?->id)],
             'duration_days' => ['required', 'integer', 'min:1', 'max:3650'],
-            'price_paisa' => ['required', 'integer', 'min:0', 'max:100000000'],
+            // S1b (v1.9.0): membership plans price in Sikka credits; the
+            // NPR mirror (price_paisa) derives on save.
+            'price_sikka' => ['required', 'integer', 'min:0', 'max:100000'],
             'stipend_sikka' => ['required', 'integer', 'min:0', 'max:100000'],
             'badge_id' => ['nullable', 'integer', 'exists:badges,id'],
             'frame_id' => ['nullable', 'integer', 'exists:frames,id'],
@@ -292,7 +294,7 @@ class SikkaAdminController extends Controller
             'name' => $validated['name'],
             'slug' => $validated['slug'],
             'duration_days' => $validated['duration_days'],
-            'price_paisa' => $validated['price_paisa'],
+            'price_sikka' => $validated['price_sikka'],
             'stipend_sikka' => $validated['stipend_sikka'],
             'perks' => [
                 MembershipPlan::PERK_UNLIMITED_UNLOCK => $request->boolean('unlimited_unlock'),

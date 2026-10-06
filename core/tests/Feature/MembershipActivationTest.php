@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\UserBadge;
 use App\Models\UserFrameUnlock;
 use App\Services\CheckoutService;
+use App\Services\SettingsService;
+use App\Services\SikkaService;
 use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -133,6 +135,65 @@ test('approval activates exactly once: membership row, first stipend and the per
         ->and(UserFrameUnlock::query()->count())->toBe(1)
         // stipend + badge + frame + verified + the order-approved bell row.
         ->and(Notification::query()->where('user_id', $buyer->id)->count())->toBe(5);
+});
+
+test('a membership is bought with Sikka credits and activates atomically', function () {
+    [$plan] = membershipPlanWorld();
+
+    // Keep the balance arithmetic exact: the daily-visit engagement reward
+    // is a separate concern (EngagementRewardTest).
+    app(SettingsService::class)->set('engage_daily_sikka', '0');
+
+    $buyer = User::factory()->create();
+
+    SikkaTransaction::query()->create([
+        'user_id' => $buyer->id,
+        'type' => SikkaTransaction::TYPE_TOPUP,
+        'amount_sikka' => 1200,
+        'cashout_eligible' => true,
+        'idempotency_key' => 'membership:sikka:fund',
+        'meta' => ['reason' => 'test top-up'],
+        'created_at' => now(),
+    ]);
+
+    // S1b (v1.9.0): the storefront prices in Sikka — never NPR.
+    $this->get(route('memberships.index'))
+        ->assertOk()
+        ->assertSee('Patron plan')
+        ->assertSee('999')            // the plan price of record, credits
+        ->assertDontSee('Rs.');
+
+    $this->actingAs($buyer)->post(route('checkout.memberships.buy', $plan))->assertRedirect();
+
+    $order = Order::query()->where('buyer_id', $buyer->id)->sole();
+
+    // The credit rail is the only door: paying deducts 999 and the paid
+    // transition activates the membership in the same breath.
+    $this->actingAs($buyer)
+        ->post(route('checkout.sikka.pay', $order))
+        ->assertRedirect(route('purchases.index'));
+
+    expect($order->refresh()->status)->toBe(Order::STATUS_PAID)
+        ->and($order->currency)->toBe(Order::CURRENCY_SIKKA)
+        ->and($order->sikka_amount)->toBe(999);
+
+    expect(SikkaTransaction::query()
+        ->where('type', SikkaTransaction::TYPE_SPEND)
+        ->where('order_id', $order->id)
+        ->sole()->amount_sikka)->toBe(-999);
+
+    expect(Membership::query()->where('user_id', $buyer->id)->where('status', Membership::STATUS_ACTIVE)->count())->toBe(1);
+
+    // 1200 funded − 999 spent + the 15-credit first stipend.
+    expect(app(SikkaService::class)->spendableAvailable($buyer))->toBe(216)
+        ->and(SikkaTransaction::query()->where('type', SikkaTransaction::TYPE_MEMBERSHIP_STIPEND)->count())->toBe(1);
+
+    // A replay pays nothing twice — the controller refuses a paid order
+    // (400) and the ledger would refuse to move even if it were reached.
+    $this->actingAs($buyer)->post(route('checkout.sikka.pay', $order))->assertStatus(400);
+
+    expect(SikkaTransaction::query()->where('type', SikkaTransaction::TYPE_SPEND)->count())->toBe(1)
+        ->and(Membership::query()->count())->toBe(1);
 });
 
 test('eSewa settlement rides the same one activation path', function () {

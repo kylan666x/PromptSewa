@@ -81,7 +81,9 @@ class PackAdminController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'tagline' => ['nullable', 'string', 'max:200'],
             'hero_copy' => ['nullable', 'string', 'max:4000'],
-            'price_npr' => ['required', 'integer', 'min:0', 'max:100000'],
+            // S1b (v1.9.0): Sikka is the price of record — the paisa mirror
+            // derives on save through the Pack model's saving hook.
+            'price_sikka' => ['required', 'integer', 'min:0', 'max:100000'],
             'is_active' => ['nullable', 'boolean'],
             'position' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'prompt_ids' => ['nullable', 'array'],
@@ -98,7 +100,7 @@ class PackAdminController extends Controller
             'description' => trim((string) ($validated['description'] ?? '')) ?: null,
             'tagline' => trim((string) ($validated['tagline'] ?? '')) ?: null,
             'hero_copy' => trim((string) ($validated['hero_copy'] ?? '')) ?: null,
-            'price_paisa' => max(0, (int) $validated['price_npr']) * 100,
+            'price_sikka' => max(0, (int) $validated['price_sikka']),
             'currency' => 'NPR',
             'is_active' => (bool) ($validated['is_active'] ?? false),
             'position' => (int) ($validated['position'] ?? 0),

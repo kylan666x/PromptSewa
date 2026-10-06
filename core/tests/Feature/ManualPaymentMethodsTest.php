@@ -4,7 +4,9 @@ use App\Models\LicenseGrant;
 use App\Models\ManualPaymentMethod;
 use App\Models\Order;
 use App\Models\Prompt;
+use App\Models\SikkaPack;
 use App\Models\User;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -40,6 +42,26 @@ function buyerOrder(User $buyer): Order
     return $order;
 }
 
+/**
+ * S1b (v1.9.0): the money rails (eSewa / manual transfer) render ONLY on an
+ * order carrying a top-up pack — every product order (prompt, pack, plan)
+ * rides the Sikka credit rail. The rendering locks below therefore use the
+ * one order shape that still asks for money.
+ */
+function topUpOrder(User $buyer): Order
+{
+    $pack = SikkaPack::factory()->create();
+    $order = Order::factory()->for($buyer, 'buyer')->create(['total_paisa' => $pack->price_paisa]);
+    $order->items()->create([
+        'sikka_pack_id' => $pack->id,
+        'price_paisa' => $pack->price_paisa,
+        'currency' => 'npr',
+        'quantity' => 1,
+    ]);
+
+    return $order;
+}
+
 function proofFile(): UploadedFile
 {
     // A real 1x1 PNG so validation + GD both accept it.
@@ -62,18 +84,19 @@ test('admin updates manual payment instructions and they persist and render at c
         ])
         ->assertRedirect();
 
-    $settings = app(App\Services\SettingsService::class);
+    $settings = app(SettingsService::class);
     expect($settings->isOn('manual_payment_enabled'))->toBeTrue('manual toggle did not persist under the runtime key')
         ->and($settings->get('manual_payment_instructions'))->toContain('98XXXXXXXX');
 
     // And it re-renders in the admin form and on a checkout with no methods
-    // configured (legacy fallback panel).
+    // configured (legacy fallback panel) — the top-up checkout, the one
+    // surface that still shows the money rails.
     $this->actingAs($admin)->get(route('admin.payments.edit'))
         ->assertOk()
         ->assertSee('98XXXXXXXX', false);
 
     $buyer = User::factory()->create();
-    $order = buyerOrder($buyer);
+    $order = topUpOrder($buyer);
     $this->actingAs($buyer)->get(route('checkout.show', $order))
         ->assertOk()
         ->assertSee('Send to eSewa 98XXXXXXXX', false);
@@ -93,7 +116,7 @@ test('rendered admin payments form submission persists the manual toggle', funct
         'manual_payment_instructions' => 'Bank: 123-456-789',
     ])->assertRedirect();
 
-    expect(app(App\Services\SettingsService::class)->isOn('manual_payment_enabled'))->toBeTrue();
+    expect(app(SettingsService::class)->isOn('manual_payment_enabled'))->toBeTrue();
 });
 
 // ---------------------------------------------------------------------------
@@ -186,13 +209,13 @@ test('QR uploads stay PNG on disk even from a JPEG source', function () {
 test('checkout renders only active methods in position order and snapshots the name', function () {
     Storage::fake('public');
     $buyer = User::factory()->create();
-    $order = buyerOrder($buyer);
+    $order = topUpOrder($buyer);
 
     ManualPaymentMethod::create(['name' => 'Second', 'position' => 2, 'active' => true]);
     ManualPaymentMethod::create(['name' => 'First', 'position' => 1, 'active' => true]);
     ManualPaymentMethod::create(['name' => 'Hidden', 'position' => 0, 'active' => false]);
 
-    app(App\Services\SettingsService::class)->set('manual_payment_enabled', '1');
+    app(SettingsService::class)->set('manual_payment_enabled', '1');
 
     $html = $this->actingAs($buyer)->get(route('checkout.show', $order))->getContent();
 

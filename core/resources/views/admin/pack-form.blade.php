@@ -3,7 +3,8 @@
         /** @var \App\Models\Pack $pack */
         /** @var \Illuminate\Support\Collection<int, \App\Models\Prompt> $prompts */
         /** @var \Illuminate\Support\Collection $selectedIds */
-        $priceNpr = old('price_npr', $pack->exists ? $pack->priceNpr() : 0);
+        // S1b (v1.9.0): packs price in Sikka credits; the NPR mirror derives.
+        $priceSikka = old('price_sikka', $pack->exists ? $pack->priceSikka() : 0);
         $selected = old('prompt_ids', $selectedIds->all());
     @endphp
 
@@ -48,9 +49,10 @@
 
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
-                    <label class="block text-xs font-medium text-ink/60">Price (NPR) <span class="text-saffron-deep">*</span></label>
-                    <input type="number" name="price_npr" required min="0" value="{{ $priceNpr }}"
+                    <label class="block text-xs font-medium text-ink/60">Price (Sikka credits) <span class="text-saffron-deep">*</span></label>
+                    <input type="number" name="price_sikka" required min="0" max="100000" value="{{ $priceSikka }}"
                            class="mt-1.5 block w-full rounded-xl border border-ink/10 bg-paper-deep px-3.5 py-2.5 text-sm text-ink outline-none focus:border-saffron-deep">
+                    @error('price_sikka') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-ink/60">Sort position</label>
@@ -80,7 +82,7 @@
                                    class="size-4 rounded border-ink/20 bg-paper-deep text-saffron-deep focus:ring-saffron/40">
                             <span class="truncate text-sm text-ink/90">{{ $prompt->title }}</span>
                         </span>
-                        <span class="shrink-0 text-xs text-ink0">{{ $prompt->priceLabel() }}</span>
+                        <span class="shrink-0 text-xs text-ink0"><x-sikka :amount="$prompt->price_sikka"/></span>
                     </label>
                 @empty
                     <p class="px-2 py-4 text-sm text-ink0">No published prompts yet — publish some first.</p>

@@ -2,7 +2,9 @@
 
 use App\Models\LicenseGrant;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Pack;
+use App\Models\Product;
 use App\Models\Prompt;
 use App\Models\PromptReport;
 use App\Models\Rating;
@@ -55,7 +57,7 @@ test('rejecting a manual payment fails the order and grants nothing', function (
     $admin = flowsAdmin();
     $buyer = User::factory()->create();
     $prompt = Prompt::factory()->published()->create(['price_cents' => 24_900]);
-    $product = \App\Models\Product::factory()->for($prompt, 'prompt')->create();
+    $product = Product::factory()->for($prompt, 'prompt')->create();
 
     $order = Order::factory()->for($buyer, 'buyer')->create();
     $order->items()->create([
@@ -96,7 +98,9 @@ test('admin can create, update and delete a pack', function () {
     $this->actingAs($admin)
         ->post(route('admin.packs.store'), [
             'name' => 'Starter Bundle',
-            'price_npr' => 499,
+            // S1b (v1.9.0): the admin writes the Sikka price of record; the
+            // NPR mirror derives on save.
+            'price_sikka' => 499,
             'is_active' => '1',
             'prompt_ids' => [$a->id, $b->id],
         ])
@@ -109,7 +113,7 @@ test('admin can create, update and delete a pack', function () {
     $this->actingAs($admin)
         ->put(route('admin.packs.update', $pack), [
             'name' => 'Starter Bundle XL',
-            'price_npr' => 799,
+            'price_sikka' => 799,
             'prompt_ids' => [$a->id],
         ])
         ->assertRedirect(route('admin.packs.index'));
@@ -130,8 +134,8 @@ test('pack form requires a name and non-negative price', function () {
     $admin = flowsAdmin();
 
     $this->actingAs($admin)
-        ->post(route('admin.packs.store'), ['name' => '', 'price_npr' => -5])
-        ->assertSessionHasErrors(['name', 'price_npr']);
+        ->post(route('admin.packs.store'), ['name' => '', 'price_sikka' => -5])
+        ->assertSessionHasErrors(['name', 'price_sikka']);
 });
 
 // ---------------------------------------------------------------------------
@@ -220,7 +224,7 @@ test('license holders can rate paid prompts, guests get 401', function () {
     $buyer = User::factory()->create();
     $paid = Prompt::factory()->published()->create(['price_cents' => 24_900]);
 
-    \App\Models\OrderItem::factory()->create(['prompt_id' => $paid->id]);
+    OrderItem::factory()->create(['prompt_id' => $paid->id]);
     LicenseGrant::factory()->for($buyer, 'user')->create(['prompt_id' => $paid->id]);
 
     $this->actingAs($buyer)
@@ -240,7 +244,7 @@ test('license holders can rate paid prompts, guests get 401', function () {
 
 test('staff can resolve and dismiss reports with attribution', function () {
     $admin = flowsAdmin();
-    $report = \App\Models\PromptReport::factory()->create();
+    $report = PromptReport::factory()->create();
 
     $this->actingAs($admin)
         ->patch(route('admin.reports.status', $report), ['status' => PromptReport::STATUS_RESOLVED])
@@ -258,8 +262,8 @@ test('staff can resolve and dismiss reports with attribution', function () {
 });
 
 test('reports queue opens with the open filter by default', function () {
-    \App\Models\PromptReport::factory()->count(2)->create();
-    \App\Models\PromptReport::factory()->resolved()->create();
+    PromptReport::factory()->count(2)->create();
+    PromptReport::factory()->resolved()->create();
 
     $this->actingAs(flowsAdmin())
         ->get(route('admin.reports.index'))

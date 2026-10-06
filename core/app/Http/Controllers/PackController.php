@@ -54,11 +54,12 @@ class PackController extends Controller
             ? round((float) $ratingRow->aggregate_avg, 1)
             : null;
 
-        // Real money maths in paisa: what the contents cost separately minus
-        // the pack price. Negative (pack dearer than contents) is NOT shown
-        // as a saving — the page would be lying.
-        $individualSumPaisa = (int) $pack->publishedPrompts->sum('price_cents');
-        $savingsPaisa = max(0, $individualSumPaisa - (int) $pack->price_paisa);
+        // S1b (v1.9.0): the maths the buyer compares is Sikka — what the
+        // contents cost separately (in credits) minus the pack price. There
+        // is no NPR mirror any more: credits are the price of record, and
+        // the paisa columns are an admin/legacy accounting detail.
+        $individualSumSikka = (int) $pack->publishedPrompts->sum('price_sikka');
+        $savingsSikka = max(0, $individualSumSikka - $pack->priceSikka());
 
         $related = Pack::query()
             ->active()
@@ -75,8 +76,8 @@ class PackController extends Controller
             'pack' => $pack,
             'ratingCount' => $ratingCount,
             'ratingAvg' => $ratingAvg,
-            'individualSumPaisa' => $individualSumPaisa,
-            'savingsPaisa' => $savingsPaisa,
+            'individualSumSikka' => $individualSumSikka,
+            'savingsSikka' => $savingsSikka,
             'relatedPacks' => $related,
         ]);
     }

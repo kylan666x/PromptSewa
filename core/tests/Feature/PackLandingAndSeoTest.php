@@ -38,7 +38,8 @@ test('admin pack form persists tagline and hero copy', function () {
             'name' => 'Launch Season Pack',
             'tagline' => 'Ship it faster',
             'hero_copy' => 'The full narrative for the landing page.',
-            'price_npr' => 999,
+            // S1b (v1.9.0): Sikka credits are the price of record.
+            'price_sikka' => 999,
             'is_active' => '1',
             'position' => 0,
         ])

@@ -118,6 +118,10 @@ test('v1.4.3-schema database migrates the legacy trio plus every v1.8.0 migratio
             // the base schema is "prod before v1.9.0", so its migration is
             // pending here exactly like the v1.8.0 batch above.
             '2026_10_05_120000_retire_sikka_kill_switch',
+            // v1.9.0 (S1b): packs and membership plans get their Sikka price
+            // of record in the same batch.
+            '2026_10_05_130000_add_price_sikka_to_packs_table',
+            '2026_10_05_131000_add_price_sikka_to_membership_plans_table',
         ];
 
         DB::statement('CREATE TABLE migrations (id int unsigned not null auto_increment primary key, migration varchar(255) not null, batch int not null)');

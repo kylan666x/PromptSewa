@@ -45,22 +45,31 @@ class CheckoutController extends Controller
     {
         abort_unless($request->user()?->id === $order->buyer_id || $request->user()?->isModerator(), 403);
 
-        $order->load(['items.product.prompt', 'items.pack']);
+        $order->load(['items.product.prompt', 'items.pack', 'items.membershipPlan']);
 
-        // S2 (v1.8.0): the Sikka rail — offered only when the kill-switch is
-        // on and every line is a prompt line (packs/plans ride NPR). The
-        // spend itself happens in paySikka(), the single call site.
-        $sikkaEligible = $this->settings->isOn('sikka_enabled')
-            && $order->isPending()
-            && $this->sikka->supportsSikkaRail($order);
+        // S1b (v1.9.0): every PRODUCT order (prompt, pack, membership plan)
+        // rides the Sikka rail; the money rails (eSewa / manual transfer)
+        // survive ONLY for the one thing money still buys: SIKKA ITSELF on
+        // an order carrying a top-up-pack line. The spend itself happens in
+        // paySikka(), the single call site.
+        //
+        // The retired kill-switch is still HONOURED as a legacy global
+        // off-switch — an explicit '0' row (the desk no longer writes one,
+        // and the S1 migration flips existing rows to ON) turns the credit
+        // rail off in step with paySikka() and the top-up storefront, so a
+        // page never offers a door the POST will 403.
+        $creditRail = $this->settings->isOn('sikka_enabled') && $this->sikka->supportsSikkaRail($order);
+        $sikkaEligible = $order->isPending() && $creditRail;
         $sikkaTotal = $sikkaEligible ? $this->sikka->orderTotalSikka($order) : 0;
         $sikkaSpendable = $sikkaEligible ? $this->sikka->spendableAvailable($request->user()) : 0;
         $sikkaUnlimited = $sikkaEligible && $this->sikka->hasUnlimitedUnlock($request->user());
 
         return view('checkout.show', [
             'order' => $order,
-            'esewaEnabled' => $this->settings->isOn('esewa_enabled'),
-            'manualEnabled' => $this->settings->isOn('manual_payment_enabled'),
+            // The top-up rail is the money door: shown only when the order
+            // is NOT Sikka-purchasable (i.e. it carries Sikka itself).
+            'esewaEnabled' => ! $creditRail && $this->settings->isOn('esewa_enabled'),
+            'manualEnabled' => ! $creditRail && $this->settings->isOn('manual_payment_enabled'),
             'sikkaEligible' => $sikkaEligible,
             'sikkaTotal' => $sikkaTotal,
             'sikkaSpendable' => $sikkaSpendable,

@@ -133,7 +133,8 @@ function raidDeadLinkFormsOutsideSweep(): array
     return [
         'impersonation.stop' => 'Only rendered inside an impersonation session; the R1 impersonation sweep and ImpersonationTest cover it.',
         'admin.badges.update' => 'No form renders this route (badge edits ship as store/destroy only) — audited against the served HTML.',
-        'checkout.sikka.pay' => 'Rendered only when the Sikka kill-switch is ON (admin setting, default OFF) and the order is credit-eligible — SikkaServiceTest covers the served form with the switch on.',
+        'checkout.sikka.pay' => 'S1 (v1.9.0): the credit rail renders on every pending product order now the kill-switch is retired, but its pay FORM appears only when the balance covers the order — the sweep world holds no credits, so it sees the top-up CTA instead. SikkaEverywhereTest and CheckoutFlowTest serve the funded form.',
+        'checkout.manual.submit' => 'S1b (v1.9.0): the money rails (eSewa / manual transfer) render ONLY on an order carrying a top-up pack — every product order (prompt, pack, plan) rides the credit rail. The sweep world has no top-up order; CheckoutFlowTest serves the manual form on one and proves its absence on a pack order, and ManualPaymentMethodsTest posts the route directly.',
     ];
 }
 

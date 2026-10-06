@@ -1,8 +1,6 @@
 <?php
 
-use App\Models\Badge;
 use App\Models\FeedEvent;
-use App\Models\Prompt;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -11,7 +9,6 @@ uses(RefreshDatabase::class);
 /**
  * G6 (v1.7.0) — news feed gates.
  */
-
 function feedEventFor(User $actor, string $type = FeedEvent::TYPE_PROMPT_PUBLISHED, array $meta = []): FeedEvent
 {
     return FeedEvent::query()->create([
@@ -90,7 +87,9 @@ test('pack_created events render in the public feed', function () {
         'name' => 'Starter bundle',
         'slug' => 'starter-bundle',
         'description' => 'A pack for new buyers.',
-        'price_npr' => 999,
+        // S1b (v1.9.0): the admin pack form prices in SIKKA credits (the
+        // NPR mirror derives on save).
+        'price_sikka' => 999,
         'is_active' => '1',
     ])->assertRedirect();
 

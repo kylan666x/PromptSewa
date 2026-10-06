@@ -161,11 +161,13 @@ test('plans CRUD round-trips the perks picker and referenced plans deactivate', 
     $badge = Badge::query()->create(['name' => 'Desk badge', 'slug' => 'desk-badge', 'criterion' => 'manual', 'is_active' => true]);
     $frame = Frame::query()->create(['name' => 'Desk ring', 'image_path' => 'frames/desk-ring.png', 'is_active' => true]);
 
+    // S1b (v1.9.0): the desk prices plans in SIKKA credits; the NPR mirror
+    // (price_paisa) is derived on save from the buy rate.
     $this->actingAs($admin)->post(route('admin.sikka.plans.store'), [
         'name' => 'Desk Plan',
         'slug' => 'desk-plan',
         'duration_days' => 90,
-        'price_paisa' => 150_000,
+        'price_sikka' => 1_500,
         'stipend_sikka' => 20,
         'badge_id' => $badge->id,
         'frame_id' => $frame->id,
@@ -177,6 +179,8 @@ test('plans CRUD round-trips the perks picker and referenced plans deactivate', 
     $plan = MembershipPlan::query()->where('slug', 'desk-plan')->sole();
 
     expect($plan->duration_days)->toBe(90)
+        ->and($plan->price_sikka)->toBe(1_500)
+        ->and($plan->price_paisa)->toBe(150_000) // derived at the buy rate
         ->and($plan->stipend_sikka)->toBe(20)
         ->and($plan->hasUnlimitedUnlock())->toBeTrue()
         ->and($plan->perk(MembershipPlan::PERK_BADGE_ID))->toBe($badge->id)
@@ -185,7 +189,7 @@ test('plans CRUD round-trips the perks picker and referenced plans deactivate', 
 
     // Bounds: duration and stipend are guarded.
     $this->actingAs($admin)->post(route('admin.sikka.plans.store'), [
-        'name' => 'Bad Plan', 'slug' => 'bad-plan', 'duration_days' => 0, 'price_paisa' => 100,
+        'name' => 'Bad Plan', 'slug' => 'bad-plan', 'duration_days' => 0, 'price_sikka' => 1,
         'stipend_sikka' => 1,
     ])->assertSessionHasErrors('duration_days');
 
@@ -193,12 +197,14 @@ test('plans CRUD round-trips the perks picker and referenced plans deactivate', 
         'name' => 'Desk Plan v2',
         'slug' => 'desk-plan',
         'duration_days' => 30,
-        'price_paisa' => 50_000,
+        'price_sikka' => 500,
         'stipend_sikka' => 0,
         'active' => '1',
     ])->assertRedirect();
 
     expect($plan->refresh()->name)->toBe('Desk Plan v2')
+        ->and($plan->price_sikka)->toBe(500)
+        ->and($plan->price_paisa)->toBe(50_000)
         ->and($plan->stipend_sikka)->toBe(0)
         ->and($plan->hasUnlimitedUnlock())->toBeFalse();
 

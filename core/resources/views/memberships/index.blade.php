@@ -3,7 +3,6 @@
     /** @var \Illuminate\Support\Collection<int, \App\Models\Membership> $memberships */
     /** @var \Illuminate\Support\Collection<int, string> $badges */
     /** @var \Illuminate\Support\Collection<int, string> $frames */
-    /** @var bool $sikkaEnabled */
 @endphp
 
 <x-app-layout>
@@ -14,8 +13,8 @@
             <p class="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-saffron-deep">Memberships</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-ink">Belong to the library</h1>
             <p class="mt-1 max-w-2xl text-sm text-ink/60">
-                Plans bill once in NPR through the ordinary checkout. If a plan carries Sikka credits, the
-                stipend lands as a spendable credit every 30 days while the membership is active.
+                Plans are bought with Sikka credits at checkout — top up first if your balance is short.
+                A plan's stipend lands as spendable credits every 30 days while the membership is active.
             </p>
         </header>
 
@@ -46,11 +45,12 @@
                             <h2 class="text-lg font-bold tracking-tight text-ink">{{ $plan->name }}</h2>
                             <p class="mt-0.5 font-mono text-xs uppercase tracking-wider text-ink/50">{{ $plan->duration_days }} days</p>
                         </div>
-                        <p class="shrink-0 font-mono text-xl font-bold text-ink"><x-money :paisa="$plan->price_paisa"/></p>
+                        {{-- S1b (v1.9.0): plans price in Sikka — never NPR. --}}
+                        <p class="shrink-0 text-xl font-bold text-ink"><x-sikka :amount="$plan->priceSikka()" :word="true" :size="22"/></p>
                     </div>
 
                     <ul class="mt-5 space-y-2 text-sm text-ink/70">
-                        @if ($sikkaEnabled && $plan->stipend_sikka > 0)
+                        @if ($plan->stipend_sikka > 0)
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-700">✓</span>
                                 <span><x-sikka :amount="$plan->stipend_sikka" :word="true"/> credits every 30 days</span>
@@ -76,7 +76,11 @@
                         <form method="POST" action="{{ route('checkout.memberships.buy', $plan) }}">
                             @csrf
                             <button class="w-full rounded-full bg-ink px-5 py-3 text-sm font-bold text-paper transition hover:bg-ink-soft">
-                                Get {{ $plan->name }}
+                                @if ($plan->isFree())
+                                    Activate {{ $plan->name }}
+                                @else
+                                    Get {{ $plan->name }} — <x-sikka :amount="$plan->priceSikka()"/> credits
+                                @endif
                             </button>
                         </form>
                     @else
