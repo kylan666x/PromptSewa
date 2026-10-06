@@ -1,11 +1,18 @@
 {{--
     T12 (v1.5.0) — mobile bottom dock. Replaces the retired burger drawer.
 
-    Slot map (exactly five):
-      1. Home     2. Library   3. CENTER CTA   4. My library/You   5. Profile
+    S1b (v1.9.0) — slot map (exactly five), per the founder's directive:
+      1. Home      2. Packs    3. CENTER CTA    4. Library    5. Profile
+
+    Why Packs replaced Browse: packs were unreachable on mobile (desktop
+    navbar + footer only), and browsing prompts now flows through Home's
+    search and the "Explore prompts" hero action. The Library slot is the
+    buyer's own shelf — Purchases, with the Saved tab pointer on that page
+    (the dashboard Saved tab is where bookmarks live).
 
     Constraints:
-      - ink ground (#1c1917 family), saffron on the CENTER CTA ONLY
+      - ink ground (#1c1917 family), saffron FILL on the CENTER CTA ONLY
+        (active tabs are text colour, never a fill)
       - WCAG: every target ≥ 44px, aria-labels, visible focus rings
       - safe-area padding for notched devices
       - body wrapper adds pb-24 md:pb-0 so content clears the dock
@@ -14,12 +21,13 @@
       - no JavaScript: plain links + a POST form for logout
 
     The authed center CTA is "+ Add prompt" (the primary creator action);
-    for guests it is "Sign up". Slot 4 ("You") lands on the profile page
-    where Packs/About/Admin/Logout live — staff-only Admin row is gated
+    for guests it is "Sign up". Slot 5 lands on the profile page where
+    Packs/About/Admin/Logout live — staff-only Admin row is gated
     server-side in the profile view, never CSS-hidden.
 --}}
 @php
     $currentRoute = request()->route()?->getName();
+    $packsActive = request()->routeIs('packs.*');
 @endphp
 
 @props(['siteName' => 'PromptSewa'])
@@ -35,13 +43,13 @@
             <span class="text-[10px] font-medium">Home</span>
         </a>
 
-        {{-- Slot 2: Library --}}
-        <a href="{{ route('library.index') }}" aria-label="Browse prompts" aria-current="{{ $currentRoute === 'library.index' ? 'page' : 'false' }}"
-           class="dock-tab {{ $currentRoute === 'library.index' ? 'text-saffron' : 'text-paper/70' }}">
+        {{-- Slot 2: Packs (S1b) — the curated bundles, one tap away. --}}
+        <a href="{{ route('packs.index') }}" aria-label="Browse packs" aria-current="{{ $packsActive ? 'page' : 'false' }}"
+           class="dock-tab {{ $packsActive ? 'text-saffron' : 'text-paper/70' }}">
             <svg class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
             </svg>
-            <span class="text-[10px] font-medium">Library</span>
+            <span class="text-[10px] font-medium">Packs</span>
         </a>
 
         {{-- Slot 3: CENTER CTA — the ONLY saffron element --}}
@@ -59,7 +67,8 @@
             </a>
         @endauth
 
-        {{-- Slot 4: My library (purchases) / You --}}
+        {{-- Slot 4: Library (S1b) — the buyer's own shelf: purchases, with
+             the Saved pointer on the same page. Guests get the login door. --}}
         @auth
             <a href="{{ route('purchases.index') }}" aria-label="My library" aria-current="{{ $currentRoute === 'purchases.index' ? 'page' : 'false' }}"
                class="dock-tab {{ $currentRoute === 'purchases.index' ? 'text-saffron' : 'text-paper/70' }}">
@@ -78,7 +87,7 @@
             </a>
         @endauth
 
-        {{-- Slot 5: You (P4, v1.7.1: lands on the PUBLIC profile — the
+        {{-- Slot 5: Profile (P4, v1.7.1: lands on the PUBLIC profile — the
              identity surface. Edit profile remains reachable from the
              profile page button and the You menu on it.) --}}
         <a href="{{ auth()->check() ? route('creators.show', auth()->user()) : route('login') }}"
@@ -88,7 +97,7 @@
             <svg class="size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
             </svg>
-            <span class="text-[10px] font-medium">You</span>
+            <span class="text-[10px] font-medium">Profile</span>
         </a>
     </div>
 </nav>

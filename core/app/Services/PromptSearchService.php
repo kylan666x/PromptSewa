@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Pack;
 use App\Models\Prompt;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * UI-001: the ONLY search entry point for public catalog surfaces.
@@ -73,21 +76,54 @@ class PromptSearchService
     }
 
     /**
+     * S1b (v1.9.0) — search sellable PACKS by name/slug/tagline/description
+     * for the navbar typeahead.
+     *
+     * Only active packs that actually contain published prompts surface: an
+     * empty bundle is not a product. Ordering matches the /packs index
+     * (admin position, then name) so the typeahead and the page agree.
+     *
+     * @return Collection<int, Pack>
+     */
+    public function searchPacks(string $term, int $limit = 3): Collection
+    {
+        $term = trim($term);
+
+        if ($term === '') {
+            return collect();
+        }
+
+        return Pack::query()
+            ->active()
+            ->where(fn ($query) => $query
+                ->where('name', 'like', "%{$term}%")
+                ->orWhere('slug', 'like', "%{$term}%")
+                ->orWhere('tagline', 'like', "%{$term}%")
+                ->orWhere('description', 'like', "%{$term}%"))
+            ->whereHas('publishedPrompts')
+            ->withCount(['publishedPrompts'])
+            ->orderBy('position')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * Search creator profiles by handle/name/email for the library page
      * sidebar section and the navbar typeahead. Only users with at least
      * one public prompt are surfaced. Eager-loads activeFrame (W1: the
      * typeahead rows render the creator's equipped frame).
      *
-     * @return \Illuminate\Support\Collection<int, \App\Models\User>
+     * @return Collection<int, User>
      */
-    public function searchCreators(string $term, int $limit = 6): \Illuminate\Support\Collection
+    public function searchCreators(string $term, int $limit = 6): Collection
     {
         $term = trim($term);
         if ($term === '') {
             return collect();
         }
 
-        return \App\Models\User::query()
+        return User::query()
             ->whereNull('deleted_at')
             ->where(fn ($q) => $q
                 ->where('name', 'like', "%{$term}%")

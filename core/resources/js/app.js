@@ -157,6 +157,9 @@ Alpine.data('searchPreview', (previewUrl) => ({
     open: false,
     loading: false,
     prompts: [],
+    // S1b (v1.9.0): packs are searchable — the typeahead renders them
+    // between prompts and creators.
+    packs: [],
     creators: [],
     activeIndex: -1,
     controller: null,
@@ -164,6 +167,7 @@ Alpine.data('searchPreview', (previewUrl) => ({
     get items() {
         return [
             ...this.prompts.map((p) => ({ ...p, kind: 'prompt' })),
+            ...this.packs.map((p) => ({ ...p, kind: 'pack' })),
             ...this.creators.map((c) => ({ ...c, kind: 'creator' })),
         ];
     },
@@ -185,9 +189,10 @@ Alpine.data('searchPreview', (previewUrl) => ({
             signal: this.controller.signal,
             headers: { Accept: 'application/json' },
         })
-            .then((response) => (response.ok ? response.json() : { prompts: [], creators: [] }))
+            .then((response) => (response.ok ? response.json() : { prompts: [], packs: [], creators: [] }))
             .then((data) => {
                 this.prompts = data.prompts || [];
+                this.packs = data.packs || [];
                 this.creators = data.creators || [];
                 this.open = this.items.length > 0;
                 this.loading = false;

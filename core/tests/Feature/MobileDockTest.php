@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Pack;
+use App\Models\Prompt;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -16,9 +18,10 @@ function dockHtml(string $html): string
 test('the dock renders exactly five slots with correct hrefs for a guest', function () {
     $dock = dockHtml($this->get(route('home'))->getContent());
 
+    // S1b (v1.9.0): the slot map is Home · Packs · ＋ · Library · Profile.
     expect(substr_count($dock, '<a '))->toBe(5)
         ->and($dock)->toContain('href="'.route('home').'"')
-        ->and($dock)->toContain('href="'.route('library.index').'"')
+        ->and($dock)->toContain('href="'.route('packs.index').'"')
         ->and($dock)->toContain('href="'.route('register').'"')
         ->and($dock)->toContain('href="'.route('login').'"');
 });
@@ -31,11 +34,25 @@ test('the dock renders exactly five slots with correct hrefs for an authed membe
     expect(substr_count($dock, '<a '))->toBe(5)
         ->and($dock)->toContain('href="'.route('dashboard.prompts.create').'"')
         ->and($dock)->toContain('href="'.route('purchases.index').'"')
-        // P4 (v1.7.1): the You slot lands on the PUBLIC profile.
+        // S1b (v1.9.0): Packs take the browse slot — packs were unreachable
+        // on mobile before this.
+        ->and($dock)->toContain('href="'.route('packs.index').'"')
+        // P4 (v1.7.1): the Profile slot lands on the PUBLIC profile.
         ->and($dock)->toContain('href="'.route('creators.show', $member).'"')
         ->and($dock)->not->toContain(route('dashboard.profile.edit'))
         // Member must never see an admin destination.
         ->not->toContain(route('admin.dashboard'));
+
+    // The five labels, in order — the contract the directive names.
+    preg_match_all('/<span class="text-\[10px\] font-medium">([^<]+)<\/span>/', $dock, $labels);
+
+    expect($labels[1])->toBe(['Home', 'Packs', 'Library', 'Profile']);
+});
+
+test('browsing the prompt catalog is no longer a dock slot (packs own it)', function () {
+    $dock = dockHtml($this->get(route('home'))->getContent());
+
+    expect($dock)->not->toContain('href="'.route('library.index').'"');
 });
 
 test('the dock is hidden on md and up and the center CTA carries the only saffron fill', function () {
@@ -57,13 +74,19 @@ test('saffron fill appears only on the center CTA in the dock', function () {
         ->and($dock)->toContain('bg-saffron');
 });
 
-test('the active tab carries aria-current', function () {
+test('the active tab carries aria-current — on the packs page and pack detail', function () {
     $member = User::factory()->create();
 
-    $dock = dockHtml($this->actingAs($member)->get(route('library.index'))->getContent());
+    $dock = dockHtml($this->actingAs($member)->get(route('packs.index'))->getContent());
 
     expect($dock)->toContain('aria-current="page"')
-        ->and($dock)->toContain('aria-label="Browse prompts"');
+        ->and($dock)->toContain('aria-label="Browse packs"');
+
+    $pack = Pack::factory()->create(['is_active' => true]);
+    $dock = dockHtml($this->actingAs($member)->get(route('packs.show', $pack))->getContent());
+
+    expect($dock)->toContain('aria-current="page"')
+        ->and($dock)->toContain('aria-label="Browse packs"');
 });
 
 test('no burger button survives anywhere in the mobile layout', function () {
@@ -77,7 +100,7 @@ test('no burger button survives anywhere in the mobile layout', function () {
 
 test('category chips render on the library page', function () {
     $creator = User::factory()->create(['role' => User::ROLE_CREATOR]);
-    $prompt = \App\Models\Prompt::factory()->for($creator, 'creator')->hasVersion()->create();
+    $prompt = Prompt::factory()->for($creator, 'creator')->hasVersion()->create();
     $category = $prompt->category;
 
     $html = $this->get(route('library.index'))->getContent();

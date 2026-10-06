@@ -86,13 +86,37 @@
                         </div>
                     </template>
 
+                    {{-- S1b (v1.9.0): packs are searchable too — bundles
+                         render between prompts and creators, priced in
+                         Sikka like every other product. --}}
+                    <template x-if="packs.length > 0">
+                        <div>
+                            <p class="px-4 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-widest text-ink/40">Packs</p>
+                            <template x-for="(pack, index) in packs" :key="'k'+index">
+                                <a :href="pack.url"
+                                   class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
+                                   :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"
+                                   @mouseenter="activeIndex = prompts.length + index">
+                                    <span class="inline-flex min-w-0 items-center gap-2">
+                                        <span class="rounded bg-ink px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide text-saffron">Pack</span>
+                                        <span class="min-w-0 truncate" x-text="pack.name"></span>
+                                    </span>
+                                    <span class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink/40"
+                                          x-text="pack.prompts_count + (pack.prompts_count === 1 ? ' prompt' : ' prompts')"></span>
+                                    <span class="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wide text-ink/70"
+                                          x-text="pack.sikka > 0 ? 'Sikka '+pack.sikka : 'Free'"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+
                     <template x-if="creators.length > 0">
                         <div>
                             <p class="px-4 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-widest text-ink/40">Creators</p>
                             <template x-for="(creator, index) in creators" :key="'c'+index">
                                 <a :href="creator.url"
                                    class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink transition hover:bg-saffron/10"
-                                   :class="isActive(prompts.length + index) ? 'bg-saffron/10' : ''"                                    @mouseenter="activeIndex = prompts.length + index">                                        <span class="flex min-w-0 items-center gap-2">
+                                   :class="isActive(prompts.length + packs.length + index) ? 'bg-saffron/10' : ''"                                    @mouseenter="activeIndex = prompts.length + packs.length + index">                                        <span class="flex min-w-0 items-center gap-2">
                                             {{-- v1.7.5 (R1): the typeahead row is a HAND-ROLLED
                                                  mirror of x-user-avatar's composite box and must
                                                  stay token-for-token identical to it: wrapper

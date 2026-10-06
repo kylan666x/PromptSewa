@@ -29,7 +29,7 @@ class SearchController extends Controller
         $term = trim($validated['q'] ?? '');
 
         if ($term === '') {
-            return response()->json(['prompts' => [], 'creators' => []])->header('X-Robots-Tag', 'noindex');
+            return response()->json(['prompts' => [], 'packs' => [], 'creators' => []])->header('X-Robots-Tag', 'noindex');
         }
 
         $prompts = $this->search->search($term, 3)
@@ -43,6 +43,18 @@ class SearchController extends Controller
                 // carries the credit figure so the row never shows NPR.
                 'sikka' => (int) $prompt->price_sikka,
                 'url' => route('prompts.show', $prompt),
+            ])
+            ->values();
+
+        // S1b (v1.9.0): packs are findable too — the founder's report was
+        // that bundles never appeared in the typeahead at all.
+        $packs = $this->search->searchPacks($term, 3)
+            ->map(fn ($pack) => [
+                'name' => $pack->name,
+                'slug' => $pack->slug,
+                'prompts_count' => (int) $pack->published_prompts_count,
+                'sikka' => $pack->priceSikka(),
+                'url' => route('packs.show', $pack),
             ])
             ->values();
 
@@ -79,6 +91,7 @@ class SearchController extends Controller
 
         return response()->json([
             'prompts' => $prompts,
+            'packs' => $packs,
             'creators' => $creators,
         ])->header('X-Robots-Tag', 'noindex');
     }
