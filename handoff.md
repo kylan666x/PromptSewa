@@ -74,14 +74,35 @@ The founder's F1→F3 directive, on top of the v1.9.1 release commit.
   The P1 single-column feed contract (max-w-3xl, gap-6, no carousel) is
   unchanged and still locked.
 
-Release gates: full Pest suite **655 passed / 18,257 assertions / 3 skipped
-(exit 0)** — evidence `dist/v1.9.2-suite.txt`; `--list-tests tests/Arch`
+Release gates: full Pest suite **656 passed / 18,259 assertions / 3 skipped
+(exit 0)** — evidence `dist/v1.9.2-suite-final.txt` (run against the exact
+shipped bytes; the earlier `dist/v1.9.2-suite.txt` record carries the same
+numbers); `--list-tests tests/Arch`
 enumerates **6 Arch tests** — `dist/v1.9.2-list-tests.txt`; update zip
-`dist/promptsewa-1.9.2-update.zip` — `entries: 517 | hygiene audit: CLEAN`,
-SHA-256 `f23959b8fc3fd6a7d1bfc0e0cf0eecbbe2f39c89eca8f18462a5c0db7a12eddd`
+`dist/promptsewa-1.9.2-update.zip` — `entries: 517 | hygiene audit: CLEAN`
+(513 core + 4 docroot; the zip carries `core/tests/`, so the archive tracks
+every test edit), SHA-256
+`70d807a30bf16163080777c8bc57a30c3dc595f56eaed79278d2cb18f0da8807`
 (no new migrations in this release) — evidence `dist/v1.9.2-zip.txt`.
+Two earlier v1.9.2 builds are superseded and named in that evidence file:
+`f23959b8…` (pre-flake-fix) and `bed21066…` (fix applied, before Pint's
+comment tidy). Both are superseded because the archive ships `core/tests/`.
 Browser gate (DOM assertions + seeded preview DB) in
 `dist/v1.9.2-browser-gate.txt`.
+
+**A latent suite flake was found and pinned while proving the final tree**
+(the release commit post-dated the first suite run, so the original 655
+result did not cover it): `FeedTest` compared a raw Faker-generated actor
+name against rendered HTML, and Faker rolled `Myron O'Connell Jr.` — Blade
+escapes `'` to `&#039;`, so the raw `toContain()` failed on a tree where
+nothing was broken. The four affected assertions now compare `e($name)`
+(`FeedTest`, `FramesTest`) and a regression test ("an actor name carrying an
+apostrophe renders escaped, never dropped") locks the class. Evidence:
+`dist/v1.9.2-suite.txt` and `dist/v1.9.2-suite-final.txt` (the run against the
+exact shipped bytes — the archive carries `core/tests/`, so Pint's comment tidy
+on `FramesTest.php` was re-run before the final build) and
+`dist/v1.9.2-suite-orderflake.txt` (the failing run, kept as the diagnosis
+record).
 
 ### v1.9.1 — True Newsfeed Layout (P1) (previous release)
 

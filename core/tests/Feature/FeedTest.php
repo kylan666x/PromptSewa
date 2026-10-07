@@ -29,8 +29,12 @@ test('the feed renders for guests and is noindex', function () {
     $response->assertOk();
     $html = $response->getContent();
 
+    // Blade escapes the rendered name; assert the ESCAPED string. Faker
+    // rolls names like "Myron O'Connell Jr." (→ Myron O&#039;Connell Jr.)
+    // often enough that the raw comparison flaked ~1 run in N. The escaped
+    // value is the exact text the browser shows, so this is not weaker.
     expect($html)->toContain('noindex')
-        ->and($html)->toContain($actor->name);
+        ->and($html)->toContain(e($actor->name));
 });
 
 test('banned actors are excluded at query level', function () {
@@ -42,8 +46,8 @@ test('banned actors are excluded at query level', function () {
 
     $html = $this->get(route('feed.index'))->getContent();
 
-    expect($html)->toContain($clean->name)
-        ->and($html)->not->toContain($banned->name);
+    expect($html)->toContain(e($clean->name))
+        ->and($html)->not->toContain(e($banned->name));
 
     // The scope itself excludes at query level, not in the view.
     expect(FeedEvent::query()->publicStream()->count())->toBe(1);
@@ -78,6 +82,18 @@ test('the dashboard feed tab shows own events plus global milestones', function 
     expect($html)->toContain('My publish')            // own event
         ->and($html)->toContain('Milestone prompt')   // global milestone
         ->and($html)->not->toContain('Their publish'); // others' noise excluded
+});
+
+test('an actor name carrying an apostrophe renders escaped, never dropped', function () {
+    // The v1.9.2 flake pinned as behaviour: Faker rolls apostrophes, Blade
+    // escapes them, and the feed must still show the actor by name.
+    $actor = User::factory()->create(['name' => "D'Angelo O'Brien"]);
+    feedEventFor($actor);
+
+    $html = $this->get(route('feed.index'))->getContent();
+
+    expect($html)->toContain(e("D'Angelo O'Brien"))
+        ->and($html)->not->toContain("D'Angelo O'Brien");
 });
 
 test('pack_created events render in the public feed', function () {

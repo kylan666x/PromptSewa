@@ -19,7 +19,6 @@ uses(RefreshDatabase::class);
  * image-gallery cards, library creators grid, versions author, purchases
  * rows, admin users table and typeahead rows. Cards are framed now.
  */
-
 function framePng(): UploadedFile
 {
     // A real 64px transparent PNG built with GD (the alpha test's source).
@@ -102,7 +101,9 @@ test('frame overlay renders on every avatar surface including prompt cards', fun
     // carries the creator's frame (desktop dropdown + mobile row + the
     // published card on page 1 = 3 occurrences minimum on this fixture).
     $library = $this->get(route('library.index'))->getContent();
-    expect($library)->toContain($creator->name)
+    // Escaped name — Faker puns an apostrophe into its name lists (see
+    // FeedTest, same v1.9.2 flake fix).
+    expect($library)->toContain(e($creator->name))
         ->and(substr_count($library, $frameUrl))->toBeGreaterThanOrEqual(3, 'prompt cards must carry the creator frame (W1 parity)');
 
     // Storefront cards (featured + image gallery) carry it too.
